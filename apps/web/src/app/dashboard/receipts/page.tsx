@@ -28,8 +28,12 @@ import {
   receiptDisplayStatusLabel,
   receiptStatusBadgeStyle,
 } from '@/features/receipts/receipt-export';
+import { useSession } from '@/hooks/use-session';
+import { isWarehouseReceiptsOpsRole } from '@/lib/warehouse-receipts-view';
 
 export default function ReceiptsPage() {
+  const { data: session } = useSession();
+  const warehouseOps = isWarehouseReceiptsOpsRole(session?.role);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [drawerReceipt, setDrawerReceipt] = useState<any>(null);
@@ -85,26 +89,28 @@ export default function ReceiptsPage() {
           <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Yuklarni <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">Qabul Qilish</span></h1>
           <p className="text-gray-400 text-sm md:text-base">Sotuvchilardan kelgan yuklarni tekshirish va omborga qabul qilish.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => printReceiptsList(filteredReceipts || [])}
-            disabled={!filteredReceipts?.length}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-gray-300 hover:bg-white/10 disabled:opacity-40"
-          >
-            <Printer size={16} />
-            Ro&apos;yxatni chop etish
-          </button>
-          <button
-            type="button"
-            onClick={() => receiptsService.exportAllReceiptsExcel()}
-            disabled={!receipts?.length}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-gray-300 hover:bg-white/10 disabled:opacity-40"
-          >
-            <FileSpreadsheet size={16} className="text-emerald-400" />
-            Excel (barchasi)
-          </button>
-        </div>
+        {!warehouseOps && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => printReceiptsList(filteredReceipts || [])}
+              disabled={!filteredReceipts?.length}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              <Printer size={16} />
+              Ro&apos;yxatni chop etish
+            </button>
+            <button
+              type="button"
+              onClick={() => receiptsService.exportAllReceiptsExcel()}
+              disabled={!receipts?.length}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-black text-gray-300 hover:bg-white/10 disabled:opacity-40"
+            >
+              <FileSpreadsheet size={16} className="text-emerald-400" />
+              Excel (barchasi)
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards (Fixed dynamic colors & added neon glows) */}
@@ -190,14 +196,19 @@ export default function ReceiptsPage() {
                   <tr className="bg-white/[0.02] border-b border-white/5">
                     <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Qabul №</th>
                     <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Sotuvchi</th>
-                    <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Summa</th>
+                    {!warehouseOps && (
+                      <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Summa</th>
+                    )}
+                    {warehouseOps && (
+                      <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Mahsulotlar</th>
+                    )}
                     <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Status</th>
                     <th className="px-4 xl:px-8 py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 text-right">Amallar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredReceipts?.length === 0 ? (
-                    <tr><td colSpan={5} className="py-24 text-center text-gray-500 font-bold text-sm">Hech qanday qabul qilinadigan yuklar yo'q</td></tr>
+                    <tr><td colSpan={warehouseOps ? 4 : 5} className="py-24 text-center text-gray-500 font-bold text-sm">Hech qanday qabul qilinadigan yuklar yo'q</td></tr>
                   ) : filteredReceipts?.map((receipt: any, idx: number) => (
                     <motion.tr 
                       key={receipt.id}
@@ -214,15 +225,23 @@ export default function ReceiptsPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="font-bold text-xs md:text-sm text-white truncate max-w-[150px] xl:max-w-[200px]">{receipt.sellerCompany.name}</p>
-                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
-                              STIR: {receipt.sellerCompany?.tin || '—'}
-                            </p>
+                            {!warehouseOps && (
+                              <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                STIR: {receipt.sellerCompany?.tin || '—'}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-4 xl:px-8 py-5">
-                         <p className="font-black text-xs md:text-sm text-emerald-400">{formatReceiptTotal(receipt)}</p>
-                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{receipt.items?.length || 0} xil mahsulot</p>
+                         {warehouseOps ? (
+                           <p className="font-black text-xs md:text-sm text-white">{receipt.items?.length || 0} xil mahsulot</p>
+                         ) : (
+                           <>
+                             <p className="font-black text-xs md:text-sm text-emerald-400">{formatReceiptTotal(receipt)}</p>
+                             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{receipt.items?.length || 0} xil mahsulot</p>
+                           </>
+                         )}
                       </td>
                       <td className="px-4 xl:px-8 py-5">
                         <span className={`px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border max-w-[200px] text-center leading-tight ${receiptStatusBadgeStyle(receipt)}`}>
@@ -300,9 +319,13 @@ export default function ReceiptsPage() {
 
                   <div className="flex items-center justify-between pt-4 border-t border-white/5">
                     <div>
-                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Summa</p>
+                      <p className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
+                        {warehouseOps ? 'Mahsulotlar' : 'Summa'}
+                      </p>
                       <p className="font-black text-emerald-400 text-sm">
-                        {formatReceiptTotal(receipt)}
+                        {warehouseOps
+                          ? `${receipt.items?.length || 0} xil`
+                          : formatReceiptTotal(receipt)}
                       </p>
                     </div>
                     {receipt.status === 'PENDING' ? (

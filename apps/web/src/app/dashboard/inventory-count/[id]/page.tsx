@@ -9,7 +9,9 @@ import {
   useInventoryCount,
   useInventoryCountActions,
 } from '@/hooks/warehouse/use-inventory-count';
+import { usePermissions } from '@/hooks/use-permissions';
 import { toast, formatApiError } from '@/lib/toast';
+import { confirmAction } from '@/components/ConfirmDialog';
 
 export default function InventoryCountDetailPage() {
   const params = useParams();
@@ -17,6 +19,9 @@ export default function InventoryCountDetailPage() {
   const queryClient = useQueryClient();
   const { data: count, isLoading, refetch } = useInventoryCount(id);
   const { recordCount, scan, approveItem, complete, cancel } = useInventoryCountActions();
+  const { can } = usePermissions();
+  const canAdjust = can('warehouse.adjust');
+  const canManageCount = can('warehouse.manage');
 
   // Butun hujjatni qayta yuklamasdan, faqat bitta qatorni cache'da yangilash (skaner tezligi)
   const patchItem = (updated: any) => {
@@ -90,6 +95,14 @@ export default function InventoryCountDetailPage() {
   };
 
   const handleCancel = async () => {
+    if (
+      !(await confirmAction(
+        'Inventarizatsiyani bekor qilishni tasdiqlaysizmi? Ombor bloklari olib tashlanadi.',
+        { variant: 'danger', confirmLabel: 'Bekor qilish' },
+      ))
+    ) {
+      return;
+    }
     try {
       await cancel.mutateAsync(id);
       toast.success('Bekor qilindi');
@@ -119,29 +132,38 @@ export default function InventoryCountDetailPage() {
         <p className="text-gray-500 text-sm mt-1">
           {count.warehouse?.name} · {count.status}
         </p>
-        {isActive && (
-          <div className="flex flex-wrap gap-3 mt-4">
-            <button
-              type="button"
-              onClick={handleComplete}
-              disabled={complete.isPending}
-              className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-sm"
-            >
-              Yakunlash
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={cancel.isPending}
-              className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 font-bold text-sm"
-            >
-              Bekor qilish
-            </button>
+        {isActive && (canManageCount || canAdjust) && (
+          <div className="flex flex-wrap items-center gap-3 mt-4">
+            {canManageCount && (
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={complete.isPending}
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-sm"
+              >
+                Yakunlash
+              </button>
+            )}
+            {canAdjust && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancel.isPending}
+                className="px-4 py-2 rounded-xl bg-white/10 text-gray-300 font-bold text-sm hover:bg-white/15"
+              >
+                Bekor qilish
+              </button>
+            )}
+            {canAdjust && !canManageCount && (
+              <p className="text-xs text-gray-500 w-full">
+                Yakunlash va farq tasdiqi menejer yoki egasi tomonidan amalga oshiriladi.
+              </p>
+            )}
           </div>
         )}
       </div>
 
-      {isActive && (
+      {isActive && canAdjust && (
         <form
           onSubmit={handleScan}
           className="glass-card rounded-2xl p-4 border border-teal-500/20 flex flex-col sm:flex-row gap-3"
@@ -193,7 +215,7 @@ export default function InventoryCountDetailPage() {
                 )}
               </p>
 
-              {isActive && item.status === 'PENDING' && (
+              {isActive && canAdjust && item.status === 'PENDING' && (
                 <div className="flex gap-2 mt-3">
                   <input
                     type="number"
@@ -215,7 +237,7 @@ export default function InventoryCountDetailPage() {
                 </div>
               )}
 
-              {item.status === 'COUNTED' && (
+              {item.status === 'COUNTED' && canManageCount && (
                 <button
                   type="button"
                   onClick={() => handleApprove(item.id)}

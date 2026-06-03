@@ -44,6 +44,7 @@ export class DashboardService {
       topProductsData,
       dailyDispatches,
       pendingReceipts,
+      pendingPickTasks,
     ] = await Promise.all([
       this.prisma.productVariant.count({
         where: { product: { companyId } },
@@ -133,6 +134,14 @@ export class DashboardService {
           status: 'PENDING',
         },
       }),
+
+      this.prisma.pickTask.count({
+        where: {
+          companyId,
+          status: { in: ['PENDING', 'IN_PROGRESS'] },
+          dispatch: { status: 'DRAFT' },
+        },
+      }),
     ]);
 
     return {
@@ -143,6 +152,7 @@ export class DashboardService {
         totalPayables: totalCredits,
         dailyDispatches,
         pendingReceipts,
+        pendingPickTasks,
         productChange: 0,
         inventoryChange: 0,
         debtChange: 0,

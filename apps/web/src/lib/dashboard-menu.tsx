@@ -146,7 +146,7 @@ export function buildDashboardMenuGroups(
           icon: <I.ShoppingBag size={s} />,
           label: 'Buyurtmalar',
           href: '/dashboard/orders',
-          roles: ['owner', 'manager', 'sales', 'warehouse'],
+          roles: ['owner', 'manager', 'sales'],
           moduleKeys: ['B2B'],
           mobileNav: true,
         },
@@ -270,4 +270,20 @@ export function isMenuItemActive(pathname: string, href: string): boolean {
   if (href === '/dashboard') return pathname === '/dashboard';
   if (href === '/pos') return pathname === '/pos' || pathname.startsWith('/pos/');
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Rol bo‘yicha yo‘l: menyuda yo‘q bo‘limlarga to‘g‘ridan-to‘g‘ri URL ochilmasin */
+export function isDashboardPathAllowedForRole(
+  pathname: string,
+  role: SessionRole,
+  items: Pick<DashboardMenuItem, 'href' | 'roles'>[],
+): boolean {
+  const relevant = items.filter((item) => {
+    if (item.href === '#support') return false;
+    if (item.href === '/dashboard') return pathname === '/dashboard';
+    if (item.href === '/pos') return pathname === '/pos' || pathname.startsWith('/pos/');
+    return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  });
+  if (!relevant.length) return true;
+  return relevant.some((item) => item.roles.includes(role));
 }

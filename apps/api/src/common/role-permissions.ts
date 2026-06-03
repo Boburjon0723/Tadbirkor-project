@@ -119,6 +119,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.WAREHOUSE_VIEW,
     Permission.WAREHOUSE_RECEIVE,
     Permission.WAREHOUSE_DISPATCH,
+    Permission.WAREHOUSE_ADJUST,
     Permission.GOODS_RECEIPTS_VIEW,
     Permission.GOODS_RECEIPTS_ACCEPT,
     Permission.TASKS_VIEW,

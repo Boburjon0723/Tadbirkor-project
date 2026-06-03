@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ClipboardList, Loader2, Plus, ChevronRight } from 'lucide-react';
 import { useInventoryCounts, useInventoryCountActions } from '@/hooks/warehouse/use-inventory-count';
 import { useWarehouses } from '@/hooks/warehouse/use-warehouse';
+import { usePermissions } from '@/hooks/use-permissions';
 import { toast, formatApiError } from '@/lib/toast';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -22,6 +23,8 @@ export default function InventoryCountListPage() {
   const { data: counts = [], isLoading } = useInventoryCounts();
   const { data: warehouses = [] } = useWarehouses();
   const { start } = useInventoryCountActions();
+  const { can } = usePermissions();
+  const canStartCount = can('warehouse.adjust');
 
   const handleStart = async () => {
     if (!warehouseId) {
@@ -48,6 +51,7 @@ export default function InventoryCountListPage() {
         </div>
       </div>
 
+      {canStartCount ? (
       <div className="glass-card rounded-3xl p-6 border border-white/10 flex flex-col md:flex-row gap-4 items-end">
         <div className="flex-1 w-full">
           <label className="text-xs font-bold text-gray-500 uppercase">Ombor</label>
@@ -74,6 +78,12 @@ export default function InventoryCountListPage() {
           Yangi sanash
         </button>
       </div>
+      ) : (
+        <p className="text-sm text-gray-500 glass-card rounded-2xl p-4 border border-white/5">
+          Yangi inventarizatsiya boshlash uchun menejer yoki egasi ruxsati kerak. Mavjud hujjatlarni
+          ko‘rishingiz mumkin.
+        </p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-20">

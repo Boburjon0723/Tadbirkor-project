@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 type Props = {
+  catalogReadOnly?: boolean;
   warehouses: any[] | undefined;
   categories: any[] | undefined;
   selectedWarehouseId: string;
@@ -46,6 +47,7 @@ const SORT_OPTIONS = [
 ] as const;
 
 export function InventoryToolbar({
+  catalogReadOnly = false,
   warehouses,
   categories,
   selectedWarehouseId,
@@ -139,6 +141,7 @@ export function InventoryToolbar({
                               )}
                             </div>
                           </button>
+                          {!catalogReadOnly && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -155,11 +158,12 @@ export function InventoryToolbar({
                           >
                             <Trash2 size={14} />
                           </button>
+                          )}
                         </div>
                       </div>
                     ))}
 
-                    {/* Warehouse Actions (Yangi ombor, Ustun sozlamasi) inside dropdown for Mobile Viewports */}
+                    {!catalogReadOnly && (
                     <div className="border-t border-white/5 mt-1.5 pt-1.5 space-y-1 block md:hidden">
                       <button
                         type="button"
@@ -184,6 +188,7 @@ export function InventoryToolbar({
                         </button>
                       )}
                     </div>
+                    )}
                   </div>
                 </motion.div>
               </>
@@ -191,6 +196,8 @@ export function InventoryToolbar({
           </AnimatePresence>
         </div>
 
+        {!catalogReadOnly && (
+        <>
         <button
           type="button"
           onClick={onOpenCreateWarehouse}
@@ -207,6 +214,8 @@ export function InventoryToolbar({
         >
           Ustun sozlamasi
         </button>
+        </>
+        )}
       </div>
 
       {/* Group 2: Search Input + Category Filter + Sorting (Right Row - stretches nicely in a single clean row on mobile!) */}

@@ -26,6 +26,8 @@ import {
   receiptStatusBadgeStyle,
 } from './receipt-export';
 import { formatSaleAmount, normalizeSaleCurrency } from '@/lib/currency';
+import { useSession } from '@/hooks/use-session';
+import { isWarehouseReceiptsOpsRole } from '@/lib/warehouse-receipts-view';
 
 const RECEIPT_ITEMS_PAGE = 50;
 
@@ -38,6 +40,8 @@ type Props = {
 export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const { data: session } = useSession();
+  const warehouseOps = isWarehouseReceiptsOpsRole(session?.role);
 
   const {
     data,
@@ -155,7 +159,9 @@ export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
                       <div>
                         <p className="text-[10px] text-gray-500 font-black uppercase">Sotuvchi</p>
                         <p className="font-bold text-white">{active?.sellerCompany?.name}</p>
-                        <p className="text-xs text-gray-500">STIR: {active?.sellerCompany?.tin || '—'}</p>
+                        {!warehouseOps && (
+                          <p className="text-xs text-gray-500">STIR: {active?.sellerCompany?.tin || '—'}</p>
+                        )}
                       </div>
                     </motion.div>
                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
@@ -219,7 +225,9 @@ export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
                               <th className="px-4 py-3 text-center">Buyurtma</th>
                             )}
                             <th className="px-4 py-3 text-center">Jo&apos;natilgan</th>
-                            <th className="px-4 py-3 text-right">Summa</th>
+                            <th className="px-4 py-3 text-right">
+                              {warehouseOps ? 'Birlik narxi' : 'Summa'}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -247,7 +255,7 @@ export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
                                   {qty}
                                 </td>
                                 <td className="px-4 py-3 text-right text-emerald-400 font-black">
-                                  {formatSaleAmount(qty * price, cur)}
+                                  {formatSaleAmount(warehouseOps ? price : qty * price, cur)}
                                 </td>
                               </tr>
                             );
@@ -316,7 +324,7 @@ export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
             </motion.div>
 
             <div className="p-6 border-t border-white/5 space-y-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid gap-2 ${warehouseOps ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 <button
                   type="button"
                   onClick={() => active && printReceiptDocument(active)}
@@ -325,14 +333,16 @@ export function ReceiptDetailsDrawer({ receipt, onClose, onAccept }: Props) {
                   <Printer size={16} />
                   Chop etish
                 </button>
-                <button
-                  type="button"
-                  onClick={() => receiptsService.exportReceiptExcel(receipt.id)}
-                  className="flex flex-col items-center gap-1 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-gray-300 hover:bg-white/10"
-                >
-                  <FileSpreadsheet size={16} />
-                  Excel
-                </button>
+                {!warehouseOps && (
+                  <button
+                    type="button"
+                    onClick={() => receiptsService.exportReceiptExcel(receipt.id)}
+                    className="flex flex-col items-center gap-1 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black text-gray-300 hover:bg-white/10"
+                  >
+                    <FileSpreadsheet size={16} />
+                    Excel
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() =>

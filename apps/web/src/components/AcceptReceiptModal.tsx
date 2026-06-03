@@ -1,8 +1,22 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, PackageCheck, Warehouse, Loader2, CheckCircle2, ArrowRight, AlertCircle, Building2, ChevronDown, Minus, Plus } from 'lucide-react';
+import {
+  X,
+  PackageCheck,
+  Warehouse,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Building2,
+  ChevronDown,
+  Minus,
+  Plus,
+  Search,
+  Filter,
+  ListChecks,
+} from 'lucide-react';
 import { useWarehouses } from '@/hooks/warehouse/use-warehouse';
 import { useReceiptActions } from '@/hooks/logistics/use-logistics';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +25,8 @@ import { CreateWarehouseModal } from '@/components/CreateWarehouseModal';
 import { toast, formatApiError } from '@/lib/toast';
 import { confirmAction } from '@/components/ConfirmDialog';
 import { displayOrderProductSnapshot } from '@/lib/order-product-label';
+import { useSession } from '@/hooks/use-session';
+import { isWarehouseReceiptsOpsRole } from '@/lib/warehouse-receipts-view';
 
 interface AcceptReceiptModalProps {
   isOpen: boolean;
@@ -21,6 +37,9 @@ interface AcceptReceiptModalProps {
 type InboundPreviewRow = { item: any; qty: number };
 
 export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptModalProps) {
+  const { data: session } = useSession();
+  const warehouseOps = isWarehouseReceiptsOpsRole(session?.role);
+
   const formatAmount = (value: number, currency: 'UZS' | 'USD' = 'UZS') =>
     new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'uz-UZ', {
       style: 'currency',
@@ -41,6 +60,8 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   
   const [isWarehouseDropdownOpen, setIsWarehouseDropdownOpen] = useState(false);
+  const [itemSearch, setItemSearch] = useState('');
+  const [exceptionsOnly, setExceptionsOnly] = useState(false);
   
   const { data: warehouses } = useWarehouses();
   const { acceptReceipt, rejectReceipt, partialAcceptReceipt } = useReceiptActions();
@@ -61,7 +82,33 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
     setItemQuantities(
       activeReceipt.items.reduce((acc: any, item: any) => ({ ...acc, [item.id]: Number(item.quantity) }), {})
     );
+    setItemSearch('');
+    setExceptionsOnly(false);
   }, [activeReceipt]);
+
+  const receiptItems = activeReceipt?.items ?? [];
+
+  const shippedQty = (item: any) => Number(item.shippedQuantity ?? item.quantity) || 0;
+  const isItemExisting = (item: any) =>
+    item.inboundStatus === 'EXISTING' || Boolean(item.mapping);
+
+  const isItemException = (item: any) => {
+    const received = itemQuantities[item.id] ?? 0;
+    return !isItemExisting(item) || received !== shippedQty(item);
+  };
+
+  const fillAllShipped = () => {
+    setItemQuantities(
+      receiptItems.reduce(
+        (acc: Record<string, number>, item: any) => ({
+          ...acc,
+          [item.id]: shippedQty(item),
+        }),
+        {},
+      ),
+    );
+    toast.success('Barcha qatorlar jo‘natilgan miqdorga to‘ldirildi');
+  };
 
   const handleQtyChange = (itemId: string, val: string) => {
     const num = Number(val);
@@ -73,7 +120,19 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
     }
   };
 
-  const receiptItems = activeReceipt?.items ?? [];
+  const exceptionCount = receiptItems.filter(isItemException).length;
+  const visibleItems = useMemo(() => {
+    let list = receiptItems;
+    if (exceptionsOnly) list = list.filter(isItemException);
+    const q = itemSearch.trim().toLowerCase();
+    if (q) {
+      list = list.filter((item: any) =>
+        displayOrderProductSnapshot(item.productNameSnapshot).toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [receiptItems, exceptionsOnly, itemSearch, itemQuantities]);
+
   const isPartialShipment = Boolean(activeReceipt?.isPartialShipment);
 
   const duplicateMappedVariant =
@@ -271,23 +330,73 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                     Faol ombor topilmadi. Avval ombor yarating.
                   </p>
                 )}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateWarehouseOpen(true)}
-                    className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
-                  >
-                    + Yangi ombor yaratish
-                  </button>
-                </div>
+                {!warehouseOps && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateWarehouseOpen(true)}
+                      className="text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                      + Yangi ombor yaratish
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Items List */}
               <div className="space-y-4">
-                <h4 className="text-xl font-black flex items-center gap-3">
-                  <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
-                  Mahsulotlar ro'yxati
-                </h4>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <h4 className="text-xl font-black flex items-center gap-3">
+                    <div className="w-1.5 h-6 bg-emerald-500 rounded-full" />
+                    Mahsulotlar ro&apos;yxati
+                    <span className="text-xs font-bold text-gray-500">
+                      ({visibleItems.length}/{receiptItems.length})
+                    </span>
+                  </h4>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={fillAllShipped}
+                      disabled={receiptBusy || receiptItems.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wide hover:bg-emerald-600/25 disabled:opacity-40"
+                    >
+                      <ListChecks size={14} />
+                      Hammasi to&apos;liq
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExceptionsOnly((v) => !v)}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide border transition-all ${
+                        exceptionsOnly
+                          ? 'bg-amber-600/20 border-amber-500/40 text-amber-300'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                      }`}
+                    >
+                      <Filter size={14} />
+                      Farqlar ({exceptionCount})
+                    </button>
+                  </div>
+                </div>
+                <div className="relative">
+                  <Search
+                    size={16}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"
+                  />
+                  <input
+                    type="search"
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    placeholder="Mahsulot nomi bo‘yicha qidirish..."
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-11 pr-4 text-sm font-bold focus:border-emerald-500/40 outline-none"
+                  />
+                </div>
+                {visibleItems.length === 0 && (
+                  <p className="text-sm text-gray-500 text-center py-8 border border-dashed border-white/10 rounded-2xl">
+                    {exceptionsOnly
+                      ? 'Farqli qator topilmadi — «Hammasi to‘liq» bilan qabul qilishingiz mumkin.'
+                      : 'Qidiruv bo‘yicha mahsulot topilmadi.'}
+                  </p>
+                )}
                 {/* Desktop View Table */}
                 <div className="hidden md:block overflow-hidden rounded-3xl border border-white/5">
                   <table className="w-full text-left border-collapse">
@@ -300,11 +409,13 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                         <th className="px-6 py-4 text-center">Jo&apos;natilgan</th>
                         <th className="px-6 py-4 text-center">Qabul (qo&apos;lda)</th>
                         <th className="px-6 py-4 text-center">Omborga</th>
-                        <th className="px-6 py-4 text-right">Summa</th>
+                        <th className="px-6 py-4 text-right">
+                          {warehouseOps ? 'Birlik narxi' : 'Summa'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {receiptItems.map((item: any) => (
+                      {visibleItems.map((item: any) => (
                         <tr key={item.id} className="group text-sm">
                           <td className="px-6 py-4 font-bold">
                             {displayOrderProductSnapshot(item.productNameSnapshot)}
@@ -344,7 +455,9 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                           </td>
                           <td className="px-6 py-4 text-right font-black text-blue-400">
                             {formatAmount(
-                              itemQuantities[item.id] * Number(item.expectedPrice || 0),
+                              warehouseOps
+                                ? Number(item.expectedPrice || 0)
+                                : itemQuantities[item.id] * Number(item.expectedPrice || 0),
                               (item.expectedCurrency || 'UZS') as 'UZS' | 'USD',
                             )}
                           </td>
@@ -356,7 +469,7 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
 
                 {/* Mobile View List */}
                 <div className="block md:hidden space-y-3">
-                  {receiptItems.map((item: any) => {
+                  {visibleItems.map((item: any) => {
                     const itemQty = itemQuantities[item.id] ?? 0;
                     const maxQty = Number(item.shippedQuantity ?? item.quantity) || 0;
                     const unitPrice = Number(item.expectedPrice || 0);
@@ -424,9 +537,11 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                           </div>
 
                           <div className="text-right">
-                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">Summa</p>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
+                              {warehouseOps ? 'Birlik narxi' : 'Summa'}
+                            </p>
                             <p className="font-black text-xs text-blue-400">
-                              {formatAmount(itemQty * unitPrice, cur)}
+                              {formatAmount(warehouseOps ? unitPrice : itemQty * unitPrice, cur)}
                             </p>
                           </div>
                         </div>
@@ -478,41 +593,74 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                 </div>
               )}
 
-              {/* Warning box */}
-              <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl flex gap-4">
-                 <AlertCircle className="text-blue-400 shrink-0" size={24} />
-                 <p className="text-sm text-gray-400 leading-relaxed">
-                   Tasdiqlanganda mahsulotlar avval tanlangan omborga kirim qilinadi (IN harakati),
-                   keyin qarzdorlik yoziladi. Birinchi qabulda katalog yangilanadi; keyingi
-                   qabulda (qisman yuk) mavjud mapping ishlatiladi.
-                   Sotuvchi foydasiga 
-                   <span className="text-white font-bold">
-                    {' '}
-                    {formatAmount(currentTotal, (activeReceipt.items?.[0]?.expectedCurrency || 'UZS') as 'UZS' | 'USD')}{' '}
-                   </span> 
-                   miqdorida qarzdorlik yoziladi.
-                 </p>
-              </div>
+              {warehouseOps ? (
+                <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl flex gap-4">
+                  <AlertCircle className="text-blue-400 shrink-0" size={24} />
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    Tasdiqlanganda mahsulotlar tanlangan omborga kirim qilinadi (IN harakati).
+                    Miqdor va mahsulot nomini tekshiring; moliyaviy qarz yozuvi avtomatik
+                    boshqariladi.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-6 bg-blue-500/5 border border-blue-500/10 rounded-3xl flex gap-4">
+                  <AlertCircle className="text-blue-400 shrink-0" size={24} />
+                  <p className="text-sm text-gray-400 leading-relaxed">
+                    Tasdiqlanganda mahsulotlar avval tanlangan omborga kirim qilinadi (IN harakati),
+                    keyin qarzdorlik yoziladi. Birinchi qabulda katalog yangilanadi; keyingi
+                    qabulda (qisman yuk) mavjud mapping ishlatiladi. Sotuvchi foydasiga
+                    <span className="text-white font-bold">
+                      {' '}
+                      {formatAmount(
+                        currentTotal,
+                        (activeReceipt.items?.[0]?.expectedCurrency || 'UZS') as 'UZS' | 'USD',
+                      )}{' '}
+                    </span>
+                    miqdorida qarzdorlik yoziladi.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 sm:pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 shrink-0">
-              <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start w-full sm:w-auto gap-2">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest sm:mb-1">Jami Summa</p>
-                <p className="text-xl sm:text-3xl font-black text-white">
-                  {formatAmount(currentTotal, (activeReceipt.items?.[0]?.expectedCurrency || 'UZS') as 'UZS' | 'USD')}
+              {!warehouseOps && (
+                <div className="flex flex-row sm:flex-col items-center sm:items-start justify-between sm:justify-start w-full sm:w-auto gap-2">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest sm:mb-1">Jami Summa</p>
+                  <p className="text-xl sm:text-3xl font-black text-white">
+                    {formatAmount(
+                      currentTotal,
+                      (activeReceipt.items?.[0]?.expectedCurrency || 'UZS') as 'UZS' | 'USD',
+                    )}
+                  </p>
+                </div>
+              )}
+              {warehouseOps && (
+                <p className="text-sm text-gray-400 font-bold w-full sm:w-auto">
+                  Jami qabul: <span className="text-white font-black">{inboundTotalQty} dona</span>
                 </p>
-              </div>
+              )}
               <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                <button type="button" disabled={receiptBusy} onClick={handleReject} className="flex-1 sm:px-8 py-3.5 sm:py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all text-xs disabled:opacity-40">Rad etish</button>
-                <button 
+                {!warehouseOps && (
+                  <button
+                    type="button"
+                    disabled={receiptBusy}
+                    onClick={handleReject}
+                    className="flex-1 sm:px-8 py-3.5 sm:py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all text-xs disabled:opacity-40"
+                  >
+                    Rad etish
+                  </button>
+                )}
+                <button
                   type="button"
                   onClick={handleAccept}
                   disabled={!selectedWarehouseId || receiptBusy || inboundTotalQty <= 0}
-                  className={`flex-[2] sm:px-12 py-3.5 sm:py-4 ${isPartial ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'} text-white font-black rounded-2xl transition-all shadow-lg active:scale-95 text-xs disabled:opacity-50 flex items-center justify-center gap-2`}
+                  className={`${warehouseOps ? 'w-full' : 'flex-[2]'} sm:px-12 py-3.5 sm:py-4 ${isPartial ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500'} text-white font-black rounded-2xl transition-all shadow-lg active:scale-95 text-xs disabled:opacity-50 flex items-center justify-center gap-2`}
                 >
-                  {receiptBusy ? <Loader2 size={16} className="animate-spin" /> : (
+                  {receiptBusy ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
                     <>
-                      {isPartial ? 'Qisman Qabul' : "To'liq Qabul"} 
+                      {isPartial ? 'Qisman Qabul' : "To'liq Qabul"}
                       <CheckCircle2 size={16} />
                     </>
                   )}

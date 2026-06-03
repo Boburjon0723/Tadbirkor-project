@@ -30,8 +30,16 @@ import {
   filterProductsForWarehouse,
   summarizeWarehouseCatalog,
 } from '@/features/inventory/inventory-utils';
+import { useSession } from '@/hooks/use-session';
+import {
+  isInventoryCatalogReadOnly,
+  maskWarehouseCatalogFieldConfig,
+} from '@/lib/warehouse-role';
+
 export default function InventoryPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const catalogReadOnly = isInventoryCatalogReadOnly(session?.role);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -154,14 +162,20 @@ export default function InventoryPage() {
   };
 
   const handleEdit = (product: any) => {
-    setEditingProduct(product);
+    if (catalogReadOnly) {
+      router.push(
+        `/dashboard/inventory/${product.id}${selectedWarehouseId ? `?warehouseId=${selectedWarehouseId}` : ''}`,
+      );
+      return;
+    }
+    setEditingProduct(null);
     setProductDetailLoading(true);
     setIsModalOpen(true);
     void productsService
       .getProduct(product.id, selectedWarehouseId || undefined)
       .then((full) => setEditingProduct(full))
       .catch(() => {
-        /* ro‘yxatdagi ma’lumot bilan davom etiladi */
+        setEditingProduct(product);
       })
       .finally(() => setProductDetailLoading(false));
   };
@@ -197,7 +211,10 @@ export default function InventoryPage() {
   };
 
   const activeWarehouse = warehouses?.find((w: any) => w.id === selectedWarehouseId);
-  const activeConfig = warehouseFieldConfig(activeWarehouse);
+  const activeConfig = maskWarehouseCatalogFieldConfig(
+    warehouseFieldConfig(activeWarehouse),
+    session?.role,
+  );
   const displayedProducts = filterProductsForWarehouse(products, selectedWarehouseId);
   const catalogStats = useMemo(() => {
     const fromPage = productPages?.pages?.[0]?.summary;
@@ -213,6 +230,7 @@ export default function InventoryPage() {
   return (
     <div className="space-y-10 pb-20">
       <InventoryPageHeader
+        catalogReadOnly={catalogReadOnly}
         selectedWarehouseId={selectedWarehouseId}
         selectedWarehouseName={activeWarehouse?.name}
         productCount={catalogStats.productCount}
@@ -240,6 +258,7 @@ export default function InventoryPage() {
       />
 
       <InventoryToolbar
+        catalogReadOnly={catalogReadOnly}
         warehouses={warehouses}
         categories={categories}
         selectedWarehouseId={selectedWarehouseId}
@@ -281,6 +300,7 @@ export default function InventoryPage() {
           products={displayedProducts}
           selectedWarehouseId={selectedWarehouseId}
           activeConfig={activeConfig}
+          catalogReadOnly={catalogReadOnly}
           isLoading={isLoading}
           isError={isError}
           onEdit={handleEdit}
@@ -296,6 +316,7 @@ export default function InventoryPage() {
           products={displayedProducts}
           selectedWarehouseId={selectedWarehouseId}
           activeConfig={activeConfig}
+          catalogReadOnly={catalogReadOnly}
           isLoading={isLoading}
           onEdit={handleEdit}
           onQuickStock={handleQuickStock}
@@ -322,6 +343,7 @@ export default function InventoryPage() {
         )}
       </div>
 
+      {!catalogReadOnly && (
       <ProductModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -340,12 +362,16 @@ export default function InventoryPage() {
           void queryClient.invalidateQueries({ queryKey: ['products'] });
         }}
       />
+      )}
+      {!catalogReadOnly && (
       <CategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         warehouseId={selectedWarehouseId}
         warehouseName={activeWarehouse?.name}
       />
+      )}
+      {!catalogReadOnly && (
       <ImportProductModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
@@ -356,6 +382,8 @@ export default function InventoryPage() {
           await refreshCurrentInventory();
         }}
       />
+      )}
+      {!catalogReadOnly && (
       <QuickStockModal
         isOpen={isQuickStockOpen}
         onClose={() => {
@@ -369,16 +397,21 @@ export default function InventoryPage() {
           void queryClient.invalidateQueries({ queryKey: ['products'] });
         }}
       />
-      <CreateWarehouseModal
-        isOpen={isCreateWarehouseOpen}
-        onClose={() => setIsCreateWarehouseOpen(false)}
-      />
-      <WarehouseFieldConfigModal
-        key={activeWarehouse?.id || 'no-warehouse-selected'}
-        isOpen={isWarehouseConfigOpen}
-        onClose={() => setIsWarehouseConfigOpen(false)}
-        warehouse={activeWarehouse || null}
-      />
+      )}
+      {!catalogReadOnly && (
+        <>
+          <CreateWarehouseModal
+            isOpen={isCreateWarehouseOpen}
+            onClose={() => setIsCreateWarehouseOpen(false)}
+          />
+          <WarehouseFieldConfigModal
+            key={activeWarehouse?.id || 'no-warehouse-selected'}
+            isOpen={isWarehouseConfigOpen}
+            onClose={() => setIsWarehouseConfigOpen(false)}
+            warehouse={activeWarehouse || null}
+          />
+        </>
+      )}
     </div>
   );
 }

@@ -52,6 +52,11 @@ export function ProductModal({
   const [isWarehouseDropdownOpen, setIsWarehouseDropdownOpen] = useState(false);
   const [partnerLedgerContactId, setPartnerLedgerContactId] = useState('');
   const [removedVariantIds, setRemovedVariantIds] = useState<string[]>([]);
+  const lastWarehouseForStockSync = useRef<string | null>(null);
+  const formInitKeyRef = useRef<string | null>(null);
+  const lastHydrationKeyRef = useRef<string | null>(null);
+  /** Foydalanuvchi zaxiraga teganda server/forma qayta yozmasin */
+  const stockTouchedRef = useRef(false);
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -76,60 +81,141 @@ export function ProductModal({
     ],
   });
 
-  // Load product data when editing
-  React.useEffect(() => {
-    if (product) {
-      // SKU mahsulot darajasida bitta: variantlardan birinchi mavjudini ko'taramiz.
-      const variantSku =
-        product.variants?.find((v: any) => v.sku && String(v.sku).trim())?.sku || '';
-      const existingSku = inferProductSkuFromName(product.name || '', variantSku);
-      setRemovedVariantIds([]);
-      setFormData({
-        name: product.name || '',
-        description: product.description || '',
-        categoryId: product.categoryId || '',
-        sku: existingSku,
-        unit: product.unit || 'dona',
-        type: product.type || 'GOODS',
-        imageUrl: product.imageUrl || '',
-        targetWarehouseId: defaultWarehouseId || '',
-        variants: product.variants?.map((v: any) => {
-          const wh = defaultWarehouseId || '';
-          const qty = stockQtyForWarehouse(v, wh);
-          return {
-            id: v.id,
-            name: v.name,
-            barcode: v.barcode || '',
-            color: variantColorFromApi(v),
-            purchasePrice: Number(v.purchasePrice) || 0,
-            salePrice: Number(v.salePrice) || 0,
-            currency: (v.currency || 'UZS') as 'UZS' | 'USD',
-            initialStock: qty,
-            previousStock: qty,
-          };
-        }) || [{ name: 'Standart', barcode: '', color: '', purchasePrice: 0, salePrice: 0, currency: 'UZS' as 'UZS' | 'USD', initialStock: 0, previousStock: 0 }]
-      });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        categoryId: '',
-        sku: '',
-        unit: 'dona',
-        type: 'GOODS',
-        imageUrl: '',
-        targetWarehouseId: defaultWarehouseId || '',
-        variants: [{ name: 'Standart', barcode: '', color: '', purchasePrice: 0, salePrice: 0, currency: 'UZS' as 'UZS' | 'USD', initialStock: 0, previousStock: 0 }]
-      });
-    }
-  }, [product?.id, isOpen, defaultWarehouseId]);
+  const buildVariantsFromProduct = useCallback(
+    (source: any, warehouseId: string) =>
+      source.variants?.map((v: any) => {
+        const qty = stockQtyForWarehouse(v, warehouseId);
+        return {
+          id: v.id,
+          name: v.name,
+          barcode: v.barcode || '',
+          color: variantColorFromApi(v),
+          purchasePrice: Number(v.purchasePrice) || 0,
+          salePrice: Number(v.salePrice) || 0,
+          currency: (v.currency || 'UZS') as 'UZS' | 'USD',
+          initialStock: qty,
+          previousStock: qty,
+        };
+      }) || [
+        {
+          name: 'Standart',
+          barcode: '',
+          color: '',
+          purchasePrice: 0,
+          salePrice: 0,
+          currency: 'UZS' as const,
+          initialStock: 0,
+          previousStock: 0,
+        },
+      ],
+    [],
+  );
+
+  /** API dan qoldiq kelganda qayta sinxronlash (ro'yxatda stockBalances bo'lmasa 0 ko'rinadi) */
+  const productStockHydrationKey = React.useMemo(() => {
+    if (!product?.variants?.length) return '';
+    const wh = defaultWarehouseId || '';
+    return product.variants
+      .map(
+        (v: any) =>
+          `${v.id}:${stockQtyForWarehouse(v, wh)}:${(v.stockBalances || []).length}`,
+      )
+      .join('|');
+  }, [product, defaultWarehouseId]);
 
   React.useEffect(() => {
     if (!isOpen) {
       setPartnerLedgerContactId('');
       setRemovedVariantIds([]);
+      lastWarehouseForStockSync.current = null;
+      formInitKeyRef.current = null;
+      lastHydrationKeyRef.current = null;
+      stockTouchedRef.current = false;
+      return;
     }
-  }, [isOpen]);
+    if (product?.id && detailLoading) return;
+
+    const wh = defaultWarehouseId || '';
+    const initKey = product?.id ? `edit:${product.id}` : 'create';
+    const hydrationKey = `${initKey}:${productStockHydrationKey}:${wh}`;
+
+    const applyProductForm = (source: any) => {
+      const variantSku =
+        source.variants?.find((v: any) => v.sku && String(v.sku).trim())?.sku || '';
+      const existingSku = inferProductSkuFromName(source.name || '', variantSku);
+      setRemovedVariantIds([]);
+      lastWarehouseForStockSync.current = wh || null;
+      setFormData({
+        name: source.name || '',
+        description: source.description || '',
+        categoryId: source.categoryId || '',
+        sku: existingSku,
+        unit: source.unit || 'dona',
+        type: source.type || 'GOODS',
+        imageUrl: source.imageUrl || '',
+        targetWarehouseId: wh,
+        variants: buildVariantsFromProduct(source, wh),
+      });
+    };
+
+    if (formInitKeyRef.current !== initKey) {
+      formInitKeyRef.current = initKey;
+      lastHydrationKeyRef.current = hydrationKey;
+      stockTouchedRef.current = false;
+      if (product) applyProductForm(product);
+      else {
+        lastWarehouseForStockSync.current = defaultWarehouseId || null;
+        setFormData({
+          name: '',
+          description: '',
+          categoryId: '',
+          sku: '',
+          unit: 'dona',
+          type: 'GOODS',
+          imageUrl: '',
+          targetWarehouseId: defaultWarehouseId || '',
+          variants: [
+            {
+              name: 'Standart',
+              barcode: '',
+              color: '',
+              purchasePrice: 0,
+              salePrice: 0,
+              currency: 'UZS',
+              initialStock: 0,
+              previousStock: 0,
+            },
+          ],
+        });
+      }
+      return;
+    }
+
+    if (
+      product?.id &&
+      hydrationKey !== lastHydrationKeyRef.current &&
+      !stockTouchedRef.current
+    ) {
+      lastHydrationKeyRef.current = hydrationKey;
+      setFormData((prev) => ({
+        ...prev,
+        variants: prev.variants.map((fv: any) => {
+          const src = product.variants?.find((pv: any) => pv.id === fv.id);
+          if (!src?.id) return fv;
+          const qty = stockQtyForWarehouse(src, wh);
+          return { ...fv, initialStock: qty, previousStock: qty };
+        }),
+      }));
+    }
+  }, [
+    isOpen,
+    product?.id,
+    productStockHydrationKey,
+    defaultWarehouseId,
+    detailLoading,
+    buildVariantsFromProduct,
+    product,
+  ]);
 
   const resolvedWarehouseId = formData.targetWarehouseId || defaultWarehouseId;
   const { data: categories } = useCategories(resolvedWarehouseId, {
@@ -152,8 +238,12 @@ export function ProductModal({
   const showStockColumn = visibleConfig.showTotalStock !== false;
   const showVariantStockInput = Boolean(resolvedWarehouseId) && showStockColumn;
 
+  /** Foydalanuvchi boshqa omborni tanlaganda — zaxirani shu ombordan qayta olish */
   React.useEffect(() => {
-    if (!product?.id || !resolvedWarehouseId) return;
+    if (!product?.id || !resolvedWarehouseId || detailLoading) return;
+    if (lastWarehouseForStockSync.current === resolvedWarehouseId) return;
+    lastWarehouseForStockSync.current = resolvedWarehouseId;
+    stockTouchedRef.current = false;
     setFormData((prev) => ({
       ...prev,
       variants: prev.variants.map((fv: any) => {
@@ -163,7 +253,7 @@ export function ProductModal({
         return { ...fv, initialStock: qty, previousStock: qty };
       }),
     }));
-  }, [resolvedWarehouseId, product?.id]);
+  }, [resolvedWarehouseId, product?.id, product, detailLoading]);
 
   const handleAddVariant = useCallback(() => {
     setFormData((prev) => ({
@@ -201,6 +291,9 @@ export function ProductModal({
   }, []);
 
   const handleVariantChange = useCallback((index: number, field: string, value: unknown) => {
+    if (field === 'initialStock') {
+      stockTouchedRef.current = true;
+    }
     setFormData((prev) => {
       const newVariants = [...prev.variants];
       newVariants[index] = { ...newVariants[index], [field]: value };
@@ -445,7 +538,7 @@ export function ProductModal({
                   </h2>
                   <p className="text-gray-500 text-sm">
                     {product?.id
-                      ? 'Variantlar, narx va ombor qoldigвЂini yangilang'
+                      ? "Variantlar, narx va ombor qoldig'ini yangilang"
                       : "Katalogingizga yangi mahsulot va variantlarni qo'shing"}
                   </p>
                 </div>
@@ -461,6 +554,8 @@ export function ProductModal({
                 isOpen={isWarehouseDropdownOpen}
                 onToggle={() => setIsWarehouseDropdownOpen(!isWarehouseDropdownOpen)}
                 onSelect={(warehouseId) => {
+                  lastWarehouseForStockSync.current = null;
+                  stockTouchedRef.current = false;
                   setFormData((prev) => ({ ...prev, targetWarehouseId: warehouseId }));
                   setIsWarehouseDropdownOpen(false);
                 }}

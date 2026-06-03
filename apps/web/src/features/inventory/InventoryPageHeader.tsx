@@ -7,6 +7,7 @@ import { reportsService } from '@/services/reports.service';
 import { toast, formatApiError } from '@/lib/toast';
 
 type Props = {
+  catalogReadOnly?: boolean;
   selectedWarehouseId: string;
   selectedWarehouseName?: string;
   productCount?: number;
@@ -25,6 +26,7 @@ function requireWarehouse(selectedWarehouseId: string): boolean {
 }
 
 export function InventoryPageHeader({
+  catalogReadOnly = false,
   selectedWarehouseId,
   selectedWarehouseName,
   productCount = 0,
@@ -96,7 +98,9 @@ export function InventoryPageHeader({
           Mahsulotlar <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Katalogi</span>
         </h1>
         <p className="hidden md:block text-gray-400 text-sm md:text-base">
-          Barcha mahsulotlar, variantlar va narxlarni boshqarish.
+          {catalogReadOnly
+            ? 'Mahsulotlar va ombor qoldig‘ini ko‘rish (tahrirlash yo‘q).'
+            : 'Barcha mahsulotlar, variantlar va narxlarni boshqarish.'}
         </p>
         
         {selectedWarehouseId ? (
@@ -126,7 +130,7 @@ export function InventoryPageHeader({
         ) : null}
       </div>
 
-      {/* Highly optimized laptop responsive action buttons (Desktop View) */}
+      {!catalogReadOnly && (
       <div className="hidden md:flex flex-wrap items-center gap-2 lg:gap-3 mt-2 xl:mt-0">
         <button
           type="button"
@@ -211,8 +215,9 @@ export function InventoryPageHeader({
           <span>Yangi mahsulot</span>
         </button>
       </div>
+      )}
 
-      {/* Highly optimized elegant actions dropdown for Mobile View */}
+      {!catalogReadOnly && (
       <div className="flex md:hidden items-center gap-2 w-full mt-2 relative">
         <button
           type="button"
@@ -336,6 +341,7 @@ export function InventoryPageHeader({
           </AnimatePresence>
         </div>
       </div>
+      )}
     </div>
   );
 }

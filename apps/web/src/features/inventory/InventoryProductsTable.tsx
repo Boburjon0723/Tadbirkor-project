@@ -28,6 +28,7 @@ type Props = {
   products: any[];
   selectedWarehouseId: string;
   activeConfig: WarehouseFieldConfig;
+  catalogReadOnly?: boolean;
   isLoading: boolean;
   isError: boolean;
   onEdit: (product: any) => void;
@@ -40,6 +41,7 @@ export function InventoryProductsTable({
   products,
   selectedWarehouseId,
   activeConfig,
+  catalogReadOnly = false,
   isLoading,
   isError,
   onEdit,
@@ -242,6 +244,8 @@ export function InventoryProductsTable({
                     {/* Column 6: Actions */}
                     <td className="px-4 xl:px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2.5 md:opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+                        {!catalogReadOnly && (
+                          <>
                         <button
                           type="button"
                           onClick={() => onQuickStock(product)}
@@ -266,6 +270,8 @@ export function InventoryProductsTable({
                         >
                           <Trash2 size={15} />
                         </button>
+                          </>
+                        )}
                         <Link
                           href={
                             selectedWarehouseId

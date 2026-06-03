@@ -46,6 +46,7 @@ import { DashboardSidebarNav } from '@/components/DashboardSidebarNav';
 import {
   buildDashboardMenuGroups,
   flattenMenuGroups,
+  isDashboardPathAllowedForRole,
   type DashboardMenuItem,
 } from '@/lib/dashboard-menu';
 import { computeOnboardingProgress } from '@/lib/onboarding';
@@ -195,6 +196,13 @@ export default function DashboardLayout({
       router.replace('/dashboard');
     }
   }, [pathname, featureConfig, layoutHold, router, allMenuItems]);
+
+  React.useEffect(() => {
+    if (layoutHold || sessionPending) return;
+    if (!isDashboardPathAllowedForRole(pathname, role, allMenuItems)) {
+      router.replace('/dashboard');
+    }
+  }, [pathname, role, layoutHold, sessionPending, router, allMenuItems]);
 
   const filterItem = (item: DashboardMenuItem) =>
     item.roles.includes(role) && shouldShowByFeature(item);

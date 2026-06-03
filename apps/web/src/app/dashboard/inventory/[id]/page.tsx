@@ -3,8 +3,10 @@
 import React from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useProduct } from '@/hooks/products/use-products';
+import { useSession } from '@/hooks/use-session';
 import { ArrowLeft, Package, Layers, Barcode, Boxes, Loader2 } from 'lucide-react';
 import { formatStockQuantity } from '@/lib/product-units';
+import { isInventoryCatalogReadOnly } from '@/lib/warehouse-role';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -12,6 +14,8 @@ export default function ProductDetailPage() {
   const searchParams = useSearchParams();
   const id = params.id as string;
   const warehouseId = searchParams.get('warehouseId') || '';
+  const { data: session } = useSession();
+  const hidePrices = isInventoryCatalogReadOnly(session?.role);
 
   const { data: product, isLoading, isError } = useProduct(id, warehouseId || undefined);
 
@@ -26,10 +30,6 @@ export default function ProductDetailPage() {
   if (isError || !product) {
     return <div className="p-20 text-center text-red-500">Mahsulot topilmadi</div>;
   }
-
-  const formatMoney = (value: number) => {
-    return new Intl.NumberFormat('uz-UZ').format(value) + ' so‘m';
-  };
 
   return (
     <div className="space-y-8 pb-20">
@@ -95,14 +95,17 @@ export default function ProductDetailPage() {
                           {formatStockQuantity(stock, product.unit)}
                         </p>
                       </div>
-                      <div className="text-center md:text-right">
-                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">
-                          Sotuv Narxi
-                        </p>
-                        <p className="text-lg md:text-xl font-black">
-                          {formatMoney(Number(v.salePrice))}
-                        </p>
-                      </div>
+                      {!hidePrices && (
+                        <div className="text-center md:text-right">
+                          <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">
+                            Sotuv narxi
+                          </p>
+                          <p className="text-lg md:text-xl font-black">
+                            {new Intl.NumberFormat('uz-UZ').format(Number(v.salePrice || 0))}{' '}
+                            so‘m
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

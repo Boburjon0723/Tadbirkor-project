@@ -41,6 +41,14 @@ function ProductModalVariantCardInner({
 }: Props) {
   const unitCode = normalizeProductUnit(productUnit);
   const unitLabel = PRODUCT_UNIT_LABELS[unitCode];
+  /** Yozish paytida forma qayta yuklansa ham matn yo‘qolmasin */
+  const [stockDraft, setStockDraft] = React.useState<string | null>(null);
+
+  const stockDisplayValue =
+    stockDraft !== null
+      ? stockDraft
+      : stockFieldDisplayValue(variant.initialStock);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -202,22 +210,26 @@ function ProductModalVariantCardInner({
               type="text"
               inputMode={allowsDecimalStock(productUnit) ? 'decimal' : 'numeric'}
               autoComplete="off"
-              value={stockFieldDisplayValue(variant.initialStock)}
+              value={stockDisplayValue}
               onChange={(e) => {
                 const next = sanitizeStockDraftInput(e.target.value, productUnit);
                 if (next === null) return;
+                setStockDraft(next);
                 onChange(index, 'initialStock', next);
               }}
               onBlur={() => {
-                const committed = commitStockFieldValue(
-                  variant.initialStock,
-                  productUnit,
-                );
+                const raw = stockDraft !== null ? stockDraft : variant.initialStock;
+                const committed = commitStockFieldValue(raw, productUnit);
+                setStockDraft(null);
                 if (committed !== variant.initialStock) {
                   onChange(index, 'initialStock', committed);
                 }
               }}
-              onFocus={(e) => e.target.select()}
+              onFocus={(e) => {
+                const start = stockFieldDisplayValue(variant.initialStock);
+                setStockDraft(start);
+                e.target.select();
+              }}
               placeholder="0"
               className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-orange-500/50 focus:bg-orange-500/[0.02] focus:ring-2 focus:ring-orange-500/20 outline-none transition-all [appearance:textfield]"
             />

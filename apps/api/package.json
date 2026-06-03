@@ -16,7 +16,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:sql-full": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script",
-    "db:wipe-all": "prisma db execute --file ../../scripts/sql/wipe-all-companies-and-users.sql"
+    "db:wipe-all": "prisma db execute --file ../../scripts/sql/wipe-all-companies-and-users.sql",
+    "user:reset-password": "ts-node scripts/reset-user-password.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

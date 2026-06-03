@@ -16,6 +16,7 @@ type Props = {
   products: any[];
   selectedWarehouseId: string;
   activeConfig: WarehouseFieldConfig;
+  catalogReadOnly?: boolean;
   isLoading: boolean;
   onEdit: (product: any) => void;
   onQuickStock: (product: any) => void;
@@ -27,6 +28,7 @@ export function InventoryProductsMobileList({
   products,
   selectedWarehouseId,
   activeConfig,
+  catalogReadOnly = false,
   isLoading,
   onEdit,
   onQuickStock,
@@ -83,13 +85,18 @@ export function InventoryProductsMobileList({
                   )}
                 </div>
                 <div className="flex flex-col items-end">
-                  <p className="font-black text-emerald-400">
-                    {formatMoney(
-                      Number(product.variants?.[0]?.salePrice || 0),
-                      (product.variants?.[0]?.currency || 'UZS') as 'UZS' | 'USD',
+                  {!catalogReadOnly &&
+                    (activeConfig.showSalePrice || activeConfig.showPurchasePrice) && (
+                      <p className="font-black text-emerald-400">
+                        {formatMoney(
+                          Number(product.variants?.[0]?.salePrice || 0),
+                          (product.variants?.[0]?.currency || 'UZS') as 'UZS' | 'USD',
+                        )}
+                      </p>
                     )}
-                  </p>
-                  <p className="text-[10px] font-black text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full mt-1">
+                  <p
+                    className={`text-[10px] font-black text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-full ${catalogReadOnly ? '' : 'mt-1'}`}
+                  >
                     {variantCount} variant
                   </p>
                 </div>
@@ -107,6 +114,8 @@ export function InventoryProductsMobileList({
                 >
                   Batafsil
                 </Link>
+                {!catalogReadOnly && (
+                  <>
                 <button
                   type="button"
                   onClick={() => onQuickStock(product)}
@@ -129,6 +138,8 @@ export function InventoryProductsMobileList({
                 >
                   <Trash2 size={16} />
                 </button>
+                  </>
+                )}
               </div>
             </motion.div>
           );

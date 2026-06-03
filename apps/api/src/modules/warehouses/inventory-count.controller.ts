@@ -89,7 +89,7 @@ export class InventoryCountController {
   }
 
   @Post(':id/cancel')
-  @Permissions(Permission.WAREHOUSE_MANAGE)
+  @Permissions(Permission.WAREHOUSE_ADJUST)
   cancel(@CurrentUser() user: any, @Param('id') id: string) {
     return this.inventoryCountService.cancelCount(id, user.companyId);
   }

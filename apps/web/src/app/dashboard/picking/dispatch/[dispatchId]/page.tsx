@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle2, Loader2, Truck, ChevronRight, Send } from 'lucide-react';
 import { useDispatchPickTasks } from '@/hooks/logistics/use-picking';
 import { useDispatchActions } from '@/hooks/logistics/use-logistics';
+import { usePermissions } from '@/hooks/use-permissions';
 import { toast, formatApiError } from '@/lib/toast';
 
 const DISPATCH_STATUS_LABEL: Record<string, string> = {
@@ -20,6 +21,8 @@ export default function DispatchPickingPage() {
   const dispatchId = String(params.dispatchId || '');
   const { data: tasks = [], isLoading, refetch } = useDispatchPickTasks(dispatchId);
   const { sendDispatch } = useDispatchActions();
+  const { can } = usePermissions();
+  const canSendPgiPermission = can('dispatches.send');
   const [pgiJustSent, setPgiJustSent] = useState(false);
 
   const allCompleted =
@@ -29,7 +32,11 @@ export default function DispatchPickingPage() {
   const orderId = tasks[0]?.dispatch?.orderId as string | undefined;
 
   const isSent = dispatchStatus === 'SENT' || pgiJustSent;
-  const canSendPgi = allCompleted && dispatchStatus === 'DRAFT' && !sendDispatch.isPending;
+  const canSendPgi =
+    canSendPgiPermission &&
+    allCompleted &&
+    dispatchStatus === 'DRAFT' &&
+    !sendDispatch.isPending;
 
   useEffect(() => {
     if (!pgiJustSent || !isSent) return;
@@ -108,6 +115,13 @@ export default function DispatchPickingPage() {
               <p className="text-[10px] text-gray-500">Bir necha soniyadan keyin ro&apos;yxatga o&apos;tasiz…</p>
             )}
           </div>
+        )}
+
+        {allCompleted && dispatchStatus === 'DRAFT' && !isSent && !canSendPgiPermission && (
+          <p className="mt-4 text-xs text-gray-400 leading-relaxed rounded-xl border border-white/10 bg-white/5 p-3">
+            Barcha vazifalar tugallandi. Yukni yuborish (PGI) menejer yoki egasi tomonidan
+            amalga oshiriladi.
+          </p>
         )}
 
         {canSendPgi && !isSent && (
