@@ -12,6 +12,25 @@ export const ONBOARDING_STEP_PATHS = [
   '/onboarding/review',
 ] as const;
 
+/** Savollardan keyin ketma-ket o‘tadigan sahifalar */
+export const ONBOARDING_POST_QUESTIONS_PATHS: OnboardingStepPath[] = [
+  '/onboarding/modules',
+  '/onboarding/team',
+  '/onboarding/employees',
+  '/onboarding/review',
+];
+
+/** Layout redirect qilmaydi — foydalanuvchi wizard ichida erkin yuraveradi */
+export const ONBOARDING_FREE_NAV_PATHS: OnboardingStepPath[] = [
+  '/onboarding/questions',
+  ...ONBOARDING_POST_QUESTIONS_PATHS,
+];
+
+/** Majburiy emas, lekin wizardda ko‘rsatiladi */
+export const ONBOARDING_OPTIONAL_PATHS: OnboardingStepPath[] = ['/onboarding/role'];
+
+const ONBOARDING_UTILITY_PATHS = ['/onboarding/loading', '/onboarding/success'] as const;
+
 export type OnboardingStepPath = (typeof ONBOARDING_STEP_PATHS)[number];
 
 export type OnboardingProgressInput = {
@@ -44,7 +63,8 @@ export function computeOnboardingProgress(
   const hasModules = !!features?.hasFeatureConfig;
 
   const isComplete =
-    role !== 'OWNER' || (companyStatus === 'active' && hasTin && hasBusinessType);
+    role !== 'OWNER' ||
+    (companyStatus === 'active' && hasTin && hasBusinessType && hasModules);
 
   let requiredPath: OnboardingStepPath = '/onboarding/company';
   if (!hasTin) {
@@ -54,7 +74,7 @@ export function computeOnboardingProgress(
   } else if (!hasModules) {
     requiredPath = '/onboarding/questions';
   } else if (companyStatus !== 'active') {
-    requiredPath = '/onboarding/review';
+    requiredPath = '/onboarding/modules';
   } else {
     requiredPath = '/onboarding/review';
   }
@@ -84,8 +104,7 @@ export function onboardingStepIndex(path: string): number {
 }
 
 /**
- * Foydalanuvchi majburiy bosqichdan oldinmi (URL orqali o'tib ketgan)?
- * Faqat shunda onboarding layout orqaga yo'naltiradi.
+ * Joriy yo‘l majburiy bosqichdan oldinroqmi (indeks bo‘yicha).
  */
 export function isOnboardingPathAheadOfRequired(
   currentPath: string,
@@ -95,6 +114,27 @@ export function isOnboardingPathAheadOfRequired(
   const req = onboardingStepIndex(requiredPath);
   if (cur < 0 || req < 0) return false;
   return cur < req;
+}
+
+/**
+ * Layout: faqat STIR / biznes turi / savollar bosqichidan oldin qolganlarni ushlaydi.
+ * Modullar → jamoa → xodimlar → review zanjirida redirect yo‘q.
+ */
+export function shouldOnboardingLayoutRedirect(
+  currentPath: string,
+  requiredPath: OnboardingStepPath,
+): boolean {
+  if (!currentPath.startsWith('/onboarding')) return false;
+  if ((ONBOARDING_UTILITY_PATHS as readonly string[]).includes(currentPath)) {
+    return false;
+  }
+  if (ONBOARDING_OPTIONAL_PATHS.includes(currentPath as OnboardingStepPath)) {
+    return false;
+  }
+  if (ONBOARDING_FREE_NAV_PATHS.includes(currentPath as OnboardingStepPath)) {
+    return false;
+  }
+  return isOnboardingPathAheadOfRequired(currentPath, requiredPath);
 }
 
 export function needsOwnerOnboarding(

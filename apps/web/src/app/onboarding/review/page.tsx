@@ -30,7 +30,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/auth.service';
 import { onboardingService } from '@/services/onboarding.service';
 import { useSession } from '@/hooks/use-session';
-import { computeOnboardingProgress } from '@/lib/onboarding';
+import {
+  computeOnboardingProgress,
+  shouldOnboardingLayoutRedirect,
+} from '@/lib/onboarding';
 import { patchSessionCompanyActive } from '@/lib/session-cache';
 import { refreshOnboardingSession } from '@/lib/onboarding-session';
 import { toast, formatApiError } from '@/lib/toast';
@@ -49,7 +52,9 @@ export default function FinalReviewPage() {
       { role: session.me.role, company: session.me.company },
       session.features,
     );
-    if (!progress.isComplete && progress.requiredPath !== '/onboarding/review') {
+    if (
+      shouldOnboardingLayoutRedirect('/onboarding/review', progress.requiredPath)
+    ) {
       router.replace(progress.requiredPath);
     }
   }, [session, sessionPending, router]);
@@ -223,7 +228,7 @@ export default function FinalReviewPage() {
 
         <div className="mt-16 flex items-center justify-between">
           <button 
-            onClick={() => router.back()}
+            onClick={() => router.push('/onboarding/employees')}
             className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ChevronLeft size={20} />

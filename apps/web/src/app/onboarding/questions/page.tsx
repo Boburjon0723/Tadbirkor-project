@@ -106,7 +106,7 @@ export default function BusinessQuestionsPage() {
           localStorage.setItem('onboarding_enabled_modules', JSON.stringify(result.enabledModules));
         }
         await refreshOnboardingSession(queryClient);
-        router.push('/onboarding/modules');
+        router.replace('/onboarding/modules');
       } catch (err) {
         console.error(err);
         toast.error(
@@ -120,7 +120,7 @@ export default function BusinessQuestionsPage() {
 
   const handleBack = () => {
     if (currentQ > 0) setCurrentQ(currentQ - 1);
-    else router.back();
+    else router.push('/onboarding/business-type');
   };
 
   return (

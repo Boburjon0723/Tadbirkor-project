@@ -269,7 +269,7 @@ export default function AddEmployeePage() {
 
           <div className="mt-12 flex items-center justify-between">
             <button 
-              onClick={() => router.back()}
+              onClick={() => router.push('/onboarding/team')}
               className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
             >
               <ChevronLeft size={20} />

@@ -125,7 +125,7 @@ export default function TeamSetupPage() {
 
           <div className="mt-16 flex items-center justify-between">
             <button 
-              onClick={() => router.back()}
+              onClick={() => router.push('/onboarding/modules')}
               className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
             >
               <ChevronLeft size={20} />

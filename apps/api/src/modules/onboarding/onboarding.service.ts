@@ -177,7 +177,7 @@ export class OnboardingService {
     } else if (!hasModules) {
       nextPath = '/onboarding/questions';
     } else if (!isCompleted) {
-      nextPath = '/onboarding/review';
+      nextPath = '/onboarding/modules';
     } else {
       nextPath = '/dashboard';
     }

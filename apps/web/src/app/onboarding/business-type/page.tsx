@@ -160,7 +160,7 @@ export default function BusinessTypePage() {
 
           <div className="mt-16 flex items-center justify-between">
             <button 
-              onClick={() => router.back()}
+              onClick={() => router.push('/onboarding/role')}
               className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
             >
               <ChevronLeft size={20} />

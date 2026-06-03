@@ -17,7 +17,9 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { companiesService } from '@/services/companies.service';
+import { refreshOnboardingSession } from '@/lib/onboarding-session';
 
 const steps = [
   { id: 1, name: "Hisob" },
@@ -52,6 +54,7 @@ const laterModules = [
 
 export default function ModulesResultPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [enabledModules, setEnabledModules] = React.useState<EnabledModuleCard[]>([
     { id: 'products', title: 'Mahsulotlar', desc: 'Mahsulot va variantlarni boshqarish.', icon: <Package /> },
   ]);
@@ -82,8 +85,14 @@ export default function ModulesResultPage() {
     loadModules();
   }, []);
 
-  const handleNext = () => {
+  const handleSetupTeam = async () => {
+    await refreshOnboardingSession(queryClient);
     router.push('/onboarding/team');
+  };
+
+  const handleSkipTeam = async () => {
+    await refreshOnboardingSession(queryClient);
+    router.push('/onboarding/review');
   };
 
   return (
@@ -119,12 +128,18 @@ export default function ModulesResultPage() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-20 h-20 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6"
+            className="w-20 h-20 bg-blue-600/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-6"
           >
-            <CheckCircle2 size={40} />
+            <LayoutGrid size={40} />
           </motion.div>
-          <h1 className="text-3xl md:text-5xl font-bold mb-4">Tizimingiz moslashtirildi</h1>
-          <p className="text-gray-500 text-lg">Javoblaringiz asosida quyidagi bo‘limlar siz uchun tayyorlandi.</p>
+          <p className="text-blue-400 text-sm font-bold uppercase tracking-widest mb-3">
+            4-bosqich · onboarding davom etmoqda
+          </p>
+          <h1 className="text-3xl md:text-5xl font-bold mb-4">Modullar tanlandi</h1>
+          <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+            Savollaringiz asosida quyidagi bo‘limlar yoqiladi. Tizim to‘liq ishga tushishi uchun jamoa va
+            yakunlash bosqichlarini ham tugating.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
@@ -142,9 +157,9 @@ export default function ModulesResultPage() {
               <h3 className="font-bold mb-2 text-lg">{module.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-6">{module.desc}</p>
               
-              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-500 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit">
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-600/10 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit">
                 <CheckCircle2 size={12} />
-                Yoqildi
+                Tanlandi
               </div>
             </motion.div>
           ))}
@@ -168,7 +183,7 @@ export default function ModulesResultPage() {
 
         <div className="mt-20 flex items-center justify-between">
           <button 
-            onClick={() => router.back()}
+            onClick={() => router.push('/onboarding/questions')}
             className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
             <ChevronLeft size={20} />
@@ -176,13 +191,15 @@ export default function ModulesResultPage() {
           </button>
           <div className="flex gap-4">
              <button 
-              onClick={handleNext}
+              type="button"
+              onClick={() => void handleSkipTeam()}
               className="px-6 py-4 text-gray-400 font-bold hover:text-white transition-all"
             >
-              Keyinroq sozlayman
+              Jamoani keyinroq sozlayman
             </button>
             <button 
-              onClick={handleNext}
+              type="button"
+              onClick={() => void handleSetupTeam()}
               className="px-10 py-5 bg-white text-black font-bold rounded-2xl hover:bg-gray-200 transition-all flex items-center gap-2 shadow-xl shadow-white/5"
             >
               Jamoani sozlash
