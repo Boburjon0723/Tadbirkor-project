@@ -1,0 +1,7 @@
+# Railway / Nixpacks: Dockerfilesiz build qilinsa, PDF uchun tizim Chromium kerak
+[variables]
+PUPPETEER_SKIP_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
+
+[phases.setup]
+aptPkgs = ["chromium", "fonts-liberation"]

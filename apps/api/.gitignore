@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+/uploads/
+scratch/
+debug_log.txt
+*.log
+*.tmp
+*.tsbuildinfo
+coverage/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+

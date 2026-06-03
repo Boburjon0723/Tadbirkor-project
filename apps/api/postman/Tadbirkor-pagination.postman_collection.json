@@ -1,0 +1,442 @@
+{
+  "info": {
+    "_postman_id": "tadbirkor-pagination-api",
+    "name": "Tadbirkor API — Pagination & Auth",
+    "description": "Local API test (prefix: /api). Avval «1. Login» ishga tushiring — token `access_token` ga yoziladi.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "0. Auth",
+      "item": [
+        {
+          "name": "1. Login (token saqlash)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code !== 200) {",
+                  "  console.warn('Login xato — Environment da login/password to\\'g\\'rilang yoki Body da qavsiz yozing');",
+                  "  return;",
+                  "}",
+                  "const json = pm.response.json();",
+                  "pm.test('access_token bor', () => pm.expect(json.access_token).to.be.a('string').and.not.empty);",
+                  "pm.environment.set('access_token', json.access_token);",
+                  "console.log('Token saqlandi — endi goods-receipts ni Send qiling');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{login}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "2. Me (token tekshiruv)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "3. Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. Goods receipts",
+      "item": [
+        {
+          "name": "List — default (page=1, limit=30)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('items array', () => pm.expect(j.items).to.be.an('array'));",
+                  "pm.test('pagination fields', () => {",
+                  "  pm.expect(j.page).to.eql(1);",
+                  "  pm.expect(j.limit).to.be.a('number');",
+                  "  pm.expect(j.total).to.be.a('number');",
+                  "  pm.expect(j).to.have.property('hasMore');",
+                  "  pm.expect(j.summary).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/goods-receipts?page=1&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["goods-receipts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List — filter status=PENDING",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/goods-receipts?page=1&limit=10&status=PENDING",
+              "host": ["{{baseUrl}}"],
+              "path": ["goods-receipts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "PENDING" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List — search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/goods-receipts?page=1&limit=20&search=test",
+              "host": ["{{baseUrl}}"],
+              "path": ["goods-receipts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "search", "value": "test" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List — page 2",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/goods-receipts?page=2&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["goods-receipts"],
+              "query": [
+                { "key": "page", "value": "2" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detail by id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/goods-receipts/:receiptId",
+            "variable": [
+              { "key": "receiptId", "value": "RECEIPT_UUID_HERE" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Dispatches",
+      "item": [
+        {
+          "name": "List — default",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('paginated', () => {",
+                  "  pm.expect(j.items).to.be.an('array');",
+                  "  pm.expect(j.total).to.be.a('number');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dispatches?page=1&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["dispatches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List — status=SENT",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dispatches?page=1&limit=20&status=SENT",
+              "host": ["{{baseUrl}}"],
+              "path": ["dispatches"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "SENT" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Detail by id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/dispatches/:dispatchId",
+            "variable": [
+              { "key": "dispatchId", "value": "DISPATCH_UUID_HERE" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Debts",
+      "item": [
+        {
+          "name": "Entries summary (KPI)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('summary shape', () => {",
+                  "  pm.expect(j.receivable).to.have.keys('uzs', 'usd');",
+                  "  pm.expect(j.payable).to.have.keys('uzs', 'usd');",
+                  "  pm.expect(j.net).to.have.keys('uzs', 'usd');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/debts/entries/summary"
+          }
+        },
+        {
+          "name": "Partner groups — receivable",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('partner groups', () => {",
+                  "  pm.expect(j.items).to.be.an('array');",
+                  "  pm.expect(j.summary).to.be.an('object');",
+                  "  pm.expect(j.page).to.be.a('number');",
+                  "});",
+                  "if (j.items && j.items[0]) {",
+                  "  pm.environment.set('partnerCompanyId', j.items[0].partnerCompanyId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/debts/partner-groups?tab=receivable&page=1&limit=40",
+              "host": ["{{baseUrl}}"],
+              "path": ["debts", "partner-groups"],
+              "query": [
+                { "key": "tab", "value": "receivable" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "40" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Partner groups — payable + search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/debts/partner-groups?tab=payable&search=ooo&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["debts", "partner-groups"],
+              "query": [
+                { "key": "tab", "value": "payable" },
+                { "key": "search", "value": "ooo" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Entries flat list",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/debts/entries?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["debts", "entries"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "status", "value": "OPEN", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Partner ledger",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/debts/partners/{{partnerCompanyId}}/ledger"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Products (Priority 2)",
+      "item": [
+        {
+          "name": "List — default pagination",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List — legacy full (?all=true)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/products?all=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["products"],
+              "query": [{ "key": "all", "value": "true" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Reports (heavy guard)",
+      "item": [
+        {
+          "name": "Summary — default 90 days",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reports/summary"
+          }
+        },
+        {
+          "name": "Summary — custom range",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reports/summary?dateFrom=2026-01-01&dateTo=2026-05-25",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "summary"],
+              "query": [
+                { "key": "dateFrom", "value": "2026-01-01" },
+                { "key": "dateTo", "value": "2026-05-25" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. B2B orders (Priority 2)",
+      "item": [
+        {
+          "name": "My orders — default",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/b2b-orders?page=1&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2b-orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Incoming — default",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/incoming-orders?page=1&limit=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["incoming-orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "My orders — legacy full (?all=true)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/b2b-orders?all=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["b2b-orders"],
+              "query": [{ "key": "all", "value": "true" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

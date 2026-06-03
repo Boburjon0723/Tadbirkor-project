@@ -1,0 +1,42 @@
+# Dependencies & build
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs & temp
+*.log
+*.tmp
+debug_log.txt
+response.txt
+test.txt
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API uploads / scratch
+apps/api/uploads/
+apps/api/scratch/
+
+# Archives & personal (repo kerak emas)
+files.zip
+CV_Boburjon_Safarov.html
+
+# Mobile
+mobile/.expo/
+mobile/dist/
+
+# Coverage
+coverage/
