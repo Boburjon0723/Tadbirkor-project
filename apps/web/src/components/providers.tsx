@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, keepPreviousData } from '@tanstack/re
 import { useState } from 'react';
 import { Toaster } from 'sonner';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
+import { ConnectionHealthMonitor } from '@/components/ConnectionHealthMonitor';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
+        <ConnectionHealthMonitor />
         {children}
         <Toaster
           position="top-right"
