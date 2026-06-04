@@ -17,6 +17,7 @@ export type DashboardMenuIcons = {
   Users: LucideIcon;
   Store: LucideIcon;
   Wallet2: LucideIcon;
+  TrendingUp: LucideIcon;
   Banknote: LucideIcon;
   BarChart3: LucideIcon;
   Link2: LucideIcon;
@@ -186,6 +187,13 @@ export function buildDashboardMenuGroups(
           moduleKeys: ['EXPENSES'],
         },
         {
+          icon: <I.TrendingUp size={s} />,
+          label: 'Kirimlar',
+          href: '/dashboard/income',
+          roles: ['owner', 'manager', 'accountant'],
+          moduleKeys: ['INCOME'],
+        },
+        {
           icon: <I.Banknote size={s} />,
           label: 'Xodimlar (oylik)',
           href: '/dashboard/payroll',
@@ -215,6 +223,13 @@ export function buildDashboardMenuGroups(
           icon: <I.BarChart3 size={s} />,
           label: 'Umumiy hisobotlar',
           href: '/dashboard/reports',
+          roles: ['owner', 'manager', 'accountant'],
+          moduleKeys: ['REPORTS'],
+        },
+        {
+          icon: <I.TrendingUp size={s} />,
+          label: 'Oy moliyasi',
+          href: '/dashboard/reports/monthly',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['REPORTS'],
         },

@@ -38,6 +38,78 @@ export class IncomeService {
     });
   }
 
+  async getSummary(
+    companyId: string,
+    params: { from?: string; to?: string; currency?: string },
+  ) {
+    const currency = params.currency ? this.normalizeCurrency(params.currency) : undefined;
+    const where: Prisma.IncomeWhereInput = { companyId };
+    if (currency) where.currency = currency;
+    if (params.from || params.to) {
+      where.incomeDate = {};
+      if (params.from) where.incomeDate.gte = new Date(params.from);
+      if (params.to) {
+        const to = new Date(params.to);
+        to.setHours(23, 59, 59, 999);
+        where.incomeDate.lte = to;
+      }
+    }
+
+    const rows = await this.prisma.income.groupBy({
+      by: ['currency', 'categoryId'],
+      where,
+      _sum: { amount: true },
+      _count: { id: true },
+    });
+
+    const totals: Record<string, number> = {};
+    const byCategoryMap = new Map<
+      string,
+      { categoryId: string; amount: Record<string, number>; count: number }
+    >();
+
+    for (const row of rows) {
+      const amt = Number(row._sum.amount || 0);
+      const cur = row.currency;
+      totals[cur] = (totals[cur] || 0) + amt;
+
+      const prev = byCategoryMap.get(row.categoryId) || {
+        categoryId: row.categoryId,
+        amount: {} as Record<string, number>,
+        count: 0,
+      };
+      prev.amount[cur] = (prev.amount[cur] || 0) + amt;
+      prev.count += row._count.id;
+      byCategoryMap.set(row.categoryId, prev);
+    }
+
+    const categoryIds = [...byCategoryMap.keys()];
+    const categories = categoryIds.length
+      ? await this.prisma.incomeCategory.findMany({
+          where: { id: { in: categoryIds } },
+          select: { id: true, name: true },
+        })
+      : [];
+    const nameById = new Map(categories.map((c) => [c.id, c.name]));
+
+    const byCategory = [...byCategoryMap.values()]
+      .map((row) => ({
+        categoryId: row.categoryId,
+        name: nameById.get(row.categoryId) || 'Boshqa',
+        amount: row.amount,
+        count: row.count,
+      }))
+      .sort((a, b) => {
+        const aSum = Object.values(a.amount).reduce((s, n) => s + n, 0);
+        const bSum = Object.values(b.amount).reduce((s, n) => s + n, 0);
+        return bSum - aSum;
+      });
+
+    const totalCount = rows.reduce((sum, r) => sum + r._count.id, 0);
+
+    return { totals, byCategory, totalCount };
+  }
+
   async listCategories(companyId: string, includeInactive = false) {
     await this.ensureDefaultCategories(companyId);
     return this.prisma.incomeCategory.findMany({

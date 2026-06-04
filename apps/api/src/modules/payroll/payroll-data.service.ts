@@ -770,6 +770,72 @@ export class PayrollDataService {
     };
   }
 
+  /** Oy bo‘yicha oylik chiqimi — moliyaviy hisobot uchun */
+  async getMonthlyCostSummary(companyId: string, year: number, month: number) {
+    await this.assertPayrollModule(companyId);
+
+    const members = await this.prisma.companyUser.findMany({
+      where: {
+        companyId,
+        role: { not: 'OWNER' },
+        payrollProfile: { is: { onPayrollRoster: true } },
+      },
+      select: { id: true },
+    });
+    const companyUserIds = members.map((m) => m.id);
+    const stats = await this.getMonthStats(companyId, year, month, companyUserIds);
+
+    const [settlements, compensations] = await Promise.all([
+      this.prisma.employeePayrollSettlement.findMany({
+        where: { companyId, year, month, companyUserId: { in: companyUserIds } },
+      }),
+      this.prisma.employeeCompensation.findMany({
+        where: { companyId, isActive: true, companyUserId: { in: companyUserIds } },
+      }),
+    ]);
+
+    const settlementByUser = new Map(settlements.map((s) => [s.companyUserId, s]));
+    const compByUser = new Map(compensations.map((c) => [c.companyUserId, c]));
+
+    let accruedSalaryUZS = 0;
+    for (const id of companyUserIds) {
+      const comp = compByUser.get(id);
+      if (!comp) continue;
+      const settlement = settlementByUser.get(id);
+      const baseSalary = settlement
+        ? decimalToNumber(settlement.baseSalary)
+        : decimalToNumber(comp.baseSalary);
+      const totalDays = settlement?.totalDays ?? 0;
+      const workedDays = settlement?.workedDays ?? 0;
+      const bonus = settlement ? decimalToNumber(settlement.bonus) : 0;
+      const penalties = settlement ? decimalToNumber(settlement.penalties) : 0;
+      const advancesTotal = stats.advancesByUser[id] ?? 0;
+
+      if (baseSalary <= 0 && bonus <= 0 && advancesTotal <= 0) continue;
+
+      accruedSalaryUZS += computeFinalPayrollPayment({
+        baseSalary,
+        totalDays: totalDays > 0 ? totalDays : 1,
+        workedDays: workedDays > 0 ? workedDays : 1,
+        bonus,
+        penalties,
+        advancesTotal,
+      });
+    }
+
+    const cashOutUZS = stats.totalAdvancesUZS + stats.totalBonusUZS;
+
+    return {
+      rosterCount: companyUserIds.length,
+      advancesUZS: stats.totalAdvancesUZS,
+      bonusUZS: stats.totalBonusUZS,
+      openAdvancesUZS: stats.totalOpenAdvancesUZS,
+      paidIncludingBonusUZS: stats.totalPaidIncludingBonusUZS,
+      accruedSalaryUZS,
+      cashOutUZS,
+    };
+  }
+
   async getMonthStats(
     companyId: string,
     year: number,

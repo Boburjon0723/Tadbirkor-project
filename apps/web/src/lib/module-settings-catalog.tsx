@@ -10,6 +10,7 @@ import {
   Truck,
   Store,
   Wallet2,
+  TrendingUp,
   BarChart3,
   Link2,
 } from 'lucide-react';
@@ -112,8 +113,16 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
     groupId: 'finance',
     name: 'Ichki xarajatlar',
     desc: 'Chiqim va byudjet',
-    details: 'Ofis, transport, xizmatlar va boshqa ichki xarajatlari kuzatish (rivojlantirilmoqda).',
+    details: 'Ofis, transport, xizmatlar va boshqa ichki xarajatlari kuzatish.',
     icon: Wallet2,
+  },
+  {
+    key: 'INCOME',
+    groupId: 'finance',
+    name: 'Kirimlar',
+    desc: 'Tushum va daromad',
+    details: 'Savdo, qarz qaytimi, xizmat haqi va boshqa qo‘lda kiritiladigan kirimlar.',
+    icon: TrendingUp,
   },
   {
     key: 'PAYROLL',
@@ -138,7 +147,7 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
     groupId: 'reports',
     name: 'Hisobotlar',
     desc: 'Yig‘ma ko‘rinishlar',
-    details: 'Yig‘ma hisobotlar, filtrlash va eksport (rivojlantirilmoqda).',
+    details: 'Ombor marjasi, oy moliyasi (foyda/zarar) va Excel eksport.',
     icon: BarChart3,
   },
   {

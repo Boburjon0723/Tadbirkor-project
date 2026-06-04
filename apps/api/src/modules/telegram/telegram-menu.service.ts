@@ -49,23 +49,35 @@ export class TelegramMenuService {
     private readonly posReportService: TelegramPosReportService,
   ) {}
 
+  private roleCanPosReport(role: string) {
+    return ['OWNER', 'MANAGER', 'ACCOUNTANT', 'SALES'].includes(
+      String(role || '').toUpperCase(),
+    );
+  }
+
+  /** Faqat rolga mos tugmalar — ruxsatsizlar ko‘rinmaydi */
   mainMenuKeyboard(role?: string) {
     const r = String(role || '').toUpperCase();
-    const rowLeave: string[] = [];
-    if (STAFF_LEAVE_ROLES.has(r)) rowLeave.push(MENU_LEAVE_REQUEST);
-    if (LEAVE_REVIEW_ROLES.has(r)) rowLeave.push(MENU_LEAVE_PENDING);
-
-    const rowPayroll: string[] = [];
-    if (LEAVE_REVIEW_ROLES.has(r)) rowPayroll.push(MENU_PAYROLL_EMPLOYEES);
-
-    return Markup.keyboard([
+    const rows = [
       [Markup.button.contactRequest('📱 Telefon raqamni ulashish')],
       [MENU_PASSWORD],
-      [MENU_TASKS, MENU_POS_REPORT],
-      ...(rowLeave.length ? [rowLeave] : []),
-      ...(rowPayroll.length ? [rowPayroll] : []),
-      [MENU_WEB, MENU_HELP],
-    ]).resize();
+    ] as Array<Array<string | ReturnType<typeof Markup.button.contactRequest>>>;
+
+    const tasksRow = [MENU_TASKS];
+    if (this.roleCanPosReport(r)) tasksRow.push(MENU_POS_REPORT);
+    rows.push(tasksRow);
+
+    const leaveRow: string[] = [];
+    if (STAFF_LEAVE_ROLES.has(r)) leaveRow.push(MENU_LEAVE_REQUEST);
+    if (LEAVE_REVIEW_ROLES.has(r)) leaveRow.push(MENU_LEAVE_PENDING);
+    if (leaveRow.length) rows.push(leaveRow);
+
+    if (LEAVE_REVIEW_ROLES.has(r)) {
+      rows.push([MENU_PAYROLL_EMPLOYEES]);
+    }
+
+    rows.push([MENU_WEB, MENU_HELP]);
+    return Markup.keyboard(rows).resize();
   }
 
   contactOnlyKeyboard() {
@@ -76,21 +88,29 @@ export class TelegramMenuService {
       .oneTime();
   }
 
-  welcomeText(): string {
-    return [
+  welcomeText(role?: string): string {
+    const r = String(role || '').toUpperCase();
+    const lines = [
       'Tadbirkor botiga xush kelibsiz.',
       '',
       'Pastdagi menyu:',
       '• Ulanish — bildirishnomalar',
       '• Parolni tiklash',
       '• Mening vazifalarim — ochiq ishlar',
-      '• POS bugun — kassa hisoboti',
-      '• Veb-ilova',
-      '• Dam olish (xodim / menejer)',
-      '• Xodimlar oylik — maosh, avans, bonus (owner/menejer)',
-      '',
-      'Raqamni qo‘lda yozmang — faqat tugma.',
-    ].join('\n');
+    ];
+    if (this.roleCanPosReport(r)) {
+      lines.push('• POS bugun — kassa hisoboti');
+    }
+    lines.push('• Veb-ilova');
+    if (STAFF_LEAVE_ROLES.has(r)) {
+      lines.push('• Dam olish so‘rash');
+    }
+    if (LEAVE_REVIEW_ROLES.has(r)) {
+      lines.push('• Dam olish so‘rovlari (tasdiqlash)');
+      lines.push('• Xodimlar oylik — maosh, avans, bonus');
+    }
+    lines.push('', 'Raqamni qo‘lda yozmang — faqat tugma.');
+    return lines.join('\n');
   }
 
   helpText(): string {
@@ -178,7 +198,7 @@ export class TelegramMenuService {
     const role = linked
       ? this.botContext.getActiveMembership(chatId, linked)?.role
       : undefined;
-    return { message: this.welcomeText(), extra: this.mainMenuKeyboard(role) };
+    return { message: this.welcomeText(role), extra: this.mainMenuKeyboard(role) };
   }
 
   companyPickerMarkup(user: TelegramBotUser) {
@@ -225,10 +245,6 @@ export class TelegramMenuService {
     return {
       message: [this.botContext.formatProfileBlock(chatId, user), '', report].join('\n'),
     };
-  }
-
-  private roleCanPosReport(role: string) {
-    return ['OWNER', 'MANAGER', 'ACCOUNTANT', 'SALES'].includes(role);
   }
 
   private async isPosModuleEnabled(companyId: string): Promise<boolean> {

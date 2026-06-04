@@ -30,6 +30,12 @@ export function ReportsPageHeader({ exporting, isFetching, onExport, onRefresh }
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/dashboard/reports/monthly"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-black transition-all"
+          >
+            Oy moliyasi
+          </Link>
           <button
             type="button"
             onClick={onExport}

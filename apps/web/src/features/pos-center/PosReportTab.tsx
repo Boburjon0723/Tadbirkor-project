@@ -1,26 +1,63 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Loader2, ShoppingCart, Package, Banknote, CreditCard, AlertTriangle, DollarSign, Receipt } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Loader2,
+  ShoppingCart,
+  Package,
+  Banknote,
+  CreditCard,
+  AlertTriangle,
+  DollarSign,
+  Receipt,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import { reportsService, type PosReportSummary } from '@/services/reports.service';
 import { motion } from 'framer-motion';
 
 const fmt = (v: number) => Math.round(v).toLocaleString();
 const fmtUsd = (v: number) => v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
+function monthRange(cursor: Date) {
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  return {
+    dateFrom: new Date(year, month, 1).toISOString().slice(0, 10),
+    dateTo: new Date(year, month + 1, 0).toISOString().slice(0, 10),
+  };
+}
+
+function formatMonthTitle(date: Date) {
+  return date.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
+}
+
 export function PosReportTab() {
+  const [monthCursor, setMonthCursor] = useState(() => new Date());
   const [data, setData] = useState<PosReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const range = useMemo(() => monthRange(monthCursor), [monthCursor]);
+
   useEffect(() => {
+    let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
-        setData(await reportsService.getPosSummary());
+        const res = await reportsService.getPosSummary({
+          dateFrom: range.dateFrom,
+          dateTo: range.dateTo,
+        });
+        if (!cancelled) setData(res);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [range.dateFrom, range.dateTo]);
 
   if (loading) {
     return (
@@ -55,11 +92,43 @@ export function PosReportTab() {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            setMonthCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))
+          }
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+        >
+          <ChevronLeft size={16} />
+        </button>
+        <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-black capitalize text-sm">
+          <CalendarDays size={16} className="text-blue-300" />
+          {formatMonthTitle(monthCursor)}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            setMonthCursor((c) => new Date(c.getFullYear(), c.getMonth() + 1, 1))
+          }
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5"
+        >
+          <ChevronRight size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => setMonthCursor(new Date())}
+          className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-bold"
+        >
+          Hozirgi oy
+        </button>
+      </div>
+
       <p className="text-gray-500 text-xs font-bold px-1">
-        Manba: yopilgan kassa cheklari (PosSale). B2B qarz daftari kirmaydi.
+        Manba: yopilgan kassa cheklari (PosSale), {range.dateFrom} — {range.dateTo}. B2B qarz
+        daftari kirmaydi.
       </p>
 
-      {/* Top-level general stats */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="p-5 bg-white/[0.03] border border-white/5 rounded-2xl shadow-lg">
           <div className="flex items-center gap-3 mb-3">
@@ -86,7 +155,6 @@ export function PosReportTab() {
         </motion.div>
       </div>
 
-      {/* UZS Section */}
       <CurrencySection
         title="UZS — O'zbek so'mi"
         currency="UZS"
@@ -95,7 +163,6 @@ export function PosReportTab() {
         formatFn={fmt}
       />
 
-      {/* USD Section (only if there's any activity) */}
       {hasUsd && (
         <CurrencySection
           title="USD — AQSh dollari"
@@ -143,7 +210,6 @@ function CurrencySection({
         <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black border ${colorStyles.badge}`}>{currency}</span>
       </div>
 
-      {/* Main: Net sales */}
       <div className="p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
         <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Sof savdo</p>
         <p className="text-2xl md:text-3xl font-black text-white tabular-nums">
@@ -156,7 +222,6 @@ function CurrencySection({
         )}
       </div>
 
-      {/* Breakdown by payment method */}
       <div className="grid gap-3 grid-cols-3">
         <div className="p-4 bg-white/[0.03] border border-white/5 rounded-xl">
           <div className="flex items-center gap-2 mb-2">

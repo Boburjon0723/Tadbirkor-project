@@ -87,6 +87,11 @@ export const reportsService = {
     return data;
   },
 
+  async getMonthlyOverview(params?: { year?: number; month?: number }) {
+    const { data } = await api.get('/reports/monthly-overview', { params });
+    return data as MonthlyOverview;
+  },
+
   async downloadPartnerBalancePdf(partnerCompanyId: string, partnerName: string, dateFrom?: string, dateTo?: string) {
     const params = new URLSearchParams();
     if (dateFrom) params.append('dateFrom', dateFrom);
@@ -97,5 +102,57 @@ export const reportsService = {
     });
     const filename = `akt-sverka-${partnerName.toLowerCase().replace(/\s+/g, '-')}.pdf`;
     await downloadBlobFile(response.data, filename, { mimeType: 'application/pdf' });
-  }
+  },
+};
+
+export type MonthlyOverview = {
+  period: { from: string; to: string; year: number; month: number };
+  modules: { pos: boolean; income: boolean; expenses: boolean; payroll: boolean };
+  mode: 'CASH_FLOW';
+  revenue: {
+    pos: {
+      receiptsCount: number;
+      itemsSold: number;
+      grossSales: Record<string, number>;
+      discounts: Record<string, number>;
+      netSales: Record<string, number>;
+      cashSales: Record<string, number>;
+      cardSales: Record<string, number>;
+      creditSales: Record<string, number>;
+    } | null;
+    income: {
+      totals: Record<string, number>;
+      byCategory: Array<{
+        categoryId: string;
+        name: string;
+        amount: Record<string, number>;
+        count: number;
+      }>;
+      totalCount: number;
+    } | null;
+  };
+  costs: {
+    expenses: {
+      approved: Record<string, number>;
+      pending: Record<string, number>;
+      rejected: Record<string, number>;
+      counts: { pending: number; approved: number; rejected: number };
+    } | null;
+    payroll: {
+      rosterCount: number;
+      advancesUZS: number;
+      bonusUZS: number;
+      openAdvancesUZS: number;
+      paidIncludingBonusUZS: number;
+      accruedSalaryUZS: number;
+      cashOutUZS: number;
+    } | null;
+  };
+  result: {
+    cashIn: { UZS: number; USD: number };
+    cashOut: { UZS: number; USD: number };
+    netProfit: { UZS: number; USD: number };
+    status: 'PROFIT' | 'LOSS' | 'NEUTRAL';
+  };
+  warnings: string[];
 };

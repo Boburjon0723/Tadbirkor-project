@@ -3,27 +3,27 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2 } from 'lucide-react';
-import type { ExpenseCategory, ExpenseRow } from '@/services/expenses.service';
+import type { IncomeCategory, IncomeRow } from '@/services/income.service';
 import { parseAmountInput, sanitizeAmountInput } from '@/lib/amount-input';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  categories: ExpenseCategory[];
-  initial?: ExpenseRow | null;
+  categories: IncomeCategory[];
+  initial?: IncomeRow | null;
   defaultDate?: string;
   onSubmit: (payload: {
     categoryId: string;
     amount: number;
     currency: string;
-    expenseDate: string;
+    incomeDate: string;
     description?: string;
     notes?: string;
   }) => Promise<void>;
   busy?: boolean;
 };
 
-export function CreateExpenseModal({
+export function CreateIncomeModal({
   open,
   onClose,
   categories,
@@ -35,7 +35,7 @@ export function CreateExpenseModal({
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState<'UZS' | 'USD'>('UZS');
-  const [expenseDate, setExpenseDate] = useState('');
+  const [incomeDate, setIncomeDate] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const modalTransition = { duration: 0.12, ease: 'easeOut' as const };
@@ -46,14 +46,14 @@ export function CreateExpenseModal({
       setCategoryId(initial.categoryId);
       setAmount(String(initial.amount));
       setCurrency(initial.currency === 'USD' ? 'USD' : 'UZS');
-      setExpenseDate(initial.expenseDate.slice(0, 10));
+      setIncomeDate(initial.incomeDate.slice(0, 10));
       setDescription(initial.description || '');
       setNotes(initial.notes || '');
     } else {
       setCategoryId(categories[0]?.id || '');
       setAmount('');
       setCurrency('UZS');
-      setExpenseDate(defaultDate || new Date().toISOString().slice(0, 10));
+      setIncomeDate(defaultDate || new Date().toISOString().slice(0, 10));
       setDescription('');
       setNotes('');
     }
@@ -62,12 +62,12 @@ export function CreateExpenseModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseAmountInput(amount);
-    if (!categoryId || !Number.isFinite(num) || num <= 0 || !expenseDate) return;
+    if (!categoryId || !Number.isFinite(num) || num <= 0 || !incomeDate) return;
     await onSubmit({
       categoryId,
       amount: num,
       currency,
-      expenseDate,
+      incomeDate,
       description: description.trim() || undefined,
       notes: notes.trim() || undefined,
     });
@@ -94,7 +94,7 @@ export function CreateExpenseModal({
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black text-white">
-                {initial ? 'Xarajatni tahrirlash' : 'Yangi xarajat'}
+                {initial ? 'Kirimni tahrirlash' : 'Yangi kirim'}
               </h2>
               <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-gray-400">
                 <X size={20} />
@@ -149,8 +149,8 @@ export function CreateExpenseModal({
                 <label className="text-xs font-black uppercase text-gray-500 tracking-widest">Sana</label>
                 <input
                   type="date"
-                  value={expenseDate}
-                  onChange={(e) => setExpenseDate(e.target.value)}
+                  value={incomeDate}
+                  onChange={(e) => setIncomeDate(e.target.value)}
                   className="mt-1 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-white"
                   required
                 />
@@ -163,7 +163,7 @@ export function CreateExpenseModal({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="mt-1 w-full px-4 py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-white"
-                  placeholder="Masalan: ofis qog‘ozlari"
+                  placeholder="Masalan: naqd savdo tushumi"
                 />
               </div>
 
@@ -180,7 +180,7 @@ export function CreateExpenseModal({
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full py-4 rounded-2xl bg-amber-600 hover:bg-amber-500 font-black text-white flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 font-black text-white flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {busy && <Loader2 className="animate-spin" size={18} />}
                 Saqlash

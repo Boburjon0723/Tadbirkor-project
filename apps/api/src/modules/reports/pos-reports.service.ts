@@ -25,11 +25,17 @@ export class PosReportsService {
     const dateFilter: { gte?: Date; lte?: Date } = {};
     if (query.dateFrom) {
       const d = new Date(query.dateFrom);
-      if (!isNaN(d.getTime())) dateFilter.gte = d;
+      if (!isNaN(d.getTime())) {
+        d.setHours(0, 0, 0, 0);
+        dateFilter.gte = d;
+      }
     }
     if (query.dateTo) {
       const d = new Date(query.dateTo);
-      if (!isNaN(d.getTime())) dateFilter.lte = d;
+      if (!isNaN(d.getTime())) {
+        d.setHours(23, 59, 59, 999);
+        dateFilter.lte = d;
+      }
     }
     if (dateFilter.gte || dateFilter.lte) {
       where.completedAt = dateFilter;

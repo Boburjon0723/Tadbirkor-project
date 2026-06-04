@@ -35,6 +35,7 @@ import { FieldModule } from './modules/field/field.module';
 import { RetailCustomersModule } from './modules/retail-customers/retail-customers.module';
 import { RetailReceivablesModule } from './modules/retail-receivables/retail-receivables.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
+import { IncomeModule } from './modules/income/income.module';
 import { PartnerLedgerModule } from './modules/partner-ledger/partner-ledger.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
@@ -74,6 +75,7 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
     RetailCustomersModule,
     RetailReceivablesModule,
     ExpensesModule,
+    IncomeModule,
     PartnerLedgerModule,
     PlatformModule,
     PayrollModule,

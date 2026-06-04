@@ -2,7 +2,6 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  Banknote,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
@@ -10,21 +9,21 @@ import {
   Plus,
   Search,
   Trash2,
-  Wallet2,
+  TrendingUp,
 } from 'lucide-react';
 import { ModuleGate } from '@/components/ModuleGate';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
-import { CreateExpenseModal } from '@/features/expenses/CreateExpenseModal';
+import { CreateIncomeModal } from '@/features/income/CreateIncomeModal';
 import {
-  useExpenseCategories,
-  useExpenseMutations,
-  useExpenses,
-} from '@/hooks/expenses/use-expenses';
+  useIncomeCategories,
+  useIncomeMutations,
+  useIncomes,
+} from '@/hooks/income/use-income';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { toast, formatApiError } from '@/lib/toast';
 import { confirmAction } from '@/components/ConfirmDialog';
-import type { ExpenseRow } from '@/services/expenses.service';
+import type { IncomeRow } from '@/services/income.service';
 
 function formatMoney(amount: number, currency = 'UZS') {
   return `${Math.round(amount).toLocaleString('uz-UZ')} ${currency}`;
@@ -47,31 +46,33 @@ function formatMonthTitle(date: Date) {
   return date.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
 }
 
-function defaultExpenseDate(monthCursor: Date) {
+function defaultIncomeDate(monthCursor: Date) {
   const today = new Date();
   const sameMonth =
     today.getFullYear() === monthCursor.getFullYear() &&
     today.getMonth() === monthCursor.getMonth();
-  return sameMonth ? toDateInput(today) : toDateInput(new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1));
+  return sameMonth
+    ? toDateInput(today)
+    : toDateInput(new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1));
 }
 
-function categoryName(row: ExpenseRow) {
+function categoryName(row: IncomeRow) {
   return row.category?.name || 'Boshqa';
 }
 
-export default function ExpensesPage() {
+export default function IncomePage() {
   const [monthCursor, setMonthCursor] = useState(() => new Date());
   const [categoryFilter, setCategoryFilter] = useState('');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<ExpenseRow | null>(null);
+  const [editing, setEditing] = useState<IncomeRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
 
   const { from, to } = useMemo(() => monthRange(monthCursor), [monthCursor]);
   const { can, loading: permLoading } = usePermissions();
-  const { data: categories = [], isPending: catPending } = useExpenseCategories();
-  const { data: listData, isPending: listPending, isFetching } = useExpenses({
+  const { data: categories = [], isPending: catPending } = useIncomeCategories();
+  const { data: listData, isPending: listPending, isFetching } = useIncomes({
     categoryId: categoryFilter || undefined,
     search: debouncedSearch.trim() || undefined,
     from,
@@ -79,7 +80,7 @@ export default function ExpensesPage() {
     page: 1,
     limit: 100,
   });
-  const mutations = useExpenseMutations();
+  const mutations = useIncomeMutations();
 
   const items = listData?.items ?? [];
   const totals = useMemo(() => {
@@ -105,8 +106,8 @@ export default function ExpensesPage() {
     };
   }, [items]);
 
-  const canCreate = can('expenses.create');
-  const canManage = can('expenses.manage');
+  const canCreate = can('income.create');
+  const canManage = can('income.manage');
   const loading = catPending || listPending || permLoading;
 
   const moveMonth = (delta: number) => {
@@ -117,10 +118,10 @@ export default function ExpensesPage() {
     try {
       if (editing) {
         await mutations.update.mutateAsync({ id: editing.id, ...payload });
-        toast.success('Xarajat yangilandi');
+        toast.success('Kirim yangilandi');
       } else {
         await mutations.create.mutateAsync(payload);
-        toast.success('Xarajat qo‘shildi');
+        toast.success('Kirim qo‘shildi');
       }
       setModalOpen(false);
       setEditing(null);
@@ -130,8 +131,8 @@ export default function ExpensesPage() {
     }
   };
 
-  const handleDelete = async (row: ExpenseRow) => {
-    const ok = await confirmAction('Ushbu xarajatni o‘chirasizmi?', {
+  const handleDelete = async (row: IncomeRow) => {
+    const ok = await confirmAction('Ushbu kirimni o‘chirasizmi?', {
       title: 'O‘chirish',
       variant: 'danger',
       confirmLabel: 'O‘chirish',
@@ -150,16 +151,16 @@ export default function ExpensesPage() {
   };
 
   return (
-    <ModuleGate moduleKey="EXPENSES" moduleLabel="Ichki xarajatlar">
+    <ModuleGate moduleKey="INCOME" moduleLabel="Kirimlar">
       <div className="space-y-6 pb-20">
         <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-amber-300">
-              Oylik xarajat daftari
+            <p className="text-xs font-black uppercase tracking-widest text-emerald-300">
+              Oylik kirim daftari
             </p>
             <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-white">
-              <Wallet2 className="text-amber-400" size={30} />
-              Xarajatlar
+              <TrendingUp className="text-emerald-400" size={30} />
+              Kirimlar
             </h1>
           </div>
 
@@ -173,7 +174,7 @@ export default function ExpensesPage() {
               <ChevronLeft size={18} />
             </button>
             <div className="flex min-w-[190px] items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-black capitalize">
-              <CalendarDays size={18} className="text-amber-300" />
+              <CalendarDays size={18} className="text-emerald-300" />
               {formatMonthTitle(monthCursor)}
             </div>
             <button
@@ -198,9 +199,9 @@ export default function ExpensesPage() {
                   setEditing(null);
                   setModalOpen(true);
                 }}
-                className="flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-black text-white hover:bg-amber-500"
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-black text-white hover:bg-emerald-500"
               >
-                <Plus size={18} /> Xarajat qo‘shish
+                <Plus size={18} /> Kirim qo‘shish
               </button>
             )}
           </div>
@@ -208,14 +209,14 @@ export default function ExpensesPage() {
 
         <section className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="rounded-lg border border-white/10 bg-white/5 p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-gray-400">Jami xarajat</p>
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400">Jami kirim</p>
             <p className="mt-2 text-2xl font-black text-white">{formatMoney(totals.total)}</p>
             <p className="mt-1 text-sm font-bold text-gray-500">{items.length} ta yozuv</p>
           </div>
-          <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-amber-300">Kategoriyalar</p>
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Kategoriyalar</p>
             <p className="mt-2 text-2xl font-black text-white">{totals.byCategory.length}</p>
-            <p className="mt-1 text-sm font-bold text-gray-500">Ijara, transport, ofis va boshqalar</p>
+            <p className="mt-1 text-sm font-bold text-gray-500">Savdo, qarz qaytimi va boshqalar</p>
           </div>
         </section>
 
@@ -223,7 +224,7 @@ export default function ExpensesPage() {
           <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-black text-white">Kategoriya bo‘yicha</h2>
-              <Banknote size={20} className="text-amber-300" />
+              <TrendingUp size={20} className="text-emerald-300" />
             </div>
             <div className="mt-4 space-y-3">
               {totals.byCategory.length === 0 && (
@@ -245,7 +246,7 @@ export default function ExpensesPage() {
                       <span className="text-sm font-bold text-gray-300">{formatMoney(row.amount)}</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${percent}%` }} />
+                      <div className="h-full rounded-full bg-emerald-400" style={{ width: `${percent}%` }} />
                     </div>
                     <p className="mt-1 text-xs font-bold text-gray-500">
                       {row.count} ta yozuv, {percent}%
@@ -263,7 +264,9 @@ export default function ExpensesPage() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white"
               >
-                <option value="" className="bg-gray-900">Barcha kategoriyalar</option>
+                <option value="" className="bg-gray-900">
+                  Barcha kategoriyalar
+                </option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id} className="bg-gray-900">
                     {category.name}
@@ -281,7 +284,7 @@ export default function ExpensesPage() {
                 />
               </div>
               {isFetching && !loading && (
-                <span className="text-xs font-bold text-amber-300">Yangilanmoqda...</span>
+                <span className="text-xs font-bold text-emerald-300">Yangilanmoqda...</span>
               )}
             </div>
 
@@ -291,7 +294,7 @@ export default function ExpensesPage() {
               <div className="space-y-3">
                 {items.length === 0 && (
                   <div className="rounded-lg border border-white/10 bg-white/5 py-14 text-center font-bold text-gray-500">
-                    Bu oy uchun xarajat topilmadi
+                    Bu oy uchun kirim topilmadi
                   </div>
                 )}
                 {items.map((row) => (
@@ -307,14 +310,16 @@ export default function ExpensesPage() {
                           </span>
                         </div>
                         <p className="mt-2 text-lg font-black text-white">
-                          {row.description || 'Izohsiz xarajat'}
+                          {row.description || 'Izohsiz kirim'}
                         </p>
                         <p className="mt-1 text-sm font-bold text-gray-500">
-                          {new Date(row.expenseDate).toLocaleDateString('uz-UZ')} · {row.createdBy.fullName}
+                          {new Date(row.incomeDate).toLocaleDateString('uz-UZ')} · {row.createdBy.fullName}
                         </p>
                       </div>
                       <div className="flex items-center justify-between gap-3 md:justify-end">
-                        <p className="text-xl font-black text-white">{formatMoney(row.amount, row.currency)}</p>
+                        <p className="text-xl font-black text-emerald-200">
+                          +{formatMoney(row.amount, row.currency)}
+                        </p>
                         {(canCreate || canManage) && (
                           <div className="flex gap-2">
                             {canCreate && (
@@ -350,7 +355,7 @@ export default function ExpensesPage() {
           </div>
         </section>
 
-        <CreateExpenseModal
+        <CreateIncomeModal
           open={modalOpen}
           onClose={() => {
             setModalOpen(false);
@@ -358,7 +363,7 @@ export default function ExpensesPage() {
           }}
           categories={categories}
           initial={editing}
-          defaultDate={defaultExpenseDate(monthCursor)}
+          defaultDate={defaultIncomeDate(monthCursor)}
           onSubmit={handleCreate}
           busy={mutations.create.isPending || mutations.update.isPending}
         />

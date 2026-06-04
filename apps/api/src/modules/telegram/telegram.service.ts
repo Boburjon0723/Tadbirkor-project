@@ -161,14 +161,19 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     this.bot.command('menu', async (ctx) => {
       const chatId = ctx.chat?.id;
       if (!chatId) return;
-      await ctx.reply(this.menuService.welcomeText(), this.menuService.mainMenuKeyboard());
+      const kb = await this.menuKeyboardForChat(String(chatId));
+      const user = await this.botContext.findLinkedUser(String(chatId));
+      const role = user
+        ? this.botContext.getActiveMembership(String(chatId), user)?.role
+        : undefined;
+      await ctx.reply(this.menuService.welcomeText(role), kb);
     });
 
     this.bot.command('vazifalar', async (ctx) => {
       const chatId = ctx.chat?.id;
       if (!chatId) return;
       const text = await this.tasksService.buildTasksMessage(String(chatId));
-      await ctx.reply(text, this.menuService.mainMenuKeyboard());
+      await ctx.reply(text, await this.menuKeyboardForChat(String(chatId)));
     });
 
     this.bot.command('kompaniya', async (ctx) => {
@@ -181,7 +186,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const chatId = ctx.chat?.id;
       if (!chatId) return;
       const result = await this.menuService.handleMenuButton(MENU_POS_REPORT, String(chatId));
-      await ctx.reply(result.message, this.menuService.mainMenuKeyboard());
+      await ctx.reply(result.message, await this.menuKeyboardForChat(String(chatId)));
     });
 
     this.bot.command('parol', async (ctx) => {
@@ -257,7 +262,14 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      await ctx.reply(this.menuService.welcomeText(), this.menuService.mainMenuKeyboard());
+      const linked = await this.botContext.findLinkedUser(String(chatId));
+      const role = linked
+        ? this.botContext.getActiveMembership(String(chatId), linked)?.role
+        : undefined;
+      await ctx.reply(
+        this.menuService.welcomeText(role),
+        await this.menuKeyboardForChat(String(chatId)),
+      );
     });
 
     this.bot.on('contact', async (ctx) => {
@@ -402,7 +414,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         if (resetResult.handled) {
           await ctx.reply(resetResult.reply);
           if (!this.passwordResetService.isInFlow(String(chatId))) {
-            await ctx.reply('Menyu:', this.menuService.mainMenuKeyboard());
+            await ctx.reply('Menyu:', await this.menuKeyboardForChat(String(chatId)));
           }
           return;
         }
@@ -445,7 +457,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           'Raqamni matn sifatida yubormang.',
           'Pastdagi menyudan tugmani tanlang.',
         ].join('\n'),
-        this.menuService.mainMenuKeyboard(),
+        this.menuService.contactOnlyKeyboard(),
       );
     });
 
@@ -507,7 +519,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         }
         await ctx.answerCbQuery('Tanlandi');
         const tasks = await this.tasksService.buildTasksMessage(chatId);
-        await ctx.reply(tasks, this.menuService.mainMenuKeyboard());
+        await ctx.reply(tasks, await this.menuKeyboardForChat(chatId));
         return;
       }
 
@@ -639,7 +651,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         m
           ? `Sizda bitta kompaniya: ${m.companyName} (${m.role})`
           : 'Kompaniya topilmadi.',
-        this.menuService.mainMenuKeyboard(),
+        await this.menuKeyboardForChat(chatId),
       );
       return;
     }

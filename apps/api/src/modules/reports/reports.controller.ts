@@ -13,6 +13,8 @@ import { ReportsService } from './reports.service';
 import { ReportExcelService } from './report-excel.service';
 import { PosReportsService } from './pos-reports.service';
 import { ReportQueryDto } from './dto/report-query.dto';
+import { MonthlyOverviewQueryDto } from './dto/monthly-overview-query.dto';
+import { MonthlyOverviewService } from './monthly-overview.service';
 import { ProductExportQueryDto } from './dto/product-export-query.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -29,9 +31,20 @@ export class ReportsController {
     private readonly reportsService: ReportsService,
     private readonly reportExcel: ReportExcelService,
     private readonly posReportsService: PosReportsService,
+    private readonly monthlyOverviewService: MonthlyOverviewService,
     private readonly fieldService: FieldService,
     private readonly warehouseScopeService: WarehouseScopeService,
   ) {}
+
+  /** Oy bo‘yicha moliya: POS, kirim, xarajat, oylik va foyda/zarar */
+  @Get('monthly-overview')
+  @Permissions(Permission.REPORTS_VIEW)
+  getMonthlyOverview(@Request() req: any, @Query() query: MonthlyOverviewQueryDto) {
+    return this.monthlyOverviewService.getOverview(req.user.companyId, {
+      year: query.year,
+      month: query.month,
+    });
+  }
 
   /** SALES/WAREHOUSE — faqat biriktirilgan ombor; OWNER/MANAGER — tanlangan ombor */
   private async resolvePosReportWarehouseId(

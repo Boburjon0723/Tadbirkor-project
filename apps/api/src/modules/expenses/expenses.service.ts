@@ -12,6 +12,9 @@ import {
 } from './dto/expense-category.dto';
 import { CreateExpenseDto, RejectExpenseDto, UpdateExpenseDto } from './dto/expense.dto';
 
+/** Oylik modulida hisoblanadi — xarajatlar daftarida ko‘rsatilmaydi */
+const PAYROLL_EXPENSE_CATEGORY_NAMES = ['Xodimlar oyligi', 'Xodimlar avansi'] as const;
+
 const DEFAULT_CATEGORIES = [
   'Ijara',
   'Transport',
@@ -19,8 +22,6 @@ const DEFAULT_CATEGORIES = [
   'Ofis',
   'Reklama',
   'Xizmatlar',
-  'Xodimlar oyligi',
-  'Xodimlar avansi',
   'Soliq',
   'Boshqa',
 ];
@@ -48,6 +49,16 @@ export class ExpensesService {
       })),
       skipDuplicates: true,
     });
+    await this.prisma.expenseCategory.updateMany({
+      where: { companyId, name: { in: [...PAYROLL_EXPENSE_CATEGORY_NAMES] } },
+      data: { isActive: false },
+    });
+  }
+
+  private excludePayrollCategoriesWhere(): Prisma.ExpenseWhereInput {
+    return {
+      category: { name: { notIn: [...PAYROLL_EXPENSE_CATEGORY_NAMES] } },
+    };
   }
 
   async listCategories(companyId: string, includeInactive = false) {
@@ -111,7 +122,10 @@ export class ExpensesService {
     params: { from?: string; to?: string; currency?: string },
   ) {
     const currency = params.currency ? this.normalizeCurrency(params.currency) : undefined;
-    const where: Prisma.ExpenseWhereInput = { companyId };
+    const where: Prisma.ExpenseWhereInput = {
+      companyId,
+      ...this.excludePayrollCategoriesWhere(),
+    };
     if (currency) where.currency = currency;
     if (params.from || params.to) {
       where.expenseDate = {};
@@ -176,7 +190,10 @@ export class ExpensesService {
     const limit = Math.min(100, Math.max(1, parseInt(params.limit || '50', 10) || 50));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.ExpenseWhereInput = { companyId };
+    const where: Prisma.ExpenseWhereInput = {
+      companyId,
+      ...this.excludePayrollCategoriesWhere(),
+    };
     if (params.status) where.status = params.status.toUpperCase();
     if (params.categoryId) where.categoryId = params.categoryId;
     if (params.from || params.to) {
