@@ -2,14 +2,15 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  Wallet2,
-  Plus,
-  Loader2,
-  CheckCircle2,
-  XCircle,
+  Banknote,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Pencil,
-  Trash2,
+  Plus,
   Search,
+  Trash2,
+  Wallet2,
 } from 'lucide-react';
 import { ModuleGate } from '@/components/ModuleGate';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
@@ -18,67 +19,108 @@ import {
   useExpenseCategories,
   useExpenseMutations,
   useExpenses,
-  useExpenseSummary,
 } from '@/hooks/expenses/use-expenses';
 import { usePermissions } from '@/hooks/use-permissions';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { toast, formatApiError } from '@/lib/toast';
 import { confirmAction } from '@/components/ConfirmDialog';
-import { RejectReasonModal } from '@/components/RejectReasonModal';
 import type { ExpenseRow } from '@/services/expenses.service';
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Kutilmoqda',
-  APPROVED: 'Tasdiqlangan',
-  REJECTED: 'Rad etilgan',
-};
+const PAYROLL_CATEGORY_NAMES = ['Xodimlar oyligi', 'Xodimlar avansi'];
 
-const STATUS_STYLE: Record<string, string> = {
-  PENDING: 'bg-amber-500/20 text-amber-300',
-  APPROVED: 'bg-emerald-500/20 text-emerald-300',
-  REJECTED: 'bg-red-500/20 text-red-300',
-};
-
-function formatMoney(amount: number, currency: string) {
-  return `${amount.toLocaleString('uz-UZ')} ${currency}`;
+function formatMoney(amount: number, currency = 'UZS') {
+  return `${Math.round(amount).toLocaleString('uz-UZ')} ${currency}`;
 }
 
-function sumByCurrency(totals: Record<string, number> | undefined, currency: string) {
-  return totals?.[currency] ?? 0;
+function toDateInput(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function monthRange(monthCursor: Date) {
+  const year = monthCursor.getFullYear();
+  const month = monthCursor.getMonth();
+  return {
+    from: toDateInput(new Date(year, month, 1)),
+    to: toDateInput(new Date(year, month + 1, 0)),
+  };
+}
+
+function formatMonthTitle(date: Date) {
+  return date.toLocaleDateString('uz-UZ', { month: 'long', year: 'numeric' });
+}
+
+function defaultExpenseDate(monthCursor: Date) {
+  const today = new Date();
+  const sameMonth =
+    today.getFullYear() === monthCursor.getFullYear() &&
+    today.getMonth() === monthCursor.getMonth();
+  return sameMonth ? toDateInput(today) : toDateInput(new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1));
+}
+
+function categoryName(row: ExpenseRow) {
+  return row.category?.name || 'Boshqa';
+}
+
+function isPayrollRow(row: ExpenseRow) {
+  return PAYROLL_CATEGORY_NAMES.includes(categoryName(row));
 }
 
 export default function ExpensesPage() {
-  const [statusFilter, setStatusFilter] = useState('');
+  const [monthCursor, setMonthCursor] = useState(() => new Date());
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ExpenseRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
   const debouncedSearch = useDebouncedValue(search, 250);
 
-  const monthStart = useMemo(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-  }, []);
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
+  const { from, to } = useMemo(() => monthRange(monthCursor), [monthCursor]);
   const { can, loading: permLoading } = usePermissions();
   const { data: categories = [], isPending: catPending } = useExpenseCategories();
-  const { data: summary } = useExpenseSummary(monthStart, today);
   const { data: listData, isPending: listPending, isFetching } = useExpenses({
-    status: statusFilter || undefined,
+    categoryId: categoryFilter || undefined,
     search: debouncedSearch.trim() || undefined,
-    from: monthStart,
-    to: today,
+    from,
+    to,
     page: 1,
     limit: 100,
   });
   const mutations = useExpenseMutations();
 
   const items = listData?.items ?? [];
+  const totals = useMemo(() => {
+    const total = items.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const payroll = items.filter(isPayrollRow).reduce((sum, row) => sum + Number(row.amount || 0), 0);
+    const byCategory = new Map<string, { id: string; name: string; amount: number; count: number }>();
+
+    for (const row of items) {
+      const key = row.categoryId || categoryName(row);
+      const prev = byCategory.get(key) || {
+        id: row.categoryId,
+        name: categoryName(row),
+        amount: 0,
+        count: 0,
+      };
+      prev.amount += Number(row.amount || 0);
+      prev.count += 1;
+      byCategory.set(key, prev);
+    }
+
+    return {
+      total,
+      payroll,
+      other: total - payroll,
+      byCategory: Array.from(byCategory.values()).sort((a, b) => b.amount - a.amount),
+    };
+  }, [items]);
+
   const canCreate = can('expenses.create');
-  const canApprove = can('expenses.approve');
-  const canReject = can('expenses.reject');
+  const canManage = can('expenses.manage');
+  const loading = catPending || listPending || permLoading;
+
+  const moveMonth = (delta: number) => {
+    setMonthCursor((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+  };
 
   const handleCreate = async (payload: Parameters<typeof mutations.create.mutateAsync>[0]) => {
     try {
@@ -87,38 +129,13 @@ export default function ExpensesPage() {
         toast.success('Xarajat yangilandi');
       } else {
         await mutations.create.mutateAsync(payload);
-        toast.success('Xarajat yuborildi — tasdiqlash kutilmoqda');
+        toast.success('Xarajat qo‘shildi');
       }
       setModalOpen(false);
       setEditing(null);
     } catch (e) {
       toast.error(formatApiError(e));
       throw e;
-    }
-  };
-
-  const handleApprove = async (id: string) => {
-    setBusyId(id);
-    try {
-      await mutations.approve.mutateAsync(id);
-      toast.success('Tasdiqlandi');
-    } catch (e) {
-      toast.error(formatApiError(e));
-    } finally {
-      setBusyId(null);
-    }
-  };
-
-  const handleReject = async (id: string, reason: string) => {
-    setBusyId(id);
-    try {
-      await mutations.reject.mutateAsync({ id, reason });
-      toast.success('Rad etildi');
-      setRejectingId(null);
-    } catch (e) {
-      toast.error(formatApiError(e));
-    } finally {
-      setBusyId(null);
     }
   };
 
@@ -129,6 +146,7 @@ export default function ExpensesPage() {
       confirmLabel: 'O‘chirish',
     });
     if (!ok) return;
+
     setBusyId(row.id);
     try {
       await mutations.remove.mutateAsync(row.id);
@@ -140,180 +158,216 @@ export default function ExpensesPage() {
     }
   };
 
-  const loading = catPending || listPending || permLoading;
-
   return (
     <ModuleGate moduleKey="EXPENSES" moduleLabel="Ichki xarajatlar">
-      <div className="space-y-8 pb-20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="space-y-6 pb-20">
+        <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-              <Wallet2 className="text-amber-400" /> Ichki xarajatlar
+            <p className="text-xs font-black uppercase tracking-widest text-amber-300">
+              Oylik xarajat daftari
+            </p>
+            <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-white">
+              <Wallet2 className="text-amber-400" size={30} />
+              Xarajatlar
             </h1>
-            <p className="text-gray-400 mt-2">Ofis, transport va boshqa chiqimlar — tasdiqlash oqimi</p>
           </div>
-          {canCreate && (
+
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => {
-                setEditing(null);
-                setModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-500 font-black text-sm"
+              onClick={() => moveMonth(-1)}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+              title="Oldingi oy"
             >
-              <Plus size={18} /> Yangi xarajat
+              <ChevronLeft size={18} />
             </button>
-          )}
-        </div>
-
-        {summary && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="glass-card p-5 rounded-2xl border border-amber-500/20">
-              <p className="text-xs font-black uppercase text-amber-400/80 tracking-widest">Kutilmoqda</p>
-              <p className="text-2xl font-black text-white mt-2">
-                {formatMoney(sumByCurrency(summary.pending, 'UZS'), 'UZS')}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">{summary.counts.pending} ta yozuv</p>
+            <div className="flex min-w-[190px] items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-4 py-2 font-black capitalize">
+              <CalendarDays size={18} className="text-amber-300" />
+              {formatMonthTitle(monthCursor)}
             </div>
-            <div className="glass-card p-5 rounded-2xl border border-emerald-500/20">
-              <p className="text-xs font-black uppercase text-emerald-400/80 tracking-widest">Tasdiqlangan (oy)</p>
-              <p className="text-2xl font-black text-white mt-2">
-                {formatMoney(sumByCurrency(summary.approved, 'UZS'), 'UZS')}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">{summary.counts.approved} ta</p>
-            </div>
-            <div className="glass-card p-5 rounded-2xl border border-white/10">
-              <p className="text-xs font-black uppercase text-gray-500 tracking-widest">Rad etilgan</p>
-              <p className="text-2xl font-black text-gray-400 mt-2">
-                {formatMoney(sumByCurrency(summary.rejected, 'UZS'), 'UZS')}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">{summary.counts.rejected} ta</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-2 items-center">
-          {['', 'PENDING', 'APPROVED', 'REJECTED'].map((s) => (
             <button
-              key={s || 'all'}
               type="button"
-              onClick={() => setStatusFilter(s)}
-              className={`px-4 py-2 rounded-xl text-sm font-bold border ${
-                statusFilter === s
-                  ? 'bg-amber-600 border-amber-500 text-white'
-                  : 'bg-white/5 border-white/10 text-gray-400'
-              }`}
+              onClick={() => moveMonth(1)}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+              title="Keyingi oy"
             >
-              {s ? STATUS_LABEL[s] : 'Hammasi'}
+              <ChevronRight size={18} />
             </button>
-          ))}
-          <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Qidirish…"
-              className="w-full pl-10 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-bold"
-            />
-          </div>
-          {isFetching && !loading && (
-            <span className="text-xs text-amber-500/80 font-bold">Yangilanmoqda…</span>
-          )}
-        </div>
-
-        {loading ? (
-          <PageSkeleton rows={5} />
-        ) : (
-          <div className="grid gap-4">
-            {items.length === 0 && (
-              <p className="text-gray-500 font-bold text-center py-16">Xarajatlar yo‘q</p>
-            )}
-            {items.map((row) => (
-              <div
-                key={row.id}
-                className="glass-card p-6 rounded-3xl border border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+            <button
+              type="button"
+              onClick={() => setMonthCursor(new Date())}
+              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold hover:bg-white/10"
+            >
+              Hozirgi oy
+            </button>
+            {canCreate && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditing(null);
+                  setModalOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-black text-white hover:bg-amber-500"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-black text-xl text-white">
-                      {formatMoney(row.amount, row.currency)}
-                    </p>
-                    <span
-                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                        STATUS_STYLE[row.status] || 'bg-white/10 text-gray-300'
-                      }`}
-                    >
-                      {STATUS_LABEL[row.status] || row.status}
-                    </span>
-                    <span className="text-xs font-bold text-gray-500">{row.category.name}</span>
-                  </div>
-                  <p className="text-sm text-gray-400 mt-2">
-                    {new Date(row.expenseDate).toLocaleDateString('uz-UZ')} · {row.createdBy.fullName}
-                  </p>
-                  {row.description && (
-                    <p className="text-sm text-gray-300 mt-1">{row.description}</p>
-                  )}
-                  {row.rejectReason && (
-                    <p className="text-sm text-red-400 mt-1">Sabab: {row.rejectReason}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2 shrink-0">
-                  {row.status === 'PENDING' && canCreate && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditing(row);
-                          setModalOpen(true);
-                        }}
-                        className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
-                        title="Tahrirlash"
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(row)}
-                        disabled={busyId === row.id}
-                        className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20"
-                        title="O‘chirish"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </>
-                  )}
-                  {row.status === 'PENDING' && canApprove && (
-                    <button
-                      type="button"
-                      onClick={() => handleApprove(row.id)}
-                      disabled={busyId === row.id}
-                      className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-black text-sm disabled:opacity-50"
-                    >
-                      {busyId === row.id ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : (
-                        <CheckCircle2 size={18} />
-                      )}
-                      Tasdiqlash
-                    </button>
-                  )}
-                  {row.status === 'PENDING' && canReject && (
-                    <button
-                      type="button"
-                      onClick={() => setRejectingId(row.id)}
-                      disabled={busyId === row.id}
-                      className="flex items-center gap-2 px-4 py-3 rounded-xl bg-white/5 border border-white/10 font-bold text-sm text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                    >
-                      <XCircle size={18} /> Rad etish
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+                <Plus size={18} /> Xarajat qo‘shish
+              </button>
+            )}
           </div>
-        )}
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="rounded-lg border border-white/10 bg-white/5 p-5">
+            <p className="text-xs font-black uppercase tracking-widest text-gray-400">Jami xarajat</p>
+            <p className="mt-2 text-2xl font-black text-white">{formatMoney(totals.total)}</p>
+            <p className="mt-1 text-sm font-bold text-gray-500">{items.length} ta yozuv</p>
+          </div>
+          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-widest text-emerald-300">Oylik va avans</p>
+            <p className="mt-2 text-2xl font-black text-white">{formatMoney(totals.payroll)}</p>
+            <p className="mt-1 text-sm font-bold text-gray-500">Payroll alohida hisob, bu yerda pul chiqimi</p>
+          </div>
+          <div className="rounded-lg border border-blue-400/20 bg-blue-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-widest text-blue-300">Boshqa xarajatlar</p>
+            <p className="mt-2 text-2xl font-black text-white">{formatMoney(totals.other)}</p>
+            <p className="mt-1 text-sm font-bold text-gray-500">Ijara, transport, ofis va boshqalar</p>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-[360px_1fr]">
+          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-black text-white">Kategoriya bo‘yicha</h2>
+              <Banknote size={20} className="text-amber-300" />
+            </div>
+            <div className="mt-4 space-y-3">
+              {totals.byCategory.length === 0 && (
+                <p className="py-8 text-center text-sm font-bold text-gray-500">
+                  Bu oyda kategoriya summasi yo‘q
+                </p>
+              )}
+              {totals.byCategory.map((row) => {
+                const percent = totals.total ? Math.round((row.amount / totals.total) * 100) : 0;
+                return (
+                  <button
+                    key={row.id || row.name}
+                    type="button"
+                    onClick={() => setCategoryFilter(row.id)}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-left hover:bg-white/10"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-black text-white">{row.name}</span>
+                      <span className="text-sm font-bold text-gray-300">{formatMoney(row.amount)}</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${percent}%` }} />
+                    </div>
+                    <p className="mt-1 text-xs font-bold text-gray-500">
+                      {row.count} ta yozuv, {percent}%
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-4 md:flex-row md:items-center">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white"
+              >
+                <option value="" className="bg-gray-900">Barcha kategoriyalar</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id} className="bg-gray-900">
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <div className="relative min-w-[220px] flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Izoh yoki kategoriya bo‘yicha qidirish..."
+                  className="w-full rounded-lg border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm font-bold text-white"
+                />
+              </div>
+              {isFetching && !loading && (
+                <span className="text-xs font-bold text-amber-300">Yangilanmoqda...</span>
+              )}
+            </div>
+
+            {loading ? (
+              <PageSkeleton rows={5} />
+            ) : (
+              <div className="space-y-3">
+                {items.length === 0 && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 py-14 text-center font-bold text-gray-500">
+                    Bu oy uchun xarajat topilmadi
+                  </div>
+                )}
+                {items.map((row) => (
+                  <div
+                    key={row.id}
+                    className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs font-black text-gray-200">
+                            {categoryName(row)}
+                          </span>
+                          {isPayrollRow(row) && (
+                            <span className="rounded-md bg-emerald-500/15 px-2.5 py-1 text-xs font-black text-emerald-300">
+                              Payroll
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-lg font-black text-white">
+                          {row.description || 'Izohsiz xarajat'}
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-gray-500">
+                          {new Date(row.expenseDate).toLocaleDateString('uz-UZ')} · {row.createdBy.fullName}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 md:justify-end">
+                        <p className="text-xl font-black text-white">{formatMoney(row.amount, row.currency)}</p>
+                        {(canCreate || canManage) && (
+                          <div className="flex gap-2">
+                            {canCreate && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditing(row);
+                                  setModalOpen(true);
+                                }}
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10"
+                                title="Tahrirlash"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(row)}
+                              disabled={busyId === row.id}
+                              className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-500/20 bg-red-500/10 text-red-300 hover:bg-red-500/20 disabled:opacity-50"
+                              title="O‘chirish"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
         <CreateExpenseModal
           open={modalOpen}
@@ -323,17 +377,9 @@ export default function ExpensesPage() {
           }}
           categories={categories}
           initial={editing}
+          defaultDate={defaultExpenseDate(monthCursor)}
           onSubmit={handleCreate}
           busy={mutations.create.isPending || mutations.update.isPending}
-        />
-        <RejectReasonModal
-          open={!!rejectingId}
-          busy={!!rejectingId && busyId === rejectingId}
-          onClose={() => {
-            if (busyId) return;
-            setRejectingId(null);
-          }}
-          onSubmit={(reason) => (rejectingId ? handleReject(rejectingId, reason) : undefined)}
         />
       </div>
     </ModuleGate>

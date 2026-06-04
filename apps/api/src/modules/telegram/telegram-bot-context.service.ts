@@ -15,13 +15,29 @@ export type TelegramBotUser = {
   memberships: TelegramBotMembership[];
 };
 
+const LINKED_USER_CACHE_MS = 45_000;
+
 @Injectable()
 export class TelegramBotContextService {
   private readonly activeCompanyByChat = new Map<string, string>();
+  private readonly linkedUserCache = new Map<
+    string,
+    { user: TelegramBotUser; expiresAt: number }
+  >();
 
   constructor(private readonly prisma: PrismaService) {}
 
+  invalidateLinkedUser(chatId: string) {
+    this.linkedUserCache.delete(String(chatId));
+  }
+
   async findLinkedUser(chatId: string): Promise<TelegramBotUser | null> {
+    const key = String(chatId);
+    const cached = this.linkedUserCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.user;
+    }
+
     const user = await this.prisma.user.findFirst({
       where: { telegramChatId: String(chatId) },
       select: {
@@ -47,13 +63,18 @@ export class TelegramBotContextService {
         role: String(m.role || '').toUpperCase(),
       }));
 
-    return {
+    const mapped: TelegramBotUser = {
       id: user.id,
       fullName: user.fullName,
       login: user.login,
       phone: user.phone,
       memberships,
     };
+    this.linkedUserCache.set(key, {
+      user: mapped,
+      expiresAt: Date.now() + LINKED_USER_CACHE_MS,
+    });
+    return mapped;
   }
 
   getActiveCompanyId(chatId: string, user: TelegramBotUser): string | null {

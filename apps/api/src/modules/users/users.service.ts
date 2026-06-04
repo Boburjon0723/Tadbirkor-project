@@ -81,6 +81,7 @@ export class UsersService {
     'WAREHOUSE',
     'SALES',
     'FIELD_WORKER',
+    'WORKER',
   ] as const;
 
   /**
@@ -129,7 +130,7 @@ export class UsersService {
     const upper = role.toUpperCase();
     if (!UsersService.ASSIGNABLE_ROLES.includes(upper as any)) {
       throw new BadRequestException(
-        "Rol noto'g'ri: faqat MANAGER, ACCOUNTANT, WAREHOUSE, SALES yoki FIELD_WORKER tanlanadi",
+        "Rol noto'g'ri: MANAGER, ACCOUNTANT, WAREHOUSE, SALES, FIELD_WORKER yoki WORKER tanlanadi",
       );
     }
 

@@ -7,6 +7,7 @@ export enum UserRole {
   WAREHOUSE = 'WAREHOUSE',
   SALES = 'SALES',
   FIELD_WORKER = 'FIELD_WORKER',
+  WORKER = 'WORKER',
 }
 
 export class InviteUserDto {

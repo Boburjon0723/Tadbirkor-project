@@ -29,6 +29,7 @@ export class TelegramLinkService {
     'ACCOUNTANT',
     'SALES',
     'FIELD_WORKER',
+    'WORKER',
   ];
 
   constructor(

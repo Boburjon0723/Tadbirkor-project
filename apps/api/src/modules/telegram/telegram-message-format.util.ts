@@ -65,6 +65,7 @@ export const TELEGRAM_ROLE_LABELS: Record<string, string> = {
   ACCOUNTANT: 'Hisobchi',
   SALES: 'Sotuvchi',
   FIELD_WORKER: 'Dala xodimi',
+  WORKER: 'Oddiy ishchi',
 };
 
 function isUuidLike(value: string): boolean {

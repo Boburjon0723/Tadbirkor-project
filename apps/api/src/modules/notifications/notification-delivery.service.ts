@@ -1,8 +1,10 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  forwardRef,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { JobsOptions, Queue, Worker } from 'bullmq';
@@ -40,6 +42,7 @@ export class NotificationDeliveryService implements OnModuleInit, OnModuleDestro
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => TelegramService))
     private readonly telegramService: TelegramService,
   ) {}
 

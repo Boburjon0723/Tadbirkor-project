@@ -357,9 +357,14 @@ export class TestFlowService {
       { key: 'EMPLOYEES', name: 'Xodimlar' },
       { key: 'STOREFRONT', name: 'Onlayn do‘kon' },
       { key: 'EXPENSES', name: 'Ichki xarajatlar' },
+      { key: 'PAYROLL', name: 'Oylik' },
       { key: 'REPORTS', name: 'Hisobotlar' },
       { key: 'INTEGRATIONS', name: 'Ulanishlar' },
     ];
+
+    const { WAREHOUSE_SECTION_FEATURE_DEFS } = await import(
+      '../../common/warehouse-section-features'
+    );
 
     for (const m of modules) {
       const moduleRecord = await (this.prisma as any).module.upsert({
@@ -371,7 +376,22 @@ export class TestFlowService {
         },
       });
 
-      // Har bir modul uchun kamida bitta asosiy feature yaratamiz
+      if (m.key === 'WAREHOUSE') {
+        for (const def of WAREHOUSE_SECTION_FEATURE_DEFS) {
+          await (this.prisma as any).feature.upsert({
+            where: { key: def.key },
+            update: { name: def.name, description: def.description },
+            create: {
+              moduleId: moduleRecord.id,
+              key: def.key,
+              name: def.name,
+              description: def.description,
+            },
+          });
+        }
+        continue;
+      }
+
       await (this.prisma as any).feature.upsert({
         where: { key: `${m.key}_MAIN` },
         update: { name: `${m.name} Asosiy` },

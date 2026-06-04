@@ -10,6 +10,7 @@ type Props = {
   onClose: () => void;
   categories: ExpenseCategory[];
   initial?: ExpenseRow | null;
+  defaultDate?: string;
   onSubmit: (payload: {
     categoryId: string;
     amount: number;
@@ -26,6 +27,7 @@ export function CreateExpenseModal({
   onClose,
   categories,
   initial,
+  defaultDate,
   onSubmit,
   busy,
 }: Props) {
@@ -50,11 +52,11 @@ export function CreateExpenseModal({
       setCategoryId(categories[0]?.id || '');
       setAmount('');
       setCurrency('UZS');
-      setExpenseDate(new Date().toISOString().slice(0, 10));
+      setExpenseDate(defaultDate || new Date().toISOString().slice(0, 10));
       setDescription('');
       setNotes('');
     }
-  }, [open, initial, categories]);
+  }, [open, initial, categories, defaultDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,7 +181,7 @@ export function CreateExpenseModal({
                 className="w-full py-4 rounded-2xl bg-amber-600 hover:bg-amber-500 font-black text-white flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {busy && <Loader2 className="animate-spin" size={18} />}
-                {initial ? 'Saqlash' : 'Yuborish (tasdiqlashga)'}
+                Saqlash
               </button>
             </form>
           </motion.div>

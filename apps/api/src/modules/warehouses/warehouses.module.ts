@@ -11,9 +11,16 @@ import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { UsersModule } from '../users/users.module';
 import { PartnerLedgerModule } from '../partner-ledger/partner-ledger.module';
+import { CompaniesModule } from '../companies/companies.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, forwardRef(() => PartnerLedgerModule)],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    UsersModule,
+    CompaniesModule,
+    forwardRef(() => PartnerLedgerModule),
+  ],
   controllers: [WarehousesController, StockController, InventoryCountController],
   providers: [WarehousesService, StockService, InventoryGateway, AtpService, InventoryCountService],
   exports: [WarehousesService, StockService, InventoryGateway, AtpService, InventoryCountService],

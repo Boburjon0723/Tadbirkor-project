@@ -7,7 +7,9 @@ export type CompanyFeatureConfig = {
 };
 
 export type UpdateModulePayload = {
-  moduleKey: string;
+  moduleKey?: string;
+  featureKey?: string;
+  bundleId?: string;
   enabled: boolean;
 };
 
@@ -33,6 +35,20 @@ export const companiesService = {
   },
   updateModule: async (payload: UpdateModulePayload): Promise<CompanyFeatureConfig> => {
     const { data } = await api.patch('/companies/features', payload);
+    return data;
+  },
+  updateFeature: async (payload: {
+    featureKey: string;
+    enabled: boolean;
+  }): Promise<CompanyFeatureConfig> => {
+    const { data } = await api.patch('/companies/features', payload);
+    return data;
+  },
+  updateWarehouseBundle: async (payload: {
+    bundleId: string;
+    enabled: boolean;
+  }): Promise<CompanyFeatureConfig> => {
+    const { data } = await api.patch('/companies/features/warehouse-bundle', payload);
     return data;
   },
   getTelegramBindings: async (): Promise<TelegramBinding[]> => {

@@ -12,13 +12,21 @@ import {
   modulesBySettingGroup,
   type ModuleSettingDefinition,
 } from '@/lib/module-settings-catalog';
+import {
+  WAREHOUSE_ALL_BUNDLE_LABEL,
+  WAREHOUSE_BUNDLE_ALL_ID,
+  WAREHOUSE_FEATURE_BUNDLES,
+} from '@/lib/warehouse-section-features';
+import { isFeatureKeyEnabled } from '@/lib/feature-modules';
 
 export function ModuleSettingsGrouped() {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [hasFeatureConfig, setHasFeatureConfig] = useState(false);
   const [enabledModules, setEnabledModules] = useState<string[]>([]);
+  const [enabledFeatures, setEnabledFeatures] = useState<string[]>([]);
   const [updatingModule, setUpdatingModule] = useState<string | null>(null);
+  const [updatingBundle, setUpdatingBundle] = useState<string | null>(null);
   const [toggleMessage, setToggleMessage] = useState<string | null>(null);
   const [selectedModuleKey, setSelectedModuleKey] = useState<string | null>(null);
 
@@ -28,6 +36,7 @@ export function ModuleSettingsGrouped() {
         const data = await companiesService.getFeatures();
         setHasFeatureConfig(data.hasFeatureConfig);
         setEnabledModules((data.enabledModules || []).map((m) => m.toUpperCase()));
+        setEnabledFeatures((data.enabledFeatures || []).map((f) => f.toUpperCase()));
       } catch (error) {
         console.error('Modullarni yuklashda xato:', error);
       } finally {
@@ -37,10 +46,28 @@ export function ModuleSettingsGrouped() {
     loadModules();
   }, []);
 
+  const featureCfg = {
+    hasFeatureConfig,
+    enabledModules,
+    enabledFeatures,
+  };
+
   const isEnabled = (moduleKey: string) => {
     if (!hasFeatureConfig) return true;
     return enabledModules.includes(moduleKey.toUpperCase());
   };
+
+  const isWarehouseSectionOn = (featureKey: string) =>
+    isFeatureKeyEnabled(featureCfg, featureKey);
+
+  const isBundleOn = (bundleId: string) => {
+    const bundle = WAREHOUSE_FEATURE_BUNDLES.find((b) => b.id === bundleId);
+    if (!bundle) return false;
+    return bundle.featureKeys.every((k) => isWarehouseSectionOn(k));
+  };
+
+  const isAllWarehouseOn = () =>
+    WAREHOUSE_FEATURE_BUNDLES.every((b) => isBundleOn(b.id));
 
   const selectedModule =
     MODULE_SETTING_GROUPS.flatMap((g) => modulesBySettingGroup(g.id)).find(
@@ -59,8 +86,10 @@ export function ModuleSettingsGrouped() {
       });
       setHasFeatureConfig(data.hasFeatureConfig);
       setEnabledModules((data.enabledModules || []).map((m) => m.toUpperCase()));
+      setEnabledFeatures((data.enabledFeatures || []).map((f) => f.toUpperCase()));
       patchSessionFeatures(queryClient, data);
-      setToggleMessage(`${moduleKey} moduli ${nextEnabled ? 'yoqildi' : 'o‘chirildi'}.`);
+      toast.success(`${moduleKey} moduli ${nextEnabled ? 'yoqildi' : 'o‘chirildi'}.`);
+      setToggleMessage(null);
     } catch (error: unknown) {
       console.error('Modul holatini yangilashda xato:', error);
       const err = error as { response?: { data?: { message?: string | string[] } } };
@@ -73,6 +102,49 @@ export function ModuleSettingsGrouped() {
       );
     } finally {
       setUpdatingModule(null);
+    }
+  };
+
+  const applyFeatureConfig = (data: Awaited<ReturnType<typeof companiesService.getFeatures>>) => {
+    setHasFeatureConfig(data.hasFeatureConfig);
+    setEnabledModules((data.enabledModules || []).map((m) => m.toUpperCase()));
+    setEnabledFeatures((data.enabledFeatures || []).map((f) => f.toUpperCase()));
+    patchSessionFeatures(queryClient, data);
+  };
+
+  const handleToggleWarehouseBundle = async (bundleId: string) => {
+    const bundle =
+      bundleId === WAREHOUSE_BUNDLE_ALL_ID
+        ? null
+        : WAREHOUSE_FEATURE_BUNDLES.find((b) => b.id === bundleId);
+    const nextEnabled =
+      bundleId === WAREHOUSE_BUNDLE_ALL_ID ? !isAllWarehouseOn() : !isBundleOn(bundleId);
+
+    setUpdatingBundle(bundleId);
+    setToggleMessage(null);
+    try {
+      const data = await companiesService.updateWarehouseBundle({
+        bundleId,
+        enabled: nextEnabled,
+      });
+      applyFeatureConfig(data);
+      const label =
+        bundleId === WAREHOUSE_BUNDLE_ALL_ID
+          ? WAREHOUSE_ALL_BUNDLE_LABEL.name
+          : bundle?.name || bundleId;
+      toast.success(`${label} ${nextEnabled ? 'yoqildi' : 'o‘chirildi'}.`);
+    } catch (error: unknown) {
+      console.error('Ombor guruhi:', error);
+      const err = error as { response?: { data?: { message?: string | string[] } } };
+      const msg = err.response?.data?.message;
+      const text = Array.isArray(msg) ? msg[0] : msg;
+      toast.error(
+        typeof text === 'string' && text.length > 0
+          ? text
+          : 'Guruh holatini saqlashda xato.',
+      );
+    } finally {
+      setUpdatingBundle(null);
     }
   };
 
@@ -144,6 +216,94 @@ export function ModuleSettingsGrouped() {
                 />
               ))}
             </div>
+            {group.id === 'warehouse' && isEnabled('WAREHOUSE') && (
+              <div className="mt-6 p-6 rounded-[2rem] border border-white/10 bg-white/[0.02] space-y-5">
+                <div>
+                  <h4 className="text-sm font-black text-white mb-1">
+                    Ombor bo‘limlari (guruhlar)
+                  </h4>
+                  <p className="text-xs text-gray-500 font-bold">
+                    Bog‘liq funksiyalar bitta nom ostida. Chiqim yoki inventarizatsiyani yoqsangiz, asosiy
+                    ombor avtomatik yoqiladi.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {WAREHOUSE_FEATURE_BUNDLES.map((bundle) => {
+                    const Icon = bundle.icon;
+                    const on = isBundleOn(bundle.id);
+                    return (
+                      <div
+                        key={bundle.id}
+                        className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/5"
+                      >
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center shrink-0">
+                            <Icon size={18} className="text-blue-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-white">{bundle.name}</p>
+                            <p className="text-[11px] text-gray-500 font-bold">{bundle.desc}</p>
+                            <p className="text-[10px] text-emerald-500/80 mt-1 font-bold">
+                              Ichida: {bundle.includesLabel}
+                            </p>
+                            {bundle.requiresBundleIds?.length ? (
+                              <p className="text-[10px] text-gray-600 mt-0.5">
+                                Yoqilganda «Asosiy ombor» ham yoqiladi
+                              </p>
+                            ) : null}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={on}
+                          disabled={updatingBundle !== null}
+                          onClick={() => void handleToggleWarehouseBundle(bundle.id)}
+                          className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+                            on ? 'bg-blue-600' : 'bg-white/10'
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-[2px] left-[2px] h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                              on ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600/10 flex items-center justify-center shrink-0">
+                      <WAREHOUSE_ALL_BUNDLE_LABEL.icon size={18} className="text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-sm text-white">
+                        {WAREHOUSE_ALL_BUNDLE_LABEL.name}
+                      </p>
+                      <p className="text-[11px] text-gray-500 font-bold">
+                        {WAREHOUSE_ALL_BUNDLE_LABEL.desc}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={updatingBundle !== null}
+                    onClick={() => void handleToggleWarehouseBundle(WAREHOUSE_BUNDLE_ALL_ID)}
+                    className="px-6 py-3 rounded-xl bg-white text-black text-sm font-black hover:bg-gray-200 disabled:opacity-50 transition-all shrink-0"
+                  >
+                    {updatingBundle === WAREHOUSE_BUNDLE_ALL_ID ? (
+                      <Loader2 className="animate-spin inline" size={16} />
+                    ) : isAllWarehouseOn() ? (
+                      'Barchasini o‘chirish'
+                    ) : (
+                      'Barchasini yoqish'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         );
       })}

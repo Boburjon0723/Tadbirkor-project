@@ -7,9 +7,10 @@ import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { AppCacheModule } from '../../common/cache/app-cache.module';
+import { CompaniesModule } from '../companies/companies.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, WarehousesModule, AppCacheModule],
+  imports: [PrismaModule, AuthModule, WarehousesModule, AppCacheModule, CompaniesModule],
   controllers: [DispatchesController, PickTasksController],
   providers: [DispatchesService, PickingService],
   exports: [DispatchesService, PickingService],

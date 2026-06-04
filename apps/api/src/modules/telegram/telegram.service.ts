@@ -9,6 +9,8 @@ import { TelegramPasswordResetService } from './telegram-password-reset.service'
 import { TelegramMenuService, MENU_POS_REPORT } from './telegram-menu.service';
 import { TelegramBotContextService } from './telegram-bot-context.service';
 import { TelegramTasksService } from './telegram-tasks.service';
+import { TelegramLeaveBotService } from './telegram-leave-bot.service';
+import { TelegramPayrollBotService } from './telegram-payroll-bot.service';
 import {
   formatTelegramDetailLines,
   formatTelegramRoles,
@@ -47,7 +49,15 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramService.name);
   private bot: Telegraf | null = null;
   private webhookSecret: string | null = null;
-  private readonly validRoles = ['OWNER', 'MANAGER', 'WAREHOUSE', 'ACCOUNTANT', 'SALES', 'FIELD_WORKER'];
+  private readonly validRoles = [
+    'OWNER',
+    'MANAGER',
+    'WAREHOUSE',
+    'ACCOUNTANT',
+    'SALES',
+    'FIELD_WORKER',
+    'WORKER',
+  ];
   private readonly statusLabelMap: Record<string, string> = {
     PENDING: 'Kutilmoqda',
     ACCEPTED: 'Qabul qilindi',
@@ -80,12 +90,48 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     private readonly menuService: TelegramMenuService,
     private readonly botContext: TelegramBotContextService,
     private readonly tasksService: TelegramTasksService,
+    private readonly leaveBotService: TelegramLeaveBotService,
+    private readonly payrollBotService: TelegramPayrollBotService,
   ) {}
+
+  private async menuKeyboardForChat(chatId: string) {
+    const user = await this.botContext.findLinkedUser(chatId);
+    const role = user
+      ? this.botContext.getActiveMembership(chatId, user)?.role
+      : undefined;
+    return this.menuService.mainMenuKeyboard(role);
+  }
+
+  /** Inline tugmalar: mavjud xabarni yangilash (yangi xabar + menyu qidiruvidan tezroq) */
+  private async replyOrEditCallbackMessage(
+    ctx: { chat?: { id?: number }; callbackQuery?: { message?: { message_id?: number } }; telegram: any; reply: (text: string, extra?: any) => Promise<unknown> },
+    chatId: string,
+    text: string,
+    markup?: { reply_markup?: any },
+  ) {
+    const messageId = ctx.callbackQuery?.message?.message_id;
+    if (messageId != null) {
+      try {
+        await ctx.telegram.editMessageText(chatId, messageId, undefined, text, markup);
+        return;
+      } catch {
+        // xabar o‘zgarmagan yoki eski format — yangi xabar
+      }
+    }
+    await ctx.reply(text, markup);
+  }
 
   /** Lazy load — FieldService ↔ NotificationsService ↔ TelegramService tsiklini uzadi */
   private async getFieldService(): Promise<FieldService> {
     const { FieldService: FieldServiceClass } = await import('../field/field.service');
     return this.moduleRef.get(FieldServiceClass, { strict: false });
+  }
+
+  private async getPayrollLeaveService() {
+    const { PayrollLeaveService: PayrollLeaveServiceClass } = await import(
+      '../payroll/payroll-leave.service'
+    );
+    return this.moduleRef.get(PayrollLeaveServiceClass, { strict: false });
   }
 
   async onModuleInit() {
@@ -106,6 +152,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
         { command: 'kompaniya', description: 'Kompaniya tanlash' },
         { command: 'parol', description: 'Parolni tiklash' },
         { command: 'bekor', description: 'Bekor qilish' },
+        { command: 'oylik', description: 'Xodimlar oylik' },
       ])
       .catch((err) => {
         this.logger.warn(`setMyCommands: ${(err as Error).message}`);
@@ -143,15 +190,27 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       await this.promptPasswordReset(ctx, String(chatId));
     });
 
+    this.bot.command('oylik', async (ctx) => {
+      const chatId = ctx.chat?.id;
+      if (!chatId) return;
+      const result = await this.payrollBotService.handlePayrollMenu(String(chatId));
+      await ctx.reply(result.message, result.extra || (await this.menuKeyboardForChat(String(chatId))));
+    });
+
     this.bot.command('bekor', async (ctx) => {
       const chatId = ctx.chat?.id;
       if (!chatId) return;
+      const hadPayroll = this.payrollBotService.cancelSession(String(chatId));
       if (this.passwordResetService.cancelFlow(String(chatId))) {
         await ctx.reply('Jarayon bekor qilindi.', { reply_markup: { remove_keyboard: true } });
-        await ctx.reply('Menyu:', this.menuService.mainMenuKeyboard());
-      } else {
-        await ctx.reply('Bekor qilinadigan jarayon yo‘q.');
+        await ctx.reply('Menyu:', await this.menuKeyboardForChat(String(chatId)));
+        return;
       }
+      if (hadPayroll) {
+        await ctx.reply('Oylik jarayoni bekor qilindi.', await this.menuKeyboardForChat(String(chatId)));
+        return;
+      }
+      await ctx.reply('Bekor qilinadigan jarayon yo‘q.');
     });
 
     this.bot.start(async (ctx) => {
@@ -260,7 +319,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
             .join('\n'),
           { reply_markup: { remove_keyboard: true } },
         );
-        await ctx.reply('Asosiy menyu:', this.menuService.mainMenuKeyboard());
+        await ctx.reply('Asosiy menyu:', await this.menuKeyboardForChat(String(chatId)));
       } catch (err) {
         try {
           const partnerLinked = await this.telegramLinkService.linkChatToPartnerLedgerByPhone(
@@ -300,11 +359,45 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
           await this.promptPasswordReset(ctx, String(chatId));
           return;
         }
-        await ctx.reply(result.message, result.extra || this.menuService.mainMenuKeyboard());
+        if (result.message === '__TRIGGER_LEAVE_MENU__') {
+          const leaveResult = await this.leaveBotService.handleLeaveMenu(text, String(chatId));
+          await ctx.reply(
+            leaveResult.message,
+            leaveResult.extra || (await this.menuKeyboardForChat(String(chatId))),
+          );
+          return;
+        }
+        if (result.message === '__TRIGGER_PAYROLL__') {
+          const payrollResult = await this.payrollBotService.handlePayrollMenu(String(chatId));
+          await ctx.reply(
+            payrollResult.message,
+            payrollResult.extra || (await this.menuKeyboardForChat(String(chatId))),
+          );
+          return;
+        }
+        await ctx.reply(
+          result.message,
+          result.extra || (await this.menuKeyboardForChat(String(chatId))),
+        );
         return;
       }
 
       if (!text.startsWith('/')) {
+        const linked = await this.botContext.findLinkedUser(String(chatId));
+        const actorUserId = linked?.id || '';
+        const payrollText = await this.payrollBotService.handleText(
+          String(chatId),
+          text,
+          actorUserId,
+        );
+        if (payrollText.handled) {
+          await ctx.reply(
+            payrollText.reply,
+            payrollText.markup || (await this.menuKeyboardForChat(String(chatId))),
+          );
+          return;
+        }
+
         const resetResult = await this.passwordResetService.handleText(String(chatId), text);
         if (resetResult.handled) {
           await ctx.reply(resetResult.reply);
@@ -360,6 +453,47 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const callbackData = typeof ctx.callbackQuery?.['data'] === 'string' ? ctx.callbackQuery['data'] : '';
       const chatId = String(ctx.chat?.id || '');
 
+      if (this.payrollBotService.isPayrollCallback(callbackData)) {
+        await ctx.answerCbQuery().catch(() => undefined);
+        const linked = await this.botContext.findLinkedUser(chatId);
+        const userId = linked?.id || '';
+        const payrollResult = await this.payrollBotService.handleCallback(
+          chatId,
+          callbackData,
+          userId,
+          linked,
+        );
+        if (payrollResult.message) {
+          await this.replyOrEditCallbackMessage(
+            ctx,
+            chatId,
+            payrollResult.message,
+            payrollResult.markup,
+          );
+        }
+        return;
+      }
+
+      if (callbackData.startsWith('lr:')) {
+        await ctx.answerCbQuery().catch(() => undefined);
+        const linked = await this.botContext.findLinkedUser(chatId);
+        const userId = linked?.id || '';
+        const leaveResult = await this.leaveBotService.handleLeaveCallback(
+          chatId,
+          callbackData,
+          userId,
+        );
+        if (leaveResult.message) {
+          await this.replyOrEditCallbackMessage(
+            ctx,
+            chatId,
+            leaveResult.message,
+            leaveResult.markup,
+          );
+        }
+        return;
+      }
+
       if (callbackData.startsWith('mc:')) {
         const companyId = callbackData.slice(3);
         const user = await this.botContext.findLinkedUser(chatId);
@@ -410,16 +544,29 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const updatesEnabledRaw = this.configService.get<string>('TELEGRAM_UPDATES_ENABLED');
     const updatesEnabled =
-      (updatesEnabledRaw || '').toLowerCase() === 'true' ||
-      ((updatesEnabledRaw || '') === '' && this.configService.get<string>('NODE_ENV') !== 'production');
+      (this.configService.get<string>('TELEGRAM_UPDATES_ENABLED') || '').toLowerCase() ===
+      'true';
 
     if (!updatesEnabled) {
-      this.logger.warn(
-        'TELEGRAM_UPDATES_ENABLED=false. Polling yoqilmadi, bot faqat outgoing xabarlar uchun ishlaydi.',
+      this.logger.log(
+        'Telegram polling o‘chirilgan (TELEGRAM_UPDATES_ENABLED≠true). Xabar yuborish ishlaydi; incoming — webhook yoki alohida instance.',
       );
       return;
+    }
+
+    void this.startTelegramPolling();
+  }
+
+  /** Webhook o‘chiriladi, 409 bo‘lsa qayta uriniladi — faqat bitta polling instance */
+  private async startTelegramPolling(attempt = 1) {
+    if (!this.bot) return;
+
+    try {
+      await this.bot.telegram.deleteWebhook({ drop_pending_updates: true });
+    } catch (err) {
+      const message = (err as any)?.message ? String((err as any).message) : String(err);
+      this.logger.warn(`Telegram deleteWebhook: ${message}`);
     }
 
     try {
@@ -427,8 +574,18 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       this.logger.log('Telegram bot update polling ishga tushdi.');
     } catch (err) {
       const message = (err as any)?.message ? String((err as any).message) : String(err);
+      const is409 = /409|getUpdates/i.test(message);
+      if (is409 && attempt < 5) {
+        this.logger.warn(
+          `Telegram polling band (boshqa instance?). ${attempt}/4 — 3s dan keyin qayta uriniladi…`,
+        );
+        await new Promise((r) => setTimeout(r, 3000));
+        return this.startTelegramPolling(attempt + 1);
+      }
       this.logger.error(`Telegram bot launch failed: ${message}`);
-      this.logger.warn('Backend ishini davom ettiradi, Telegram update polling vaqtincha o‘chiriladi.');
+      this.logger.warn(
+        'Backend ishini davom ettiradi, Telegram update polling vaqtincha o‘chiriladi. Bitta API process qoldiring.',
+      );
     }
   }
 
@@ -1047,6 +1204,38 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
       const fieldService = await this.getFieldService();
       await fieldService.rejectFromTelegram(record.companyId, record.targetId, actorUserId);
       return { summary: '⚠️ Dala vazifasi hisoboti rad etildi. Xodim qayta yuborishi kerak.' };
+    }
+    if (record.actionKey === 'LEAVE_APPROVE') {
+      const payrollLeave = await this.getPayrollLeaveService();
+      if (!actorUserId) {
+        return { summary: '⚠️ Tasdiqlash uchun tizim foydalanuvchisi bilan ulaning.' };
+      }
+      const updated = await payrollLeave.approveLeaveRequest(
+        record.companyId,
+        actorUserId,
+        record.targetId,
+        undefined,
+        'TELEGRAM',
+      );
+      return {
+        summary: `✅ Dam olish tasdiqlandi: ${updated.companyUser.user.fullName} (${updated.daysCount} kun).`,
+      };
+    }
+    if (record.actionKey === 'LEAVE_REJECT') {
+      const payrollLeave = await this.getPayrollLeaveService();
+      if (!actorUserId) {
+        return { summary: '⚠️ Rad etish uchun tizim foydalanuvchisi bilan ulaning.' };
+      }
+      const updated = await payrollLeave.rejectLeaveRequest(
+        record.companyId,
+        actorUserId,
+        record.targetId,
+        undefined,
+        'TELEGRAM',
+      );
+      return {
+        summary: `❌ Dam olish rad etildi: ${updated.companyUser.user.fullName}.`,
+      };
     }
     throw new Error(`Unsupported action: ${record.actionKey}`);
   }

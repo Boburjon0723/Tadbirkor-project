@@ -6,7 +6,8 @@ export type SystemRole =
   | 'ACCOUNTANT'
   | 'WAREHOUSE'
   | 'SALES'
-  | 'FIELD_WORKER';
+  | 'FIELD_WORKER'
+  | 'WORKER';
 
 export interface RoleCatalogEntry {
   key: SystemRole;
@@ -59,6 +60,13 @@ export const ROLE_CATALOG: RoleCatalogEntry[] = [
     assignable: true,
     requiresWarehouse: true,
   },
+  {
+    key: 'WORKER',
+    label: 'Oddiy ishchi',
+    description: 'Ishlab chiqarish yoki umumiy xodim — cheklangan ko‘rinish.',
+    assignable: true,
+    requiresWarehouse: false,
+  },
 ];
 
 const ALL_PERMISSIONS = Object.values(Permission) as Permission[];
@@ -99,6 +107,9 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.EXPENSES_MANAGE,
     Permission.EXPENSES_APPROVE,
     Permission.EXPENSES_REJECT,
+    Permission.INCOME_VIEW,
+    Permission.INCOME_CREATE,
+    Permission.INCOME_MANAGE,
     Permission.PARTNER_LEDGER_VIEW,
     Permission.PARTNER_LEDGER_MANAGE,
     Permission.REPORTS_VIEW,
@@ -136,6 +147,9 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.EXPENSES_CREATE,
     Permission.EXPENSES_APPROVE,
     Permission.EXPENSES_REJECT,
+    Permission.INCOME_VIEW,
+    Permission.INCOME_CREATE,
+    Permission.INCOME_MANAGE,
     Permission.PARTNER_LEDGER_VIEW,
     Permission.PARTNER_LEDGER_MANAGE,
     Permission.REPORTS_VIEW,
@@ -160,6 +174,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.PRODUCTS_VIEW,
     Permission.WAREHOUSE_VIEW,
   ],
+  WORKER: [Permission.PRODUCTS_VIEW, Permission.TASKS_VIEW],
 };
 
 export function permissionsForRole(role: string): Permission[] {

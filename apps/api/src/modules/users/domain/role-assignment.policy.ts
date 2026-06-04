@@ -8,7 +8,8 @@ export type AssignableRole =
   | 'ACCOUNTANT'
   | 'WAREHOUSE'
   | 'SALES'
-  | 'FIELD_WORKER';
+  | 'FIELD_WORKER'
+  | 'WORKER';
 
 export const ROLES_REQUIRING_WAREHOUSE: ReadonlyArray<AssignableRole> = [
   'SALES',
@@ -20,6 +21,7 @@ export const ROLES_WITHOUT_WAREHOUSE: ReadonlyArray<AssignableRole> = [
   'OWNER',
   'MANAGER',
   'ACCOUNTANT',
+  'WORKER',
 ];
 
 export function roleRequiresWarehouse(role: string): boolean {

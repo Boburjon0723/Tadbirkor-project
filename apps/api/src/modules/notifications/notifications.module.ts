@@ -1,4 +1,5 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
+import { TelegramModule } from '../telegram/telegram.module';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsGateway } from './notifications.gateway';
@@ -8,7 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Global()
 @Module({
-  imports: [JwtModule, ConfigModule],
+  imports: [JwtModule, ConfigModule, forwardRef(() => TelegramModule)],
   providers: [NotificationsService, NotificationsGateway, NotificationDeliveryService],
   controllers: [NotificationsController],
   exports: [NotificationsService, NotificationsGateway, NotificationDeliveryService],

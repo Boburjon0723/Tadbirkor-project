@@ -17,6 +17,7 @@ export type DashboardMenuIcons = {
   Users: LucideIcon;
   Store: LucideIcon;
   Wallet2: LucideIcon;
+  Banknote: LucideIcon;
   BarChart3: LucideIcon;
   Link2: LucideIcon;
   Settings: LucideIcon;
@@ -89,7 +90,7 @@ export function buildDashboardMenuGroups(
           label: 'Mahsulotlar va qoldiq',
           href: '/dashboard/inventory',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE'],
+          moduleKeys: ['WAREHOUSE_BASIC'],
           mobileNav: true,
         },
         {
@@ -97,7 +98,7 @@ export function buildDashboardMenuGroups(
           label: 'Harakatlar tarixi',
           href: '/dashboard/activity',
           roles: ['owner', 'manager', 'accountant'],
-          moduleKeys: ['WAREHOUSE', 'B2B', 'DEBT'],
+          moduleKeys: ['WAREHOUSE_BASIC', 'B2B', 'DEBT'],
           moduleMatch: 'any',
         },
         {
@@ -105,22 +106,21 @@ export function buildDashboardMenuGroups(
           label: 'Saralash (picking)',
           href: '/dashboard/picking',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE', 'B2B'],
-          moduleMatch: 'any',
+          moduleKeys: ['WAREHOUSE_PICKING'],
         },
         {
           icon: <I.History size={s} />,
           label: 'Zaxira holati (ATP)',
           href: '/dashboard/warehouse',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE'],
+          moduleKeys: ['WAREHOUSE_ATP'],
         },
         {
           icon: <I.Box size={s} />,
           label: 'Inventarizatsiya',
           href: '/dashboard/inventory-count',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE'],
+          moduleKeys: ['WAREHOUSE_INVENTORY_COUNT'],
         },
       ],
     },
@@ -155,7 +155,7 @@ export function buildDashboardMenuGroups(
           label: 'Kelgan yuklar',
           href: '/dashboard/receipts',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE', 'B2B'],
+          moduleKeys: ['WAREHOUSE_BASIC', 'B2B'],
           moduleMatch: 'any',
         },
       ],
@@ -184,6 +184,13 @@ export function buildDashboardMenuGroups(
           href: '/dashboard/expenses',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['EXPENSES'],
+        },
+        {
+          icon: <I.Banknote size={s} />,
+          label: 'Xodimlar (oylik)',
+          href: '/dashboard/payroll',
+          roles: ['owner', 'manager', 'accountant'],
+          moduleKeys: ['PAYROLL'],
         },
       ],
     },

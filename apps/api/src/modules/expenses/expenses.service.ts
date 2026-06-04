@@ -13,11 +13,15 @@ import {
 import { CreateExpenseDto, RejectExpenseDto, UpdateExpenseDto } from './dto/expense.dto';
 
 const DEFAULT_CATEGORIES = [
-  'Ofis',
-  'Transport',
   'Ijara',
+  'Transport',
   'Kommunal',
+  'Ofis',
+  'Reklama',
   'Xizmatlar',
+  'Xodimlar oyligi',
+  'Xodimlar avansi',
+  'Soliq',
   'Boshqa',
 ];
 
@@ -36,15 +40,13 @@ export class ExpensesService {
   }
 
   private async ensureDefaultCategories(companyId: string) {
-    const count = await this.prisma.expenseCategory.count({ where: { companyId } });
-    if (count > 0) return;
-
     await this.prisma.expenseCategory.createMany({
       data: DEFAULT_CATEGORIES.map((name, index) => ({
         companyId,
         name,
         sortOrder: index,
       })),
+      skipDuplicates: true,
     });
   }
 

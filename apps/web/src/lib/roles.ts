@@ -4,7 +4,8 @@ export type SystemRole =
   | 'ACCOUNTANT'
   | 'WAREHOUSE'
   | 'SALES'
-  | 'FIELD_WORKER';
+  | 'FIELD_WORKER'
+  | 'WORKER';
 
 export const ROLE_LABELS: Record<SystemRole, string> = {
   OWNER: 'Egasi',
@@ -13,6 +14,7 @@ export const ROLE_LABELS: Record<SystemRole, string> = {
   WAREHOUSE: 'Omborchi',
   SALES: 'Sotuvchi',
   FIELD_WORKER: 'Dala xodimi',
+  WORKER: 'Oddiy ishchi',
 };
 
 export const ASSIGNABLE_ROLES = [
@@ -21,6 +23,7 @@ export const ASSIGNABLE_ROLES = [
   { value: 'WAREHOUSE' as const, label: 'Omborchi' },
   { value: 'SALES' as const, label: 'Sotuvchi' },
   { value: 'FIELD_WORKER' as const, label: 'Dala xodimi' },
+  { value: 'WORKER' as const, label: 'Oddiy ishchi' },
 ];
 
 export const ROLES_REQUIRING_WAREHOUSE: SystemRole[] = ['SALES', 'WAREHOUSE', 'FIELD_WORKER'];
@@ -46,6 +49,7 @@ export function permissionsForRole(role: string): string[] {
     WAREHOUSE: [],
     SALES: ['pos.view', 'pos.create'],
     FIELD_WORKER: [],
+    WORKER: [],
   };
   if (upper === 'OWNER') {
     return Object.values(MAP).flat();

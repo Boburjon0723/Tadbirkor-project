@@ -37,6 +37,7 @@ import { RetailReceivablesModule } from './modules/retail-receivables/retail-rec
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { PartnerLedgerModule } from './modules/partner-ledger/partner-ledger.module';
 import { PlatformModule } from './modules/platform/platform.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
 
 @Module({
@@ -75,6 +76,7 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
     ExpensesModule,
     PartnerLedgerModule,
     PlatformModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [

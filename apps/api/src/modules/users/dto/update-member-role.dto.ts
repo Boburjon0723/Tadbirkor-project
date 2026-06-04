@@ -1,7 +1,14 @@
 import { IsIn, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
 
 /** OWNER bu yerda berilmaydi — faqat kompaniya a'zosiga ishchi rol tanlash */
-const ASSIGNABLE_ROLES = ['MANAGER', 'ACCOUNTANT', 'WAREHOUSE', 'SALES', 'FIELD_WORKER'] as const;
+const ASSIGNABLE_ROLES = [
+  'MANAGER',
+  'ACCOUNTANT',
+  'WAREHOUSE',
+  'SALES',
+  'FIELD_WORKER',
+  'WORKER',
+] as const;
 
 export class UpdateMemberRoleDto {
   @IsString()

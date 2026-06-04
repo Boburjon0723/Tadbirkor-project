@@ -75,9 +75,17 @@ model Company {
   pickTasks         PickTask[]
   inventoryCounts   InventoryCount[]
   stockBlocks       StockBlock[]
+  payrollSettings   PayrollCompanySettings?
+  employeeLeaveRequests EmployeeLeaveRequest[]
+  employeeWorkMonths  EmployeeWorkMonth[]
+  employeeCompensations EmployeeCompensation[]
+  employeePayrollAdvances EmployeePayrollAdvance[]
+  employeePayrollSettlements EmployeePayrollSettlement[]
   inventoryVarianceTolerancePct Decimal @default(1) @db.Decimal(5, 2)
   expenseCategories ExpenseCategory[]
   expenses          Expense[]
+  incomeCategories  IncomeCategory[]
+  incomes           Income[]
   partnerLedgerContacts PartnerLedgerContact[]
 
   createdAt         DateTime @default(now())
@@ -160,6 +168,7 @@ model User {
   userStocks         UserStock[]
   expensesCreated    Expense[] @relation("ExpenseCreator")
   expensesApproved   Expense[] @relation("ExpenseApprover")
+  incomesCreated     Income[] @relation("IncomeCreator")
   partnerLedgerOperations PartnerLedgerOperation[]
 
   createdAt    DateTime @default(now())
@@ -179,6 +188,12 @@ model CompanyUser {
   warehouseId String?
   warehouse   Warehouse? @relation("CompanyUserWarehouse", fields: [warehouseId], references: [id])
   assignedPickTasks PickTask[]
+  leaveRequests    EmployeeLeaveRequest[]
+  workMonths       EmployeeWorkMonth[]
+  payrollProfile   EmployeePayrollProfile?
+  compensations    EmployeeCompensation[]
+  payrollAdvances  EmployeePayrollAdvance[]
+  payrollSettlements EmployeePayrollSettlement[]
   /// Rol defaultidan qo‘shimcha ruxsatlar (masalan pos.credit)
   grantPermissions String[] @default([])
   /// Rol defaultidan olib tashlangan ruxsatlar
@@ -776,6 +791,46 @@ model Expense {
 
 // --- Hamkor daftari (tizimda bo‘lmagan hamkorlar, qo‘lda hisob) ---
 
+// --- Kirimlar (INCOME moduli) ---
+
+model IncomeCategory {
+  id        String   @id @default(uuid())
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id])
+  name      String
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  incomes   Income[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model Income {
+  id          String         @id @default(uuid())
+  companyId   String
+  company     Company        @relation(fields: [companyId], references: [id])
+  categoryId  String
+  category    IncomeCategory @relation(fields: [categoryId], references: [id])
+  amount      Decimal        @db.Decimal(15, 2)
+  currency    String         @default("UZS")
+  incomeDate  DateTime
+  description String?
+  notes       String?
+  createdById String
+  createdBy   User           @relation("IncomeCreator", fields: [createdById], references: [id])
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([companyId, incomeDate])
+  @@index([categoryId])
+  @@index([createdById])
+}
+
 model PartnerLedgerContact {
   id              String   @id @default(uuid())
   companyId       String
@@ -1318,4 +1373,127 @@ model FieldTaskApproval {
 
   @@index([fieldTaskId])
   @@index([reportId])
+}
+
+// --- PAYROLL: dam olish va ish kunlari ---
+
+model PayrollCompanySettings {
+  companyId        String   @id
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  /// AUTO — tasdiqlangan dam olish kunlari avtomatik ayiriladi; MANUAL — faqat qo‘lda
+  workedDaysMode   String   @default("AUTO")
+  updatedAt        DateTime @updatedAt
+}
+
+model EmployeeLeaveRequest {
+  id               String   @id @default(uuid())
+  companyId        String
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyUserId    String
+  companyUser      CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  startDate        DateTime @db.Date
+  endDate          DateTime @db.Date
+  daysCount        Int
+  reason           String?
+  status           String   @default("PENDING") // PENDING | APPROVED | REJECTED | CANCELLED
+  requestedAt      DateTime @default(now())
+  reviewedAt       DateTime?
+  reviewedByUserId String?
+  reviewNote       String?
+
+  @@index([companyId, status])
+  @@index([companyUserId, status])
+  @@index([companyId, startDate, endDate])
+}
+
+model EmployeeWorkMonth {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyUserId   String
+  companyUser     CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  year            Int
+  month           Int
+  totalDays       Int
+  workedDays      Int
+  isManual        Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([companyUserId, year, month])
+  @@index([companyId, year, month])
+}
+
+/// Xodim ish haqi profili — kadrlar va dam olish limiti
+model EmployeePayrollProfile {
+  companyUserId          String    @id
+  companyUser            CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  firstName              String?
+  lastName               String?
+  position               String?
+  department             String?
+  address                String?
+  email                  String?
+  notes                  String?
+  phone                  String?
+  /// Oyiga maoshdan ayirilmaydigan dam olish (ish kuni)
+  monthlyPaidLeaveQuota  Int       @default(0)
+  /// Oylik (ish haqi) ro‘yxatida ko‘rsatish — Kompaniya > Xodimlar dan mustaqil
+  onPayrollRoster        Boolean   @default(false)
+  leftAt                 DateTime? @db.Date
+  employmentStatus       String    @default("ACTIVE")
+  updatedAt              DateTime  @updatedAt
+}
+
+model EmployeeCompensation {
+  id              String      @id @default(uuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyUserId   String
+  companyUser     CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  employeeName    String
+  employeeRole    String
+  baseSalary      Decimal     @db.Decimal(15, 2)
+  currency        String      @default("UZS")
+  effectiveFrom   DateTime    @default(now()) @db.Date
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([companyId, companyUserId, isActive])
+}
+
+model EmployeePayrollAdvance {
+  id              String      @id @default(uuid())
+  companyId       String
+  company         Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyUserId   String
+  companyUser     CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  year            Int
+  month           Int
+  amount          Decimal     @db.Decimal(15, 2)
+  advanceDate     DateTime    @db.Date
+  reason          String
+  createdAt       DateTime    @default(now())
+
+  @@index([companyUserId, year, month])
+}
+
+model EmployeePayrollSettlement {
+  id                 String      @id @default(uuid())
+  companyId          String
+  company            Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyUserId      String
+  companyUser        CompanyUser @relation(fields: [companyUserId], references: [id], onDelete: Cascade)
+  year               Int
+  month              Int
+  baseSalary         Decimal     @db.Decimal(15, 2)
+  totalDays          Int
+  workedDays         Int
+  bonus              Decimal     @default(0) @db.Decimal(15, 2)
+  penalties          Decimal     @default(0) @db.Decimal(15, 2)
+  paymentConfirmedAt DateTime?
+  updatedAt          DateTime    @updatedAt
+
+  @@unique([companyUserId, year, month])
+  @@index([companyId, year, month])
 }

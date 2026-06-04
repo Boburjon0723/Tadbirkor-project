@@ -62,7 +62,13 @@ export default function TeamPage() {
     try {
       setIsLoading(true);
       const data = await usersService.getCompanyUsers();
-      setUsers(data);
+      // Faqat oylik (pay.* login) — jamoa ro‘yxatida ko‘rsatilmaydi
+      setUsers(
+        (data || []).filter(
+          (u: { user?: { login?: string } }) =>
+            !String(u?.user?.login || '').startsWith('pay.'),
+        ),
+      );
     } catch (err) {
       console.error('Foydalanuvchilarni yuklashda xato:', err);
     } finally {

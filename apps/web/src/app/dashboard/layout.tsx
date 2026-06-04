@@ -8,6 +8,7 @@ import {
   Users, 
   Store,
   Wallet2,
+  Banknote,
   Link2,
   LogOut,
   ChevronLeft,
@@ -169,6 +170,7 @@ export default function DashboardLayout({
         Users,
         Store,
         Wallet2,
+        Banknote,
         BarChart3,
         Link2,
         Settings,
@@ -223,6 +225,7 @@ export default function DashboardLayout({
       'warehouse',
       'sales',
       'field_worker',
+      'worker',
     ];
     return [
       ...filteredMenuGroups,

@@ -414,7 +414,7 @@ export class AuthService {
           },
         });
 
-        await tx.companyUser.create({
+        const membership = await tx.companyUser.create({
           data: {
             companyId,
             userId: user.id,
@@ -427,6 +427,7 @@ export class AuthService {
 
         return {
           id: user.id,
+          companyUserId: membership.id,
           fullName: user.fullName,
           login: user.login,
           email: user.email,
@@ -459,7 +460,7 @@ export class AuthService {
         dto.denyPermissions,
       );
 
-      await tx.companyUser.create({
+      const membership = await tx.companyUser.create({
         data: {
           companyId,
           userId: user.id,
@@ -472,6 +473,7 @@ export class AuthService {
 
       return {
         id: user.id,
+        companyUserId: membership.id,
         fullName: user.fullName,
         login: user.login,
         email: user.email,

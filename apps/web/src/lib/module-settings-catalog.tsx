@@ -50,7 +50,7 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
     name: 'Ombor',
     desc: 'Qoldiqlar va harakatlar',
     details:
-      'Kirim/chiqim, transfer, qoldiq nazorati, inventory jarayonlari shu modulda boshqariladi.',
+      'Katalog va qoldiq. Saralash, ATP, inventarizatsiya — shu modul ichidagi alohida bo‘limlardan yoqiladi.',
     icon: WarehouseIcon,
   },
   {
@@ -114,6 +114,15 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
     desc: 'Chiqim va byudjet',
     details: 'Ofis, transport, xizmatlar va boshqa ichki xarajatlari kuzatish (rivojlantirilmoqda).',
     icon: Wallet2,
+  },
+  {
+    key: 'PAYROLL',
+    groupId: 'finance',
+    name: 'Oylik',
+    desc: 'Xodimlar maoshi',
+    details:
+      'Asosiy oylik, bonus/jarima, davr bo‘yicha hisoblash va tasdiqlash. EMPLOYEES moduli yoqilgan bo‘lishi kerak.',
+    icon: Banknote,
   },
   {
     key: 'FIELD_SERVICE',

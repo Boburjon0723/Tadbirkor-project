@@ -5,6 +5,7 @@ export enum Role {
   WAREHOUSE = 'WAREHOUSE',
   SALES = 'SALES',
   FIELD_WORKER = 'FIELD_WORKER',
+  WORKER = 'WORKER',
 }
 
 export enum Permission {
@@ -56,6 +57,10 @@ export enum Permission {
   EXPENSES_MANAGE = 'expenses.manage',
   EXPENSES_APPROVE = 'expenses.approve',
   EXPENSES_REJECT = 'expenses.reject',
+
+  INCOME_VIEW = 'income.view',
+  INCOME_CREATE = 'income.create',
+  INCOME_MANAGE = 'income.manage',
 
   PARTNER_LEDGER_VIEW = 'partner_ledger.view',
   PARTNER_LEDGER_MANAGE = 'partner_ledger.manage',

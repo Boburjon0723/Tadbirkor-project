@@ -14,35 +14,49 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Permission } from '../../common/enums/role.enum';
 import { InventoryCountService } from './inventory-count.service';
+import { CompaniesService } from '../companies/companies.service';
 
 @Controller('inventory-counts')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class InventoryCountController {
-  constructor(private readonly inventoryCountService: InventoryCountService) {}
+  constructor(
+    private readonly inventoryCountService: InventoryCountService,
+    private readonly companiesService: CompaniesService,
+  ) {}
+
+  private async assertInventoryCount(user: { companyId: string }) {
+    await this.companiesService.assertFeatureEnabled(
+      user.companyId,
+      'WAREHOUSE_INVENTORY_COUNT',
+    );
+  }
 
   @Get()
   @Permissions(Permission.WAREHOUSE_VIEW)
-  list(
+  async list(
     @CurrentUser() user: any,
     @Query('status') status?: string,
     @Query('warehouseId') warehouseId?: string,
   ) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.list(user.companyId, { status, warehouseId });
   }
 
   @Get(':id')
   @Permissions(Permission.WAREHOUSE_VIEW)
-  findOne(@CurrentUser() user: any, @Param('id') id: string) {
+  async findOne(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.findOne(id, user.companyId);
   }
 
   @Post(':id/scan')
   @Permissions(Permission.WAREHOUSE_ADJUST)
-  scan(
+  async scan(
     @CurrentUser() user: any,
     @Param('id') id: string,
     @Body() dto: { barcode: string; countedQuantity: number },
   ) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.recordCountByBarcode(
       id,
       user.companyId,
@@ -54,20 +68,22 @@ export class InventoryCountController {
 
   @Post()
   @Permissions(Permission.WAREHOUSE_ADJUST)
-  start(
+  async start(
     @CurrentUser() user: any,
     @Body() dto: { warehouseId: string; productVariantIds?: string[] },
   ) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.startCount(user.companyId, user.sub, dto);
   }
 
   @Patch('items/:itemId/count')
   @Permissions(Permission.WAREHOUSE_ADJUST)
-  recordCount(
+  async recordCount(
     @CurrentUser() user: any,
     @Param('itemId') itemId: string,
     @Body() dto: { countedQuantity: number },
   ) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.recordCount(
       itemId,
       user.companyId,
@@ -78,19 +94,22 @@ export class InventoryCountController {
 
   @Patch('items/:itemId/approve')
   @Permissions(Permission.WAREHOUSE_MANAGE)
-  approveItem(@CurrentUser() user: any, @Param('itemId') itemId: string) {
+  async approveItem(@CurrentUser() user: any, @Param('itemId') itemId: string) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.approveItem(itemId, user.companyId, user.sub);
   }
 
   @Post(':id/complete')
   @Permissions(Permission.WAREHOUSE_MANAGE)
-  complete(@CurrentUser() user: any, @Param('id') id: string) {
+  async complete(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.completeCount(id, user.companyId, user.sub);
   }
 
   @Post(':id/cancel')
   @Permissions(Permission.WAREHOUSE_ADJUST)
-  cancel(@CurrentUser() user: any, @Param('id') id: string) {
+  async cancel(@CurrentUser() user: any, @Param('id') id: string) {
+    await this.assertInventoryCount(user);
     return this.inventoryCountService.cancelCount(id, user.companyId);
   }
 }

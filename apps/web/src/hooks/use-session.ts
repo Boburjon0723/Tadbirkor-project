@@ -8,7 +8,8 @@ export type SessionRole =
   | 'accountant'
   | 'warehouse'
   | 'sales'
-  | 'field_worker';
+  | 'field_worker'
+  | 'worker';
 
 export type SessionData = {
   me: Awaited<ReturnType<typeof authService.getMe>>;

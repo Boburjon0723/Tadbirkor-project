@@ -21,6 +21,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { WarehouseScopeService } from '../users/services/warehouse-scope.service';
+import { CompaniesService } from '../companies/companies.service';
 
 @Controller('stock')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -29,6 +30,7 @@ export class StockController {
     private readonly stockService: StockService,
     private readonly warehouseScopeService: WarehouseScopeService,
     private readonly atpService: AtpService,
+    private readonly companiesService: CompaniesService,
   ) {}
 
   private async resolveWarehouseId(
@@ -113,6 +115,7 @@ export class StockController {
     @Param('variantId') variantId: string,
     @Query('warehouseId') warehouseId: string,
   ) {
+    await this.companiesService.assertFeatureEnabled(user.companyId, 'WAREHOUSE_ATP');
     warehouseId = await this.resolveWarehouseId(user.companyId, user.sub, warehouseId);
     const result = await this.atpService.getFreeStock(variantId, warehouseId, user.companyId);
     return {
@@ -136,6 +139,7 @@ export class StockController {
     @CurrentUser() user: any,
     @Body() body: { warehouseId: string; variantIds: string[] },
   ) {
+    await this.companiesService.assertFeatureEnabled(user.companyId, 'WAREHOUSE_ATP');
     const warehouseId = await this.resolveWarehouseId(
       user.companyId,
       user.sub,

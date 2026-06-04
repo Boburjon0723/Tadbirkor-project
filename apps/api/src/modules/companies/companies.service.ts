@@ -7,6 +7,12 @@ import { RemoveTelegramBindingDto } from './dto/remove-telegram-binding.dto';
 import { TelegramLinkService } from '../telegram/telegram-link.service';
 import { AppCacheService } from '../../common/cache/app-cache.service';
 import { randomBytes } from 'crypto';
+import {
+  WAREHOUSE_BUNDLE_ALL_ID,
+  WAREHOUSE_FEATURE_BUNDLES,
+  WAREHOUSE_SECTION_FEATURE_DEFS,
+  WAREHOUSE_SECTION_FEATURE_KEYS,
+} from '../../common/warehouse-section-features';
 
 const FEATURES_CACHE_TTL_MS = Number(process.env.FEATURES_CACHE_TTL_MS || 300_000);
 
@@ -81,30 +87,117 @@ export class CompaniesService {
     const key = AppCacheService.companyFeaturesKey(companyId);
     return this.cache.getOrSet(
       key,
-      () => this.loadFeatureConfig(companyId),
+      async () => {
+        await this.ensureWarehouseFeatureCatalog();
+        await this.ensurePayrollModuleCatalog();
+        await this.ensureCompanyWarehouseSectionDefaults(companyId);
+        return this.loadFeatureConfig(companyId);
+      },
       FEATURES_CACHE_TTL_MS,
     );
   }
 
-  private async loadFeatureConfig(companyId: string) {
-    const companyFeatures = await (this.prisma as any).companyFeature.findMany({
+  /** PAYROLL moduli va feature katalogda bo‘lishi kerak (UI toggle) */
+  async ensurePayrollModuleCatalog() {
+    const moduleRecord = await (this.prisma as any).module.upsert({
+      where: { key: 'PAYROLL' },
+      update: {
+        name: 'Oylik',
+        description: 'Xodimlar maoshi hisoblash va tasdiqlash',
+      },
+      create: {
+        key: 'PAYROLL',
+        name: 'Oylik',
+        description: 'Xodimlar maoshi hisoblash va tasdiqlash',
+      },
+    });
+
+    await (this.prisma as any).feature.upsert({
+      where: { key: 'PAYROLL_MAIN' },
+      update: {
+        name: 'Oylik hisoblash',
+        description: 'Davr bo‘yicha maosh, bonus va tasdiqlash',
+      },
+      create: {
+        moduleId: moduleRecord.id,
+        key: 'PAYROLL_MAIN',
+        name: 'Oylik hisoblash',
+        description: 'Davr bo‘yicha maosh, bonus va tasdiqlash',
+      },
+    });
+  }
+
+  /** Feature jadvalida ombor bo‘limlari mavjudligini kafolatlash */
+  async ensureWarehouseFeatureCatalog() {
+    const warehouseModule = await (this.prisma as any).module.findUnique({
+      where: { key: 'WAREHOUSE' },
+    });
+    if (!warehouseModule) return;
+
+    for (const def of WAREHOUSE_SECTION_FEATURE_DEFS) {
+      await (this.prisma as any).feature.upsert({
+        where: { key: def.key },
+        update: { name: def.name, description: def.description },
+        create: {
+          moduleId: warehouseModule.id,
+          key: def.key,
+          name: def.name,
+          description: def.description,
+        },
+      });
+    }
+  }
+
+  /** Eski kompaniyalar: ombor yoqilgan bo‘lsa, yangi bo‘limlar default yoqilgan */
+  private async ensureCompanyWarehouseSectionDefaults(companyId: string) {
+    const configCount = await (this.prisma as any).companyFeature.count({
+      where: { companyId },
+    });
+    if (configCount === 0) return;
+
+    const hasWarehouseOn = await (this.prisma as any).companyFeature.findFirst({
       where: {
         companyId,
         enabled: true,
+        feature: { module: { key: 'WAREHOUSE' } },
       },
-      include: {
-        feature: {
-          select: {
-            key: true,
-            module: {
-              select: {
-                key: true,
-              },
+    });
+    if (!hasWarehouseOn) return;
+
+    const features = await (this.prisma as any).feature.findMany({
+      where: { key: { in: [...WAREHOUSE_SECTION_FEATURE_KEYS] } },
+      select: { id: true, key: true },
+    });
+
+    for (const feature of features) {
+      const existing = await (this.prisma as any).companyFeature.findUnique({
+        where: {
+          companyId_featureId: { companyId, featureId: feature.id },
+        },
+      });
+      if (!existing) {
+        await (this.prisma as any).companyFeature.create({
+          data: { companyId, featureId: feature.id, enabled: true },
+        });
+      }
+    }
+  }
+
+  private async loadFeatureConfig(companyId: string) {
+    const [companyFeatures, configCount] = await Promise.all([
+      (this.prisma as any).companyFeature.findMany({
+        where: { companyId, enabled: true },
+        include: {
+          feature: {
+            select: {
+              key: true,
+              module: { select: { key: true } },
             },
           },
         },
-      },
-    });
+      }),
+      (this.prisma as any).companyFeature.count({ where: { companyId } }),
+    ]);
 
     const enabledFeatures = companyFeatures.map((cf: any) => cf.feature.key);
     const enabledModules = Array.from(
@@ -112,10 +205,28 @@ export class CompaniesService {
     );
 
     return {
-      hasFeatureConfig: companyFeatures.length > 0,
+      hasFeatureConfig: configCount > 0,
       enabledFeatures,
       enabledModules,
     };
+  }
+
+  async isFeatureEnabled(companyId: string, featureKey: string): Promise<boolean> {
+    const config = await this.getFeatureConfig(companyId);
+    if (!config.hasFeatureConfig) return true;
+    const upper = featureKey.toUpperCase();
+    return (config.enabledFeatures || []).some(
+      (f: string) => String(f).toUpperCase() === upper,
+    );
+  }
+
+  async assertFeatureEnabled(companyId: string, featureKey: string) {
+    const enabled = await this.isFeatureEnabled(companyId, featureKey);
+    if (!enabled) {
+      throw new BadRequestException(
+        `${featureKey} bo‘limi o‘chirilgan. Sozlamalar → Modullar → Ombor bo‘limlaridan yoqing.`,
+      );
+    }
   }
 
   async isModuleEnabled(companyId: string, moduleKey: string): Promise<boolean> {
@@ -152,8 +263,117 @@ export class CompaniesService {
     };
   }
 
+  private async upsertCompanyFeatures(
+    companyId: string,
+    updates: { key: string; enabled: boolean }[],
+  ) {
+    const deduped = new Map<string, boolean>();
+    for (const u of updates) {
+      deduped.set(u.key.toUpperCase(), u.enabled);
+    }
+
+    await this.ensureWarehouseFeatureCatalog();
+
+    for (const [key, enabled] of deduped.entries()) {
+      const feature = await (this.prisma as any).feature.findUnique({
+        where: { key },
+      });
+      if (!feature) continue;
+      await (this.prisma as any).companyFeature.upsert({
+        where: {
+          companyId_featureId: { companyId, featureId: feature.id },
+        },
+        update: { enabled },
+        create: { companyId, featureId: feature.id, enabled },
+      });
+    }
+
+    this.invalidateFeatureCache(companyId);
+    return this.getFeatureConfig(companyId);
+  }
+
+  async updateWarehouseBundle(
+    companyId: string,
+    bundleId: string,
+    enabled: boolean,
+  ) {
+    if (bundleId === WAREHOUSE_BUNDLE_ALL_ID) {
+      return this.upsertCompanyFeatures(
+        companyId,
+        WAREHOUSE_SECTION_FEATURE_KEYS.map((key) => ({ key, enabled })),
+      );
+    }
+
+    const bundle = WAREHOUSE_FEATURE_BUNDLES.find((b) => b.id === bundleId);
+    if (!bundle) {
+      throw new NotFoundException('Ombor guruhi topilmadi');
+    }
+
+    const updates: { key: string; enabled: boolean }[] = [];
+
+    if (enabled) {
+      for (const reqId of bundle.requiresBundleIds || []) {
+        const req = WAREHOUSE_FEATURE_BUNDLES.find((b) => b.id === reqId);
+        if (!req) continue;
+        for (const key of req.featureKeys) {
+          updates.push({ key, enabled: true });
+        }
+      }
+      for (const key of bundle.featureKeys) {
+        updates.push({ key, enabled: true });
+      }
+    } else {
+      for (const key of bundle.featureKeys) {
+        updates.push({ key, enabled: false });
+      }
+      for (const other of WAREHOUSE_FEATURE_BUNDLES) {
+        if (other.requiresBundleIds?.includes(bundleId)) {
+          for (const key of other.featureKeys) {
+            updates.push({ key, enabled: false });
+          }
+        }
+      }
+    }
+
+    return this.upsertCompanyFeatures(companyId, updates);
+  }
+
   async updateFeatureConfig(companyId: string, dto: UpdateFeatureDto) {
-    const moduleKey = dto.moduleKey.toUpperCase();
+    const bundleIdRaw = String(dto.bundleId || '').trim();
+    const featureKeyRaw = String(dto.featureKey || '').trim();
+    const moduleKeyRaw = String(dto.moduleKey || '').trim();
+
+    if (bundleIdRaw) {
+      return this.updateWarehouseBundle(companyId, bundleIdRaw, dto.enabled);
+    }
+
+    if (featureKeyRaw) {
+      await this.ensureWarehouseFeatureCatalog();
+      const featureKey = featureKeyRaw.toUpperCase();
+      const feature = await (this.prisma as any).feature.findUnique({
+        where: { key: featureKey },
+      });
+      if (!feature) {
+        throw new NotFoundException('Bo‘lim (feature) topilmadi');
+      }
+      return this.upsertCompanyFeatures(companyId, [
+        { key: featureKey, enabled: dto.enabled },
+      ]);
+    }
+
+    if (!moduleKeyRaw) {
+      throw new BadRequestException('moduleKey yoki featureKey kerak');
+    }
+
+    const moduleKey = moduleKeyRaw.toUpperCase();
+
+    if (moduleKey === 'WAREHOUSE') {
+      await this.ensureWarehouseFeatureCatalog();
+    }
+    if (moduleKey === 'PAYROLL') {
+      await this.ensurePayrollModuleCatalog();
+    }
+
     const moduleRecord = await (this.prisma as any).module.findUnique({
       where: { key: moduleKey },
       include: { features: true },

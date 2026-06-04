@@ -18,6 +18,17 @@ export function isModuleKeyEnabled(
   );
 }
 
+/** Ombor ichidagi alohida bo‘lim (WAREHOUSE_PICKING, WAREHOUSE_ATP, …) */
+export function isFeatureKeyEnabled(
+  cfg: CompanyFeatureConfig | null | undefined,
+  featureKey: string,
+): boolean {
+  if (!cfg || !cfg.hasFeatureConfig) return true;
+  return (cfg.enabledFeatures || []).some(
+    (f) => String(f).toUpperCase() === featureKey.toUpperCase(),
+  );
+}
+
 /** Menyu yoki sahifa: bir nechta modul — `all` = hammasi yoqilgan, `any` = kamida bittasi. */
 export function areModuleKeysEnabled(
   cfg: CompanyFeatureConfig | null | undefined,
@@ -26,7 +37,13 @@ export function areModuleKeysEnabled(
 ): boolean {
   if (!keys.length) return true;
   if (!cfg || !cfg.hasFeatureConfig) return true;
-  const checks = keys.map((k) => isModuleKeyEnabled(cfg, k));
+  const checks = keys.map((k) => {
+    const upper = k.toUpperCase();
+    if (upper.includes('_') && !upper.endsWith('_MAIN')) {
+      return isFeatureKeyEnabled(cfg, upper) || isModuleKeyEnabled(cfg, upper);
+    }
+    return isModuleKeyEnabled(cfg, k);
+  });
   return mode === 'any' ? checks.some(Boolean) : checks.every(Boolean);
 }
 

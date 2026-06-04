@@ -7,6 +7,7 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/role.enum';
 import { UpdateFeatureDto } from './dto/update-feature.dto';
+import { UpdateWarehouseBundleDto } from './dto/update-warehouse-bundle.dto';
 import { UpsertTelegramBindingDto } from './dto/upsert-telegram-binding.dto';
 import { RemoveTelegramBindingDto } from './dto/remove-telegram-binding.dto';
 
@@ -40,6 +41,17 @@ export class CompaniesController {
   @Permissions(Permission.SETTINGS_MANAGE)
   updateFeatures(@Request() req: any, @Body() dto: UpdateFeatureDto) {
     return this.companiesService.updateFeatureConfig(req.user.companyId, dto);
+  }
+
+  /** Ombor guruhlari: core | b2b_outbound | inventory_count | all */
+  @Patch('features/warehouse-bundle')
+  @Permissions(Permission.SETTINGS_MANAGE)
+  updateWarehouseBundle(@Request() req: any, @Body() dto: UpdateWarehouseBundleDto) {
+    return this.companiesService.updateWarehouseBundle(
+      req.user.companyId,
+      dto.bundleId.trim(),
+      dto.enabled,
+    );
   }
 
   @Patch('me')

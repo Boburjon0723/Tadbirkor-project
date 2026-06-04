@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramBotContextService, TelegramBotUser } from './telegram-bot-context.service';
 import { TelegramTasksService } from './telegram-tasks.service';
 import { TelegramPosReportService } from './telegram-pos-report.service';
+import { MENU_PAYROLL_EMPLOYEES } from './telegram-payroll-bot.service';
 
 export const MENU_LINK = '📱 Ulanish / yangilash';
 export const MENU_PASSWORD = '🔑 Parolni tiklash';
@@ -13,6 +14,19 @@ export const MENU_POS_REPORT = '📊 POS bugun';
 export const MENU_WEB = '🌐 Veb-ilovani ochish';
 export const MENU_HELP = 'ℹ️ Yordam';
 
+export const MENU_LEAVE_REQUEST = '🏖 Dam olish so‘rash';
+export const MENU_LEAVE_PENDING = '📋 Dam olish so‘rovlari';
+export { MENU_PAYROLL_EMPLOYEES };
+
+const STAFF_LEAVE_ROLES = new Set([
+  'WORKER',
+  'FIELD_WORKER',
+  'WAREHOUSE',
+  'SALES',
+  'ACCOUNTANT',
+]);
+const LEAVE_REVIEW_ROLES = new Set(['OWNER', 'MANAGER']);
+
 export const MENU_BUTTONS = new Set([
   MENU_LINK,
   MENU_PASSWORD,
@@ -20,6 +34,9 @@ export const MENU_BUTTONS = new Set([
   MENU_POS_REPORT,
   MENU_WEB,
   MENU_HELP,
+  MENU_LEAVE_REQUEST,
+  MENU_LEAVE_PENDING,
+  MENU_PAYROLL_EMPLOYEES,
 ]);
 
 @Injectable()
@@ -32,10 +49,21 @@ export class TelegramMenuService {
     private readonly posReportService: TelegramPosReportService,
   ) {}
 
-  mainMenuKeyboard() {
+  mainMenuKeyboard(role?: string) {
+    const r = String(role || '').toUpperCase();
+    const rowLeave: string[] = [];
+    if (STAFF_LEAVE_ROLES.has(r)) rowLeave.push(MENU_LEAVE_REQUEST);
+    if (LEAVE_REVIEW_ROLES.has(r)) rowLeave.push(MENU_LEAVE_PENDING);
+
+    const rowPayroll: string[] = [];
+    if (LEAVE_REVIEW_ROLES.has(r)) rowPayroll.push(MENU_PAYROLL_EMPLOYEES);
+
     return Markup.keyboard([
-      [Markup.button.contactRequest('📱 Telefon raqamni ulashish'), MENU_PASSWORD],
+      [Markup.button.contactRequest('📱 Telefon raqamni ulashish')],
+      [MENU_PASSWORD],
       [MENU_TASKS, MENU_POS_REPORT],
+      ...(rowLeave.length ? [rowLeave] : []),
+      ...(rowPayroll.length ? [rowPayroll] : []),
       [MENU_WEB, MENU_HELP],
     ]).resize();
   }
@@ -58,6 +86,8 @@ export class TelegramMenuService {
       '• Mening vazifalarim — ochiq ishlar',
       '• POS bugun — kassa hisoboti',
       '• Veb-ilova',
+      '• Dam olish (xodim / menejer)',
+      '• Xodimlar oylik — maosh, avans, bonus (owner/menejer)',
       '',
       'Raqamni qo‘lda yozmang — faqat tugma.',
     ].join('\n');
@@ -73,6 +103,7 @@ export class TelegramMenuService {
       '/kompaniya — kompaniya tanlash (bir nechta bo‘lsa)',
       '/parol — parolni tiklash',
       '/bekor — jarayonni bekor qilish',
+      '/oylik — xodimlar oylik (owner/menejer)',
       '',
       'Bildirishnomalardagi tugmalar (Qabul/Rad) shu chatda ishlaydi.',
     ].join('\n');
@@ -135,7 +166,19 @@ export class TelegramMenuService {
       return { message: this.helpText() };
     }
 
-    return { message: this.welcomeText(), extra: this.mainMenuKeyboard() };
+    if (normalized === MENU_LEAVE_REQUEST || normalized === MENU_LEAVE_PENDING) {
+      return { message: '__TRIGGER_LEAVE_MENU__' };
+    }
+
+    if (normalized === MENU_PAYROLL_EMPLOYEES) {
+      return { message: '__TRIGGER_PAYROLL__' };
+    }
+
+    const linked = await this.botContext.findLinkedUser(chatId);
+    const role = linked
+      ? this.botContext.getActiveMembership(chatId, linked)?.role
+      : undefined;
+    return { message: this.welcomeText(), extra: this.mainMenuKeyboard(role) };
   }
 
   companyPickerMarkup(user: TelegramBotUser) {
