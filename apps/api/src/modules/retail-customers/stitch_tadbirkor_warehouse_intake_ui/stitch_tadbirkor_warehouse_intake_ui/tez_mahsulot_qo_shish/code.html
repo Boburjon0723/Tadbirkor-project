@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Axis ERP - Quick Product Add</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800;900&amp;family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#adc6ff",
+                    "on-error": "#690005",
+                    "surface": "#0e1511",
+                    "on-primary-container": "#00422b",
+                    "surface-dim": "#0e1511",
+                    "on-primary": "#003824",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container-lowest": "#09100c",
+                    "primary-fixed-dim": "#4edea3",
+                    "primary-container": "#10b981",
+                    "on-error-container": "#ffdad6",
+                    "inverse-primary": "#006c49",
+                    "on-secondary-fixed-variant": "#004395",
+                    "tertiary": "#ffb95f",
+                    "outline": "#86948a",
+                    "surface-tint": "#4edea3",
+                    "on-surface-variant": "#bbcabf",
+                    "inverse-on-surface": "#2b322d",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-primary-fixed": "#002113",
+                    "on-secondary-fixed": "#001a42",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "error-container": "#93000a",
+                    "tertiary-container": "#e29100",
+                    "on-background": "#dde4dd",
+                    "inverse-surface": "#dde4dd",
+                    "surface-bright": "#343b36",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "surface-container-highest": "#2f3632",
+                    "on-surface": "#dde4dd",
+                    "background": "#0e1511",
+                    "surface-container-high": "#242c27",
+                    "on-tertiary-container": "#523200",
+                    "outline-variant": "#3c4a42",
+                    "error": "#ffb4ab",
+                    "on-secondary": "#002e6a",
+                    "surface-container": "#1a211d",
+                    "primary-fixed": "#6ffbbe",
+                    "surface-variant": "#2f3632",
+                    "on-secondary-container": "#e6ecff",
+                    "primary": "#4edea3",
+                    "surface-container-low": "#161d19",
+                    "secondary-container": "#0566d9",
+                    "on-tertiary": "#472a00",
+                    "on-primary-fixed-variant": "#005236",
+                    "tertiary-fixed": "#ffddb8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "touch-target-min": "48px",
+                    "element-padding": "12px",
+                    "container-margin": "24px",
+                    "button-height": "56px",
+                    "stack-gap": "16px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Hanken Grotesk"],
+                    "label-status": ["Inter"],
+                    "label-caps": ["Space Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-sm-mobile": ["16px", {"lineHeight": "22px", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "headline-lg-mobile": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      .glass-card {
+        background: rgba(10, 10, 12, 0.8);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        background-color: #0e1511;
+        overscroll-behavior-y: contain;
+      }
+      /* Custom focus styles for industrial theme */
+      .input-industrial:focus-within {
+        border-color: #10b981;
+        box-shadow: 0 0 0 1px #10b981;
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface font-body-md overflow-hidden">
+<!-- Background Content (Simulating Warehouse Intake Screen) -->
+<main class="min-h-screen p-container-margin filter blur-sm">
+<header class="fixed top-0 left-0 w-full z-10 flex items-center h-14 px-container-margin bg-surface/80 backdrop-blur-xl border-b border-white/10">
+<span class="material-symbols-outlined text-primary mr-4" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-headline-sm text-headline-sm-mobile font-bold text-on-surface">Ombor kirimi</h1>
+</header>
+<div class="mt-20 space-y-4">
+<!-- Mock items for background -->
+<div class="glass-card rounded-[20px] p-4 flex justify-between items-start opacity-50">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1 uppercase">SKU: 459021</p>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Alyuminiy Profil 2m</h3>
+</div>
+<span class="px-3 py-1 rounded-full bg-primary/20 text-primary text-label-status">TUGALLANGAN</span>
+</div>
+<div class="glass-card rounded-[20px] p-4 flex justify-between items-start opacity-30">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1 uppercase">SKU: 102933</p>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Burchak mahkamlagich</h3>
+</div>
+<span class="px-3 py-1 rounded-full bg-tertiary/20 text-tertiary text-label-status">DRAFT</span>
+</div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex flex-col justify-end md:justify-center items-center transition-opacity duration-300" id="modal-overlay">
+<!-- Quick Product Add Modal -->
+<section class="glass-card w-full max-w-lg md:rounded-[32px] rounded-t-[32px] overflow-hidden flex flex-col max-h-[795px] shadow-2xl animate-in slide-in-from-bottom duration-300" id="quick-add-modal">
+<!-- Modal Header -->
+<header class="p-6 pb-2 flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-error-container flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="error_outline">error_outline</span>
+</div>
+<div>
+<h2 class="font-headline-lg text-headline-lg-mobile text-on-surface">Mahsulot topilmadi</h2>
+<p class="text-on-surface-variant text-body-md">Yangi mahsulotni tezda qo'shing</p>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/10 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="close">close</span>
+</button>
+</header>
+<!-- Modal Body (Form) -->
+<div class="p-6 space-y-stack-gap overflow-y-auto">
+<!-- Barcode (Readonly) -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1">BARKOD (SKANERLANGAN)</label>
+<div class="relative flex items-center h-button-height bg-surface-container rounded-xl border border-white/10 px-4 group">
+<span class="material-symbols-outlined text-on-surface-variant mr-3" data-icon="barcode">barcode</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-on-surface-variant font-medium cursor-not-allowed" readonly="" type="text" value="8601234567890"/>
+<span class="material-symbols-outlined text-outline text-sm" data-icon="lock">lock</span>
+</div>
+</div>
+<!-- Product Name (Focus) -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1" for="product-name">MAHSULOT NOMI *</label>
+<div class="input-industrial relative flex items-center h-button-height bg-surface-container rounded-xl border border-white/10 px-4 transition-all duration-200">
+<span class="material-symbols-outlined text-primary mr-3" data-icon="edit">edit</span>
+<input autofocus="" class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-outline" id="product-name" placeholder="Masalan: LED Chiroq 12W" type="text"/>
+</div>
+</div>
+<!-- Grid for Quantity and Unit -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Quantity -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1">MIQDORI</label>
+<div class="input-industrial flex items-center h-button-height bg-surface-container rounded-xl border border-white/10 px-1">
+<button class="w-12 h-12 flex items-center justify-center text-on-surface hover:text-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="remove">remove</span>
+</button>
+<input class="bg-transparent border-none focus:ring-0 w-full text-center text-on-surface font-headline-sm" type="number" value="1"/>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface hover:text-primary transition-colors active:scale-90">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+</button>
+</div>
+</div>
+<!-- Unit Selection -->
+<div class="space-y-2">
+<label class="font-label-caps text-label-caps text-on-surface-variant ml-1">O'LCHOV BIRLIGI</label>
+<div class="input-industrial relative flex items-center h-button-height bg-surface-container rounded-xl border border-white/10 px-4">
+<select class="bg-transparent border-none focus:ring-0 w-full text-on-surface appearance-none">
+<option selected="" value="dona">dona</option>
+<option value="kg">kg</option>
+<option value="metr">metr</option>
+<option value="litr">litr</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 pointer-events-none text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Quick Help / Note -->
+<div class="bg-primary/10 rounded-xl p-4 border border-primary/20 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5" data-icon="info">info</span>
+<p class="text-body-md text-on-primary-fixed-variant leading-tight">
+                        Mahsulot ombor bazasiga "Noma'lum" toifasi bilan vaqtinchalik qo'shiladi. To'liq ma'lumotni kompyuterda kiritishingiz mumkin.
+                    </p>
+</div>
+</div>
+<!-- Modal Footer -->
+<footer class="p-6 pt-2 space-y-3">
+<button class="w-full h-button-height bg-secondary-container text-on-secondary-container font-headline-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform shadow-lg hover:brightness-110">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+                    Tez qo'shish
+                </button>
+<button class="w-full h-button-height bg-transparent text-on-surface-variant font-headline-sm rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-transform hover:bg-white/5" onclick="window.history.back()">
+                    Bekor qilish
+                </button>
+</footer>
+<!-- Bottom Handle (Mobile) -->
+<div class="md:hidden flex justify-center pb-3">
+<div class="w-12 h-1.5 bg-white/20 rounded-full"></div>
+</div>
+</section>
+</div>
+<!-- Bottom Navigation Bar (Hidden but mapped from Shared Components JSON for shell integrity) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/90 backdrop-blur-xl border-t border-white/15 flex justify-around items-center h-20 px-4 pb-safe filter blur-sm pointer-events-none">
+<div class="flex flex-col items-center justify-center bg-primary-container/20 text-primary rounded-xl px-4 py-2">
+<span class="material-symbols-outlined" data-icon="barcode_scanner">barcode_scanner</span>
+<span class="font-label-caps text-label-caps">Skaner</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-caps text-label-caps">Ro‘yxat</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-caps text-label-caps">Hujjatlar</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-caps text-label-caps">Sozlamalar</span>
+</div>
+</nav>
+<script>
+        // Simple micro-interaction for numeric stepper
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const icon = this.querySelector('.material-symbols-outlined');
+                if (!icon) return;
+                
+                const input = this.parentElement.querySelector('input[type="number"]');
+                if (!input) return;
+
+                let val = parseInt(input.value);
+                if (icon.textContent === 'add') {
+                    input.value = val + 1;
+                } else if (icon.textContent === 'remove' && val > 1) {
+                    input.value = val - 1;
+                }
+            });
+        });
+
+        // Auto-focus logic for better UX
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('product-name').focus();
+            }, 500);
+        });
+
+        // Close modal logic (visual only for prototype)
+        const overlay = document.getElementById('modal-overlay');
+        const modal = document.getElementById('quick-add-modal');
+        
+        const closeModal = () => {
+            modal.classList.add('translate-y-full');
+            modal.classList.add('opacity-0');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => {
+                // In a real app, route back or hide element
+                console.log('Modal closed');
+            }, 300);
+        };
+    </script>
+</body></html>

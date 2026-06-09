@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { StockHistoryItem } from "@/features/warehouse/warehouse-history-types";
 
 export const warehouseService = {
   // Warehouses
@@ -39,8 +40,8 @@ export const warehouseService = {
   },
 
   // Stock Movements
-  async getStockMovements(params?: any) {
-    const { data } = await api.get("/stock/movements", { params });
+  async getStockMovements(params?: { warehouseId?: string }) {
+    const { data } = await api.get<StockHistoryItem[]>("/stock/movements", { params });
     return data;
   },
 

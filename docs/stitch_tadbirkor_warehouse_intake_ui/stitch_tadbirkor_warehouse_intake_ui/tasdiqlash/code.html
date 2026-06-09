@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Kirimni tasdiqlash</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800;900&amp;family=Space+Grotesk:wght@700&amp;family=Inter:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#ffdad6",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "surface-container-high": "#242c27",
+                    "on-tertiary-container": "#523200",
+                    "inverse-surface": "#dde4dd",
+                    "outline-variant": "#3c4a42",
+                    "secondary-container": "#0566d9",
+                    "primary-container": "#10b981",
+                    "surface-dim": "#0e1511",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-surface": "#dde4dd",
+                    "on-tertiary": "#472a00",
+                    "inverse-on-surface": "#2b322d",
+                    "on-secondary-fixed": "#001a42",
+                    "error": "#ffb4ab",
+                    "surface-container-highest": "#2f3632",
+                    "secondary": "#adc6ff",
+                    "on-primary-fixed": "#002113",
+                    "surface-container-lowest": "#09100c",
+                    "tertiary-container": "#e29100",
+                    "surface-container": "#1a211d",
+                    "secondary-fixed": "#d8e2ff",
+                    "on-primary-fixed-variant": "#005236",
+                    "primary-fixed": "#6ffbbe",
+                    "on-secondary": "#002e6a",
+                    "outline": "#86948a",
+                    "inverse-primary": "#006c49",
+                    "surface-bright": "#343b36",
+                    "on-surface-variant": "#bbcabf",
+                    "surface": "#0e1511",
+                    "primary": "#4edea3",
+                    "surface-tint": "#4edea3",
+                    "surface-variant": "#2f3632",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "on-secondary-fixed-variant": "#004395",
+                    "on-secondary-container": "#e6ecff",
+                    "tertiary-fixed": "#ffddb8",
+                    "surface-container-low": "#161d19",
+                    "tertiary": "#ffb95f",
+                    "on-primary-container": "#00422b",
+                    "error-container": "#93000a",
+                    "on-background": "#dde4dd",
+                    "on-primary": "#003824",
+                    "background": "#0e1511",
+                    "on-error": "#690005",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-tertiary-fixed-variant": "#653e00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "element-padding": "12px",
+                    "button-height": "56px",
+                    "stack-gap": "16px",
+                    "touch-target-min": "48px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Hanken Grotesk"],
+                    "label-caps": ["Space Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "label-status": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-sm-mobile": ["16px", {"lineHeight": "22px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .inner-glow {
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+        body {
+            background-color: #0e1511;
+            color: #dde4dd;
+            overflow-x: hidden;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md bg-background text-on-surface">
+<!-- Top Navigation Anchor (As per JSON) -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10 flex items-center h-14 px-container-margin">
+<button class="material-symbols-outlined text-primary active:scale-95 transition-transform duration-200" data-icon="arrow_back">arrow_back</button>
+<h1 class="ml-4 font-headline-sm text-headline-sm-mobile font-bold text-on-surface">Ombor kirimi</h1>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-28 px-container-margin max-w-2xl mx-auto space-y-6">
+<!-- Summary Context -->
+<div class="glass-card rounded-xl p-6 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">OMBOR MANZILI</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Markaziy Logistika Xabi</h2>
+</div>
+<div class="bg-primary/20 px-3 py-1 rounded-full">
+<span class="font-label-status text-label-status text-primary">DRAFT</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-2 border-t border-white/10">
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">POZITSIYALAR</span>
+<p class="font-headline-sm text-headline-sm">12 turdagi mahsulot</p>
+</div>
+<div>
+<span class="font-label-caps text-label-caps text-on-surface-variant block mb-1">UMUMIY SONI</span>
+<p class="font-headline-sm text-headline-sm">1,450 dona</p>
+</div>
+</div>
+</div>
+<!-- Preview List (Background Content) -->
+<div class="space-y-4 opacity-40 select-none pointer-events-none">
+<div class="glass-card rounded-[20px] p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg">Sanoat Elektr Dvigateli v2</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">SKU: ENG-204-TR</p>
+</div>
+<div class="text-right">
+<p class="font-headline-sm text-headline-sm text-primary">24 dona</p>
+</div>
+</div>
+<div class="glass-card rounded-[20px] p-4 flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="flex-1">
+<p class="font-body-lg text-body-lg">Simsiz Datchik S300</p>
+<p class="font-label-caps text-label-caps text-on-surface-variant">SKU: SNR-300-WL</p>
+</div>
+<div class="text-right">
+<p class="font-headline-sm text-headline-sm text-primary">120 dona</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/60 backdrop-blur-sm" id="confirm-modal">
+<div class="glass-card w-full max-w-md rounded-[24px] overflow-hidden shadow-2xl scale-100 transition-all duration-300">
+<!-- Modal Header -->
+<div class="p-8 pb-4 text-center">
+<div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-primary/20">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="verified">verified</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Kirimni tasdiqlaysizmi?</h3>
+</div>
+<!-- Modal Content -->
+<div class="px-8 pb-8 space-y-6">
+<div class="bg-surface-container-low rounded-xl p-4 border border-white/5">
+<div class="flex justify-between items-center mb-3">
+<span class="text-on-surface-variant font-body-md">Ombor</span>
+<span class="text-on-surface font-body-md font-semibold">Markaziy Xab</span>
+</div>
+<div class="flex justify-between items-center mb-3">
+<span class="text-on-surface-variant font-body-md">Pozitsiyalar soni</span>
+<span class="text-on-surface font-body-md font-semibold">12 ta</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-on-surface-variant font-body-md">Umumiy miqdor</span>
+<span class="text-primary font-headline-sm">1,450 dona</span>
+</div>
+</div>
+<div class="flex items-start gap-3 p-4 bg-tertiary-container/10 border border-tertiary-container/20 rounded-xl">
+<span class="material-symbols-outlined text-tertiary text-xl" data-icon="warning">warning</span>
+<p class="font-body-md text-on-surface text-sm">
+                        Tasdiqlangandan keyin qoldiq oshadi va ushbu amalni bekor qilib bo'lmaydi.
+                    </p>
+</div>
+<!-- Action Buttons -->
+<div class="space-y-3">
+<button class="w-full h-button-height bg-primary text-on-primary font-headline-sm rounded-xl inner-glow active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                        Ha, tasdiqlash
+                    </button>
+<button class="w-full h-button-height bg-transparent border border-outline/30 text-on-surface font-headline-sm rounded-xl hover:bg-white/5 active:scale-[0.98] transition-all" onclick="document.getElementById('confirm-modal').style.display='none'">
+                        Orqaga
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Shell (As per JSON) -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-white/15 rounded-t-xl flex justify-around items-center h-20 px-4 pb-safe">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="barcode_scanner">barcode_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Skaner</span>
+</div>
+<!-- Active state for Documents/Inventory context -->
+<div class="flex flex-col items-center justify-center bg-primary-container/20 text-primary rounded-xl px-4 py-2 active:scale-90 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-caps text-label-caps mt-1">Hujjatlar</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Ro‘yxat</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Sozlamalar</span>
+</div>
+</nav>
+<!-- Visual Atmosphere: Subtle Gradient Background -->
+<div class="fixed inset-0 -z-10 opacity-30 pointer-events-none">
+<div class="absolute top-[-10%] right-[-10%] w-96 h-96 bg-primary/20 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-10%] left-[-10%] w-96 h-96 bg-secondary/10 blur-[120px] rounded-full"></div>
+</div>
+<script>
+        // Micro-interaction for the confirm button
+        const confirmBtn = document.querySelector('button.bg-primary');
+        if(confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                confirmBtn.innerHTML = '<span class="material-symbols-outlined animate-spin" data-icon="progress_activity">progress_activity</span> Tasdiqlanmoqda...';
+                confirmBtn.classList.add('opacity-80', 'pointer-events-none');
+                setTimeout(() => {
+                    alert('Kirim muvaffaqiyatli amalga oshirildi!');
+                    window.location.reload();
+                }, 1500);
+            });
+        }
+    </script>
+</body></html>

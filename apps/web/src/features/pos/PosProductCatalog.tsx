@@ -21,6 +21,11 @@ import {
   normalizeSaleCurrency,
   type SaleCurrency,
 } from '@/lib/currency';
+import {
+  formatStockQuantity,
+  normalizeProductUnit,
+  PRODUCT_UNIT_LABELS,
+} from '@/lib/product-units';
 
 export type PosCatalogVariant = {
   id: string;
@@ -29,6 +34,8 @@ export type PosCatalogVariant = {
   name: string;
   salePrice?: number | string;
   currency?: string;
+  unit?: string;
+  stockQuantity?: number;
   image?: string;
   barcode?: string;
   categoryId?: string;
@@ -112,19 +119,19 @@ export function PosProductCatalog({
               <button
                 type="button"
                 onClick={onBack}
-                className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-all border border-white/5 active:scale-95"
+                className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-[var(--pos-input-bg)] flex items-center justify-center text-[var(--pos-muted)] hover:text-[var(--pos-text)] transition-all border border-[var(--pos-border)] active:scale-95"
               >
                 <ArrowLeft size={18} />
               </button>
             )}
             <div className="flex items-center gap-2">
-              <Zap className="text-blue-500 fill-blue-500 w-5 h-5 md:w-6 md:h-6" />
+              <Zap className="text-[var(--pos-accent)] fill-[var(--pos-accent)] w-5 h-5 md:w-6 md:h-6" />
               <div className="hidden sm:block">
                 <h1 className="text-lg md:text-xl font-black tracking-tight">
-                  Axis <span className="text-blue-500">POS</span>
+                  Axis <span className="text-[var(--pos-accent)]">POS</span>
                 </h1>
                 {!isSalesRole && !showWarehousePicker && warehouseName ? (
-                  <p className="text-[10px] text-gray-500 font-bold truncate max-w-[140px]">
+                  <p className="text-[10px] text-[var(--pos-muted)] font-bold truncate max-w-[140px]">
                     Ombor: {warehouseName}
                   </p>
                 ) : null}
@@ -137,17 +144,17 @@ export function PosProductCatalog({
               <button
                 type="button"
                 onClick={onWarehouseOpenToggle}
-                className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-2.5 px-3 text-xs md:text-sm font-bold flex items-center justify-between gap-2 hover:bg-white/10 transition-all"
+                className="w-full bg-[var(--pos-input-bg)] border border-[var(--pos-border)] rounded-xl py-2 md:py-2.5 px-3 text-xs md:text-sm font-bold flex items-center justify-between gap-2 hover:bg-[var(--pos-card)] transition-all"
               >
                 <span className="flex items-center gap-2 min-w-0">
-                  <Building2 size={16} className="text-blue-500 shrink-0" />
+                  <Building2 size={16} className="text-[var(--pos-accent)] shrink-0" />
                   <span className="truncate">
                     {warehouseName || 'Omborni tanlang'}
                   </span>
                 </span>
                 <ChevronDown
                   size={16}
-                  className={`text-gray-500 shrink-0 transition-transform ${isWarehouseOpen ? 'rotate-180' : ''}`}
+                  className={`text-[var(--pos-muted)] shrink-0 transition-transform ${isWarehouseOpen ? 'rotate-180' : ''}`}
                 />
               </button>
               <AnimatePresence>
@@ -158,10 +165,10 @@ export function PosProductCatalog({
                       initial={{ opacity: 0, y: 8, scale: 0.96 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                      className="absolute top-full left-0 right-0 mt-2 bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-40 p-1 max-h-56 overflow-y-auto custom-scrollbar"
+                      className="absolute top-full left-0 right-0 mt-2 bg-[var(--pos-panel)] border border-[var(--pos-border)] rounded-2xl shadow-2xl overflow-hidden z-40 p-1 max-h-56 overflow-y-auto custom-scrollbar"
                     >
                       {!warehouses?.length ? (
-                        <p className="px-4 py-3 text-xs text-gray-500">Faol ombor yo&apos;q</p>
+                        <p className="px-4 py-3 text-xs text-[var(--pos-muted)]">Faol ombor yo&apos;q</p>
                       ) : (
                         warehouses.map((w) => (
                           <button
@@ -170,8 +177,8 @@ export function PosProductCatalog({
                             onClick={() => onSelectWarehouse?.(w.id)}
                             className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${
                               selectedWarehouseId === w.id
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                ? 'bg-[var(--pos-accent)] text-white'
+                                : 'text-[var(--pos-muted)] hover:bg-[var(--pos-input-bg)] hover:text-[var(--pos-text)]'
                             }`}
                           >
                             <span className="block truncate">{w.name}</span>
@@ -179,8 +186,8 @@ export function PosProductCatalog({
                               <span
                                 className={`block text-[10px] truncate mt-0.5 ${
                                   selectedWarehouseId === w.id
-                                    ? 'text-blue-100'
-                                    : 'text-gray-500'
+                                    ? 'text-white/80'
+                                    : 'text-[var(--pos-muted)]'
                                 }`}
                               >
                                 {w.address}
@@ -197,18 +204,18 @@ export function PosProductCatalog({
           ) : null}
 
           <div className="flex-1 max-w-xl relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-500 transition-colors w-4 h-4" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--pos-muted)] group-focus-within:text-[var(--pos-accent)] transition-colors w-4 h-4" />
             <input
               ref={searchInputRef as RefObject<HTMLInputElement>}
               type="text"
               placeholder="Qidirish (Ctrl+F)..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2 md:py-2.5 pl-11 md:pl-12 pr-4 text-xs md:text-sm focus:outline-none focus:border-blue-500/50 transition-all font-bold"
+              className="w-full bg-[var(--pos-input-bg)] border border-[var(--pos-border)] rounded-xl py-2 md:py-2.5 pl-11 md:pl-12 pr-4 text-xs md:text-sm text-[var(--pos-text)] focus:outline-none focus:border-[var(--pos-accent)] transition-all font-bold"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
             />
           </div>
 
-          <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10 shrink-0">
+          <div className="flex items-center bg-[var(--pos-input-bg)] p-1 rounded-xl border border-[var(--pos-border)] shrink-0">
             {(['grid', 'list', 'compact'] as const).map((mode) => {
               const Icon = mode === 'grid' ? Grid : mode === 'list' ? List : Square;
               return (
@@ -216,7 +223,7 @@ export function PosProductCatalog({
                   key={mode}
                   type="button"
                   onClick={() => onViewModeChange(mode)}
-                  className={`p-2 rounded-lg transition-all ${viewMode === mode ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                  className={`p-2 rounded-lg transition-all ${viewMode === mode ? 'bg-[var(--pos-accent)] text-white shadow-lg shadow-cyan-900/30' : 'text-[var(--pos-muted)] hover:text-[var(--pos-text)] hover:bg-[var(--pos-input-bg)]'}`}
                 >
                   <Icon size={16} />
                 </button>
@@ -228,13 +235,13 @@ export function PosProductCatalog({
             <button
               type="button"
               onClick={onThemeToggle}
-              className="p-2 md:p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-white transition-all active:scale-95"
-              title="Mavzuni o'zgartirish"
+              className="p-2 md:p-2.5 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] text-[var(--pos-muted)] hover:text-[var(--pos-text)] transition-all active:scale-95"
+              title={theme === 'dark' ? 'Qaymoq rejim' : 'Qorong\'u rejim'}
             >
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-white/5 rounded-xl border border-white/5">
-              <div className="w-6 h-6 rounded-lg bg-blue-600/20 flex items-center justify-center text-blue-400 font-black text-[9px]">
+            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-[var(--pos-input-bg)] rounded-xl border border-[var(--pos-border)]">
+              <div className="w-6 h-6 rounded-lg bg-[var(--pos-accent)]/20 flex items-center justify-center text-cyan-300 font-black text-[9px]">
                 {(cashierName || '?').charAt(0).toUpperCase()}
               </div>
               <p className="text-[11px] font-bold truncate max-w-[80px]">
@@ -245,7 +252,7 @@ export function PosProductCatalog({
               <button
                 type="button"
                 onClick={onLogout}
-                className="p-2 md:p-2.5 rounded-xl bg-white/5 border border-white/10 text-red-400 hover:bg-red-500/10 transition-all"
+                className="p-2 md:p-2.5 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] text-red-400 hover:bg-red-500/10 transition-all"
               >
                 <LogOut size={18} />
               </button>
@@ -257,7 +264,7 @@ export function PosProductCatalog({
           <button
             type="button"
             onClick={() => onCategoryChange(null)}
-            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${!selectedCategory ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 hover:text-white border border-white/5'}`}
+            className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${!selectedCategory ? 'bg-[var(--pos-accent)] text-white shadow-lg shadow-cyan-900/20' : 'bg-[var(--pos-input-bg)] text-[var(--pos-muted)] hover:text-[var(--pos-text)] border border-[var(--pos-border)]'}`}
           >
             Barchasi
           </button>
@@ -266,7 +273,7 @@ export function PosProductCatalog({
               key={cat.id}
               type="button"
               onClick={() => onCategoryChange(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${selectedCategory === cat.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-white/5 text-gray-500 hover:text-white border border-white/5'}`}
+              className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${selectedCategory === cat.id ? 'bg-[var(--pos-accent)] text-white shadow-lg shadow-cyan-900/20' : 'bg-[var(--pos-input-bg)] text-[var(--pos-muted)] hover:text-[var(--pos-text)] border border-[var(--pos-border)]'}`}
             >
               {cat.name}
             </button>
@@ -277,15 +284,15 @@ export function PosProductCatalog({
       <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain custom-scrollbar pr-2 pb-24 md:pb-0">
         {productsLoading ? (
           <div className="h-full flex flex-col items-center justify-center gap-4">
-            <Loader2 className="animate-spin text-blue-500" size={40} />
-            <p className="text-gray-500 font-black uppercase tracking-widest text-[10px]">
+            <Loader2 className="animate-spin text-[var(--pos-accent)]" size={40} />
+            <p className="text-[var(--pos-muted)] font-black uppercase tracking-widest text-[10px]">
               Mahsulotlar yuklanmoqda...
             </p>
           </div>
         ) : filteredVariants.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-6">
-            <p className="text-gray-300 font-black">Bu omborda sotish uchun qoldiq yo&apos;q</p>
-            <p className="text-gray-500 text-sm max-w-md">
+            <p className="text-[var(--pos-text)] font-black">Bu omborda sotish uchun qoldiq yo&apos;q</p>
+            <p className="text-[var(--pos-muted)] text-sm max-w-md">
               POS faqat tanlangan faol ombordagi qoldiqdan ko&apos;rsatadi.
               {warehouseName ? ` Hozir: «${warehouseName}».` : ''} Inventardan import yoki kirim qiling.
             </p>
@@ -305,6 +312,12 @@ export function PosProductCatalog({
                 const bgColor = colors[variant.productName.length % colors.length];
                 const price = Number(variant.salePrice || 0);
                 const cur = normalizeSaleCurrency(variant.currency);
+                const unit = normalizeProductUnit(variant.unit);
+                const unitLabel = PRODUCT_UNIT_LABELS[unit];
+                const stockText =
+                  variant.stockQuantity !== undefined
+                    ? formatStockQuantity(variant.stockQuantity, unit)
+                    : null;
 
                 if (viewMode === 'list') {
                   return (
@@ -316,10 +329,10 @@ export function PosProductCatalog({
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ delay: Math.min(idx * 0.01, 0.2) }}
                       onClick={() => onAddToCart(variant)}
-                      className="group flex items-center gap-4 p-3 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-blue-500/30 transition-all cursor-pointer active:scale-[0.99]"
+                      className="group flex items-center gap-4 p-3 rounded-2xl bg-[var(--pos-card)]/50 border border-[var(--pos-border)] hover:bg-[var(--pos-card)] hover:border-cyan-500/30 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       <div
-                        className={`w-12 h-12 rounded-xl ${bgColor}/10 flex items-center justify-center shrink-0 border border-white/5 overflow-hidden`}
+                        className={`w-12 h-12 rounded-xl ${bgColor}/10 flex items-center justify-center shrink-0 border border-[var(--pos-border)] overflow-hidden`}
                       >
                         {variant.image ? (
                           <img src={variant.image} alt="" className="w-full h-full object-cover" />
@@ -332,18 +345,22 @@ export function PosProductCatalog({
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-sm truncate group-hover:text-blue-400">
+                        <h4 className="font-bold text-sm truncate group-hover:text-cyan-300">
                           {variant.productName}
                         </h4>
-                        <p className="text-[11px] text-gray-500 truncate font-medium">
+                        <p className="text-[11px] text-[var(--pos-muted)] truncate font-medium">
                           {variant.name}
+                          {stockText ? ` · ${stockText}` : ''}
                         </p>
                       </div>
                       <div className="flex items-center gap-6">
-                        <p className="font-black text-emerald-400 text-sm">
+                        <p className="font-black text-[var(--pos-money)] text-sm">
                           {formatMoney(price, cur)}
+                          <span className="text-[var(--pos-muted)] text-[10px] font-bold">
+                            /{unitLabel}
+                          </span>
                         </p>
-                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center">
+                        <div className="w-9 h-9 rounded-xl bg-[var(--pos-accent)] flex items-center justify-center">
                           <Plus size={18} className="text-white" />
                         </div>
                       </div>
@@ -361,7 +378,7 @@ export function PosProductCatalog({
                       exit={{ opacity: 0, scale: 0.95 }}
                       transition={{ delay: Math.min(idx * 0.01, 0.2) }}
                       onClick={() => onAddToCart(variant)}
-                      className="glass-card p-4 rounded-2xl border border-white/5 hover:border-blue-500/30 cursor-pointer flex flex-col gap-3 bg-white/[0.01]"
+                      className="glass-card p-4 rounded-2xl border border-[var(--pos-border)] hover:border-cyan-500/30 cursor-pointer flex flex-col gap-3 bg-[var(--pos-card)]/40"
                     >
                       <div
                         className={`w-full aspect-square ${bgColor}/10 rounded-xl flex items-center justify-center overflow-hidden`}
@@ -380,11 +397,15 @@ export function PosProductCatalog({
                         <h4 className="font-bold text-xs line-clamp-1">
                           {variant.productName}
                         </h4>
-                        <p className="text-[10px] text-gray-500 truncate">
+                        <p className="text-[10px] text-[var(--pos-muted)] truncate">
                           {variant.name}
+                          {stockText ? ` · ${stockText}` : ''}
                         </p>
-                        <p className="font-black text-emerald-400 text-sm pt-1">
+                        <p className="font-black text-[var(--pos-money)] text-sm pt-1">
                           {formatMoney(price, cur)}
+                          <span className="text-[var(--pos-muted)] text-[9px] font-bold">
+                            /{unitLabel}
+                          </span>
                         </p>
                       </div>
                     </motion.div>
@@ -400,7 +421,7 @@ export function PosProductCatalog({
                     exit={{ opacity: 0, scale: 0.9 }}
                     transition={{ delay: Math.min(idx * 0.005, 0.2) }}
                     onClick={() => onAddToCart(variant)}
-                    className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-blue-600 cursor-pointer text-center active:scale-95"
+                    className="p-2.5 rounded-xl bg-[var(--pos-card)]/50 border border-[var(--pos-border)] hover:bg-[var(--pos-accent)] cursor-pointer text-center active:scale-95"
                   >
                     <div
                       className={`w-10 h-10 mx-auto mb-2 rounded-lg ${bgColor}/10 flex items-center justify-center overflow-hidden`}
@@ -416,7 +437,8 @@ export function PosProductCatalog({
                       )}
                     </div>
                     <h4 className="font-bold text-[10px] truncate">{variant.productName}</h4>
-                    <p className="font-black text-emerald-400 text-[10px]">
+                    <p className="text-[8px] text-[var(--pos-muted)]">{unitLabel}</p>
+                    <p className="font-black text-[var(--pos-money)] text-[10px]">
                       {formatMoney(price, cur).split(' ')[0]}
                     </p>
                   </motion.div>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800;900&amp;family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;family=Space+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            backdrop-filter: blur(12px);
+            background: rgba(10, 10, 12, 0.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .success-glow {
+            box-shadow: 0 0 80px -10px rgba(16, 185, 129, 0.3);
+        }
+        @keyframes draw-check {
+            0% { stroke-dashoffset: 48; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .animate-check {
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+            animation-delay: 0.2s;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "surface-container-high": "#242c27",
+                        "on-tertiary-container": "#523200",
+                        "inverse-surface": "#dde4dd",
+                        "outline-variant": "#3c4a42",
+                        "secondary-container": "#0566d9",
+                        "primary-container": "#10b981",
+                        "surface-dim": "#0e1511",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-surface": "#dde4dd",
+                        "on-tertiary": "#472a00",
+                        "inverse-on-surface": "#2b322d",
+                        "on-secondary-fixed": "#001a42",
+                        "error": "#ffb4ab",
+                        "surface-container-highest": "#2f3632",
+                        "secondary": "#adc6ff",
+                        "on-primary-fixed": "#002113",
+                        "surface-container-lowest": "#09100c",
+                        "tertiary-container": "#e29100",
+                        "surface-container": "#1a211d",
+                        "secondary-fixed": "#d8e2ff",
+                        "on-primary-fixed-variant": "#005236",
+                        "primary-fixed": "#6ffbbe",
+                        "on-secondary": "#002e6a",
+                        "outline": "#86948a",
+                        "inverse-primary": "#006c49",
+                        "surface-bright": "#343b36",
+                        "on-surface-variant": "#bbcabf",
+                        "surface": "#0e1511",
+                        "primary": "#4edea3",
+                        "surface-tint": "#4edea3",
+                        "surface-variant": "#2f3632",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "on-secondary-fixed-variant": "#004395",
+                        "on-secondary-container": "#e6ecff",
+                        "tertiary-fixed": "#ffddb8",
+                        "surface-container-low": "#161d19",
+                        "tertiary": "#ffb95f",
+                        "on-primary-container": "#00422b",
+                        "error-container": "#93000a",
+                        "on-background": "#dde4dd",
+                        "on-primary": "#003824",
+                        "background": "#0e1511",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#653e00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "container-margin": "24px",
+                        "element-padding": "12px",
+                        "button-height": "56px",
+                        "stack-gap": "16px",
+                        "touch-target-min": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Hanken Grotesk"],
+                        "label-caps": ["Space Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-status": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                        "headline-xl-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                        "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                        "headline-sm-mobile": ["16px", {"lineHeight": "22px", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                        "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex flex-col items-center justify-center overflow-hidden">
+<!-- Background Atmospheric Effect -->
+
+<!-- Top App Bar (Suppressed but logically consistent with JSON for Identity) -->
+<header class="bg-surface/80 dark:bg-surface/80 backdrop-blur-xl fixed top-0 w-full z-50 border-b border-white/10 flex items-center h-14 px-container-margin w-full max-w-full">
+<button class="active:scale-95 transition-transform duration-200 text-primary dark:text-primary mr-4">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm-mobile font-bold text-on-surface dark:text-on-surface">Ombor kirimi</h1>
+</header>
+<main class="relative z-10 w-full max-w-md px-container-margin flex flex-col items-center text-center space-y-8 mt-14 mb-20">
+<!-- Success Animation Container -->
+<div class="relative w-32 h-32 flex items-center justify-center success-glow rounded-full bg-primary/10 border border-primary/20">
+<svg class="w-16 h-16 text-primary" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" viewbox="0 0 24 24">
+<path class="animate-check" d="M20 6L9 17l-5-5"></path>
+</svg>
+<!-- Particle Effects -->
+<div class="absolute inset-0 animate-ping opacity-20 border-2 border-primary rounded-full"></div>
+</div>
+<!-- Success Message -->
+<div class="space-y-3">
+<h2 class="font-headline-xl text-headline-xl-mobile text-on-surface">Kirim muvaffaqiyatli yozildi</h2>
+<div class="inline-flex items-center px-4 py-2 glass-card rounded-full space-x-2 border border-white/10">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Hujjat №</span>
+<span class="font-headline-sm text-headline-sm text-primary">WRH-2024-0892</span>
+</div>
+</div>
+<!-- Summary Details Bento Card -->
+<div class="glass-card w-full rounded-[20px] p-6 text-left space-y-4">
+<div class="flex justify-between items-center pb-4 border-b border-white/5">
+<span class="font-body-md text-on-surface-variant">Jami SKU:</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">12 ta</span>
+</div>
+<div class="flex justify-between items-center pb-4 border-b border-white/5">
+<span class="font-body-md text-on-surface-variant">Umumiy miqdor:</span>
+<span class="font-headline-sm text-headline-sm text-on-surface">1,420 dona</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-on-surface-variant">Vaqti:</span>
+<span class="font-body-md text-on-surface">Bugun, 14:45</span>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full space-y-4 pt-4">
+<button class="w-full h-button-height bg-primary text-on-primary font-headline-sm text-headline-sm rounded-xl active:scale-95 transition-all duration-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] flex items-center justify-center space-x-2">
+<span class="material-symbols-outlined">add_circle</span>
+<span>Yana kirim</span>
+</button>
+<button class="w-full h-button-height bg-transparent border border-white/10 text-on-surface font-headline-sm text-headline-sm rounded-xl active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 hover:bg-white/5">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Ro‘yxatga qaytish</span>
+</button>
+</div>
+</main>
+<!-- Navigation Shell (Using BottomNavBar from JSON as Anchor) -->
+<nav class="bg-surface/90 dark:bg-surface/90 backdrop-blur-xl fixed bottom-0 w-full z-50 rounded-t-xl border-t border-white/15 shadow-2xl flex justify-around items-center h-20 px-4 pb-safe w-full">
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="barcode_scanner">barcode_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Skaner</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Ro‘yxat</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-primary-container/20 text-primary rounded-xl px-4 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-caps text-label-caps mt-1">Hujjatlar</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Sozlamalar</span>
+</div>
+</nav>
+<script>
+        // Simple haptic feedback simulation on interactions
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.navigator.vibrate) {
+                    window.navigator.vibrate(10);
+                }
+            });
+        });
+
+        // Trigger confetti-like particle burst (simulated via JS)
+        function triggerSuccessEffect() {
+            console.log("Success state initialized");
+        }
+        window.onload = triggerSuccessEffect;
+    </script>
+</body></html>

@@ -144,6 +144,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
   ],
   ACCOUNTANT: [
     Permission.PRODUCTS_VIEW,
+    Permission.WAREHOUSE_VIEW,
     Permission.DEBT_VIEW,
     Permission.DEBT_CONFIRM_PAYMENT,
     Permission.EXPENSES_VIEW,

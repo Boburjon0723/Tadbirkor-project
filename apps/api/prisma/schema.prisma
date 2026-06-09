@@ -70,10 +70,13 @@ model Company {
 
   posCreditEnabled       Boolean  @default(false) // nasiya (CREDIT) sotuv
   posMaxDiscountPercent  Decimal? @db.Decimal(5, 2) // kassir chegirma limiti (%), null = 15
+  /// Ombor kirimi: scanMode, allowBulkQty, allowQuickProduct, maxQtyPerScan
+  warehouseIntakeSettings Json?
   fieldTasks        FieldTask[]
   userStocks        UserStock[]
   pickTasks         PickTask[]
   inventoryCounts   InventoryCount[]
+  warehouseIntakes  WarehouseIntake[]
   stockBlocks       StockBlock[]
   payrollSettings   PayrollCompanySettings?
   employeeLeaveRequests EmployeeLeaveRequest[]
@@ -150,7 +153,7 @@ model User {
   login        String   @unique
   passwordHash String
   status       String   @default("active")
-  telegramChatId   String?  @unique
+  telegramChatId   String?
   telegramLinkedAt DateTime?
   
   companies    CompanyUser[]
@@ -173,6 +176,8 @@ model User {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@index([telegramChatId])
 }
 
 model CompanyUser {
@@ -279,6 +284,7 @@ model ProductVariant {
   userStocks    UserStock[]
   pickTasks      PickTask[]
   inventoryCountItems InventoryCountItem[]
+  warehouseIntakeLines WarehouseIntakeLine[]
   stockBlocks    StockBlock[]
 
   createdBy     String?
@@ -312,12 +318,57 @@ model Warehouse {
   userStocks    UserStock[]
   pickTasks      PickTask[]
   inventoryCounts InventoryCount[]
+  warehouseIntakes WarehouseIntake[]
   stockBlocks    StockBlock[]
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([companyId])
+}
+
+model WarehouseIntake {
+  id                     String   @id @default(uuid())
+  companyId              String
+  company                Company  @relation(fields: [companyId], references: [id])
+  warehouseId            String
+  warehouse              Warehouse @relation(fields: [warehouseId], references: [id])
+  reference              String
+  status                 String   @default("DRAFT") // DRAFT | COMPLETED | CANCELLED
+  note                   String?
+  partnerLedgerContactId String?
+  createdBy              String?
+  completedBy            String?
+  completedAt            DateTime?
+
+  lines                  WarehouseIntakeLine[]
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([companyId, reference])
+  @@index([companyId])
+  @@index([warehouseId, status])
+  @@index([companyId, status, createdAt])
+}
+
+model WarehouseIntakeLine {
+  id               String          @id @default(uuid())
+  intakeId         String
+  intake           WarehouseIntake @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+  productVariantId String
+  productVariant   ProductVariant  @relation(fields: [productVariantId], references: [id])
+  quantity         Decimal         @db.Decimal(15, 4)
+  scanCount        Int             @default(0)
+  scannedBarcode   String?
+  entryMode        String          @default("MANUAL") // MANUAL | SCAN
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@unique([intakeId, productVariantId])
+  @@index([intakeId])
+  @@index([productVariantId])
 }
 
 model StockBalance {

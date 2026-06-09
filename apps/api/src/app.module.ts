@@ -40,6 +40,7 @@ import { IncomeModule } from './modules/income/income.module';
 import { PartnerLedgerModule } from './modules/partner-ledger/partner-ledger.module';
 import { PlatformModule } from './modules/platform/platform.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
+import { WarehouseIntakeModule } from './modules/warehouse-intake/warehouse-intake.module';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
@@ -88,6 +89,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     PartnerLedgerModule,
     PlatformModule,
     PayrollModule,
+    WarehouseIntakeModule,
   ],
   controllers: [AppController],
   providers: [

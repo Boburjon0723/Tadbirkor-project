@@ -84,7 +84,7 @@ export class TelegramLinkService {
       );
     }
 
-    const existingChatOwner = await this.prisma.user.findUnique({
+    const existingChatOwner = await this.prisma.user.findFirst({
       where: { telegramChatId: normalizedChatId },
       select: { id: true, fullName: true },
     });

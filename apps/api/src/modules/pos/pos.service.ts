@@ -23,6 +23,10 @@ import {
 } from './dto/pos-sale.dto';
 import { AppCacheService } from '../../common/cache/app-cache.service';
 import { posCatalogCachePrefix } from '../../common/pos-catalog-cache.util';
+import {
+  normalizeProductUnit,
+  validateStockQuantity,
+} from '../../common/units/product-unit.util';
 import { getDayRangeInAppTimezone } from '../../common/tashkent-date.util';
 import { LONG_TX_OPTIONS, POS_CHECKOUT_TX_OPTIONS } from '../../prisma/transaction-options';
 import { InventoryGateway } from '../warehouses/inventory.gateway';
@@ -254,7 +258,12 @@ export class PosService {
         unitPrice,
         label,
       );
-      const quantity = Number(it.quantity);
+      const unit = normalizeProductUnit(variant.product?.unit);
+      const quantity = validateStockQuantity(
+        Number(it.quantity),
+        unit,
+        label,
+      );
       const lineTotal = this.round2(unitPrice * quantity);
 
       resolved.push({
@@ -416,6 +425,7 @@ export class PosService {
       barcode: v.barcode,
       salePrice: this.toMoney(v.salePrice),
       currency: v.currency,
+      unit: normalizeProductUnit(v.product?.unit),
       stock: warehouseId
         ? Number(stockMap.get(v.id)?.quantity ?? 0)
         : null,
@@ -482,6 +492,7 @@ export class PosService {
             select: {
               id: true,
               name: true,
+              unit: true,
               categoryId: true,
               imageUrl: true,
               category: { select: { id: true, name: true } },
@@ -508,6 +519,7 @@ export class PosService {
       barcode: v.barcode,
       salePrice: this.toMoney(v.salePrice),
       currency: v.currency,
+      unit: normalizeProductUnit(v.product.unit),
       image: v.product.imageUrl,
       categoryId: v.product.categoryId,
       categoryName: v.product.category?.name ?? null,

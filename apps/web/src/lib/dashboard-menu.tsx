@@ -22,6 +22,7 @@ export type DashboardMenuIcons = {
   BarChart3: LucideIcon;
   Link2: LucideIcon;
   Settings: LucideIcon;
+  PackagePlus: LucideIcon;
 };
 
 export type DashboardMenuItem = {
@@ -90,13 +91,35 @@ export function buildDashboardMenuGroups(
           icon: <I.Box size={s} />,
           label: 'Mahsulotlar va qoldiq',
           href: '/dashboard/inventory',
-          roles: ['owner', 'manager', 'warehouse'],
+          roles: ['owner', 'manager', 'warehouse', 'accountant', 'sales'],
           moduleKeys: ['WAREHOUSE_BASIC'],
           mobileNav: true,
         },
         {
+          icon: <I.PackagePlus size={s} />,
+          label: 'Ombor kirimi',
+          href: '/dashboard/warehouse-intake',
+          roles: ['owner', 'manager', 'warehouse'],
+          moduleKeys: ['WAREHOUSE_INTAKE'],
+          mobileNav: true,
+        },
+        {
+          icon: <I.Settings size={s} />,
+          label: 'Kirim sozlamalari',
+          href: '/dashboard/warehouse-intake/settings',
+          roles: ['owner', 'manager'],
+          moduleKeys: ['WAREHOUSE_INTAKE'],
+        },
+        {
           icon: <I.History size={s} />,
-          label: 'Harakatlar tarixi',
+          label: 'Ombor tarixi',
+          href: '/dashboard/warehouse',
+          roles: ['owner', 'manager', 'warehouse', 'accountant'],
+          moduleKeys: ['WAREHOUSE_BASIC'],
+        },
+        {
+          icon: <I.History size={s} />,
+          label: 'Faollik jurnali',
           href: '/dashboard/activity',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['WAREHOUSE_BASIC', 'B2B', 'DEBT'],

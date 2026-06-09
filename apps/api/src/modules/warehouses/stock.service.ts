@@ -192,22 +192,164 @@ export class StockService {
     });
   }
 
+  private movementSourceLabel(sourceType: string | null | undefined): string {
+    switch (sourceType) {
+      case 'WAREHOUSE_INTAKE':
+        return 'Ombor kirimi';
+      case 'MANUAL':
+        return "Qo'lda";
+      case 'DISPATCH':
+        return "Jo'natma";
+      case 'GOODS_RECEIPT':
+        return 'B2B qabul';
+      case 'POS_SALE':
+        return 'POS sotuv';
+      case 'STOCK_IN_MANUAL':
+        return "Qo'lda kirim";
+      case 'STOCK_OUT_MANUAL':
+        return "Qo'lda chiqim";
+      case 'ADJUSTMENT':
+        return 'Tuzatish';
+      case 'TRANSFER':
+        return "Ko'chirish";
+      default:
+        return sourceType || 'Boshqa';
+    }
+  }
+
   async getMovements(companyId: string, warehouseId?: string) {
-    return this.prisma.stockMovement.findMany({
+    const movements = await this.prisma.stockMovement.findMany({
       where: {
         companyId,
         warehouse: { status: { not: 'ARCHIVED' } },
         ...(warehouseId ? { warehouseId } : {}),
       },
       include: {
-        warehouse: true,
+        warehouse: { select: { id: true, name: true } },
         productVariant: {
-          include: { product: true }
-        }
+          include: { product: { select: { id: true, name: true } } },
+        },
       },
       orderBy: { createdAt: 'desc' },
-      take: 100
+      take: 300,
     });
+
+    if (!movements.length) return [];
+
+    const userIds = [
+      ...new Set(movements.map((m) => m.createdBy).filter(Boolean)),
+    ] as string[];
+    const users = userIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, fullName: true },
+        })
+      : [];
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const intakeSourceIds = [
+      ...new Set(
+        movements
+          .filter((m) => m.sourceType === 'WAREHOUSE_INTAKE' && m.sourceId)
+          .map((m) => m.sourceId as string),
+      ),
+    ];
+    const intakes = intakeSourceIds.length
+      ? await this.prisma.warehouseIntake.findMany({
+          where: { id: { in: intakeSourceIds }, companyId },
+          select: { id: true, reference: true, note: true },
+        })
+      : [];
+    const intakeMap = new Map(intakes.map((i) => [i.id, i]));
+
+    const intakeGroups = new Map<string, typeof movements>();
+    const singles: typeof movements = [];
+
+    for (const m of movements) {
+      if (m.sourceType === 'WAREHOUSE_INTAKE' && m.sourceId) {
+        const list = intakeGroups.get(m.sourceId) || [];
+        list.push(m);
+        intakeGroups.set(m.sourceId, list);
+      } else {
+        singles.push(m);
+      }
+    }
+
+    const history: Array<Record<string, unknown>> = [];
+
+    for (const [sourceId, lines] of intakeGroups) {
+      const intake = intakeMap.get(sourceId);
+      const sorted = [...lines].sort(
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+      );
+      const anchor = sorted[0];
+      const createdById = anchor.createdBy;
+      const user = createdById ? userMap.get(createdById) : null;
+
+      history.push({
+        kind: 'intake',
+        id: sourceId,
+        intakeId: sourceId,
+        reference: intake?.reference || anchor.note || 'Ombor kirimi',
+        createdAt: anchor.createdAt,
+        type: 'IN',
+        sourceType: 'WAREHOUSE_INTAKE',
+        sourceLabel: this.movementSourceLabel('WAREHOUSE_INTAKE'),
+        createdBy: createdById
+          ? { id: createdById, fullName: user?.fullName || "Noma'lum" }
+          : null,
+        warehouse: anchor.warehouse,
+        totalUnits: lines.reduce((sum, l) => sum + Number(l.quantity), 0),
+        lineCount: lines.length,
+        note: intake?.note || null,
+        lines: [...lines]
+          .sort((a, b) =>
+            a.productVariant.product.name.localeCompare(
+              b.productVariant.product.name,
+              'uz',
+            ),
+          )
+          .map((l) => ({
+            id: l.id,
+            productName: l.productVariant.product.name,
+            variantName: l.productVariant.name,
+            quantity: Number(l.quantity),
+            barcode: l.productVariant.barcode,
+            sku: l.productVariant.sku,
+          })),
+      });
+    }
+
+    for (const m of singles) {
+      const user = m.createdBy ? userMap.get(m.createdBy) : null;
+      history.push({
+        kind: 'single',
+        id: m.id,
+        createdAt: m.createdAt,
+        type: m.type,
+        sourceType: m.sourceType,
+        sourceLabel: this.movementSourceLabel(m.sourceType),
+        createdBy: m.createdBy
+          ? { id: m.createdBy, fullName: user?.fullName || "Noma'lum" }
+          : null,
+        warehouse: m.warehouse,
+        productVariant: {
+          id: m.productVariant.id,
+          name: m.productVariant.name,
+          product: m.productVariant.product,
+        },
+        quantity: Number(m.quantity),
+        note: m.note,
+      });
+    }
+
+    history.sort(
+      (a, b) =>
+        new Date(String(b.createdAt)).getTime() -
+        new Date(String(a.createdAt)).getTime(),
+    );
+
+    return history.slice(0, 100);
   }
 
   /**
@@ -356,7 +498,7 @@ export class StockService {
     const movement = await run();
 
     if (
-      sourceType === 'MANUAL' &&
+      (sourceType === 'MANUAL' || sourceType === 'WAREHOUSE_INTAKE') &&
       userId &&
       dto.partnerLedgerContactId &&
       (type === 'IN' || type === 'OUT')

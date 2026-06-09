@@ -67,6 +67,44 @@ body {
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   }
 
+  /* Ombor kirimi — Stitch mobil glass */
+  .intake-glass {
+    background: rgba(10, 10, 12, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  @keyframes intake-scanner-pulse {
+    0% {
+      border-color: rgba(16, 185, 129, 0.2);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2);
+    }
+    50% {
+      border-color: rgba(16, 185, 129, 1);
+      box-shadow: 0 0 20px 0 rgba(16, 185, 129, 0.35);
+    }
+    100% {
+      border-color: rgba(16, 185, 129, 0.2);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2);
+    }
+  }
+
+  .intake-scanner-pulse {
+    animation: intake-scanner-pulse 2s infinite ease-in-out;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .neon-border {
     position: relative;
   }
@@ -94,12 +132,55 @@ body {
   }
 }
 
-/* POS Light Mode Toggle based on CSS Filters */
-.pos-light-theme {
-  filter: invert(0.92) hue-rotate(180deg) brightness(0.95);
+/* POS — Dark / Light (qaymoq, toza oq emas). Savat alohida rangda. */
+.pos-shell {
+  color: var(--pos-text);
+
+  /* Katalog maydoni */
+  --pos-bg: #0b1120;
+  --pos-card: #151f33;
+  --pos-input-bg: #131c31;
+  --pos-text: #e2e8f0;
+  --pos-muted: #94a3b8;
+  --pos-border: rgba(100, 116, 139, 0.28);
+  --pos-accent: #0891b2;
+  --pos-accent-soft: rgba(8, 145, 178, 0.15);
+  --pos-money: #fbbf24;
+  --pos-overlay: rgba(0, 0, 0, 0.72);
+
+  /* Savat — asosiy fondan farq qiladi */
+  --pos-cart-bg: #1a2744;
+  --pos-cart-card: #223052;
+  --pos-cart-header: #152238;
+  --pos-cart-text: #f1f5f9;
+  --pos-cart-muted: #94a3b8;
+  --pos-cart-border: rgba(56, 189, 248, 0.14);
+  --pos-cart-accent-soft: rgba(8, 145, 178, 0.2);
+
+  /* Modallar */
+  --pos-modal-bg: #131c31;
 }
-.pos-light-theme img,
-.pos-light-theme video,
-.pos-light-theme [data-revert-theme="true"] {
-  filter: invert(1) hue-rotate(180deg);
+
+/* Light — qaymoq katalog + to'q ko'k savat */
+.pos-shell.pos-theme-light {
+  --pos-bg: #f4efe6;
+  --pos-card: #faf7f1;
+  --pos-input-bg: #fffdf9;
+  --pos-text: #292524;
+  --pos-muted: #78716c;
+  --pos-border: rgba(168, 162, 158, 0.38);
+  --pos-accent: #0e7490;
+  --pos-accent-soft: rgba(14, 116, 144, 0.12);
+  --pos-money: #b45309;
+  --pos-overlay: rgba(41, 37, 36, 0.45);
+
+  --pos-cart-bg: #2c3e50;
+  --pos-cart-card: #354a5f;
+  --pos-cart-header: #243447;
+  --pos-cart-text: #faf7f1;
+  --pos-cart-muted: #cbd5e1;
+  --pos-cart-border: rgba(148, 163, 184, 0.22);
+  --pos-cart-accent-soft: rgba(14, 116, 144, 0.25);
+
+  --pos-modal-bg: #faf7f1;
 }

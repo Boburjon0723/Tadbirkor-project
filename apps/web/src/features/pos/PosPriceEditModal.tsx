@@ -83,7 +83,7 @@ export function PosPriceEditModal({
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 space-y-6 shadow-2xl"
+            className="relative w-full max-w-md bg-[var(--pos-panel)] border border-[var(--pos-border)] rounded-3xl p-8 space-y-6 shadow-2xl"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -95,7 +95,7 @@ export function PosPriceEditModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500"
+                className="w-10 h-10 rounded-xl bg-slate-800/50 flex items-center justify-center text-gray-500"
               >
                 <X size={18} />
               </button>
@@ -115,7 +115,7 @@ export function PosPriceEditModal({
                 </p>
               )}
               {canOverridePrice && (
-                <p className="text-[11px] text-emerald-500/80">
+                <p className="text-[11px] text-[var(--pos-money)]/80">
                   Sizda chekirmasiz narx o‘zgartirish huquqi bor.
                 </p>
               )}
@@ -134,7 +134,7 @@ export function PosPriceEditModal({
                   setInput(e.target.value);
                   setError(null);
                 }}
-                className="w-full bg-black/50 border border-white/10 rounded-2xl py-4 px-5 text-xl font-black text-emerald-400 focus:outline-none focus:border-emerald-500/50"
+                className="w-full bg-black/50 border border-[var(--pos-border)] rounded-2xl py-4 px-5 text-xl font-black text-[var(--pos-money)] focus:outline-none focus:border-emerald-500/50"
               />
               {error && (
                 <p className="text-xs text-red-400 font-bold">{error}</p>
@@ -145,14 +145,14 @@ export function PosPriceEditModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-3 rounded-2xl bg-white/5 font-black text-sm"
+                className="flex-1 py-3 rounded-2xl bg-slate-800/50 font-black text-sm"
               >
                 Bekor
               </button>
               <button
                 type="button"
                 onClick={handleSave}
-                className="flex-1 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 font-black text-sm"
+                className="flex-1 py-3 rounded-2xl bg-[var(--pos-accent)] hover:brightness-110 font-black text-sm"
               >
                 Saqlash
               </button>

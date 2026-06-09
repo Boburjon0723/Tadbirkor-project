@@ -29,6 +29,11 @@ import { PosBarcodeScanner } from '@/features/pos/PosBarcodeScanner';
 import { usePosMultiCart } from '@/features/pos/usePosMultiCart';
 import type { PosCartItem } from '@/features/pos/types';
 import { PosReceiptPrintModal, type ReceiptData } from '@/features/pos/PosReceiptPrintModal';
+import {
+  PosQuantityModal,
+  type PosQuantityModalVariant,
+} from '@/features/pos/PosQuantityModal';
+import { allowsDecimalStock, normalizeProductUnit } from '@/lib/product-units';
 
 export default function POSPage() {
   const router = useRouter();
@@ -42,6 +47,8 @@ export default function POSPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [quantityModalVariant, setQuantityModalVariant] =
+    useState<PosQuantityModalVariant | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<
@@ -71,7 +78,7 @@ export default function POSPage() {
     formatMoney,
     addToCart,
     removeFromCart,
-    updateQuantity,
+    setItemQuantity,
     updateItemPrice,
     clearCart,
     setCustomer,
@@ -160,6 +167,8 @@ export default function POSPage() {
       name: v.name,
       salePrice: v.salePrice,
       currency: v.currency,
+      unit: v.unit,
+      stockQuantity: v.quantity,
       barcode: v.barcode ?? undefined,
       image: v.image ?? undefined,
       categoryId: v.categoryId ?? undefined,
@@ -200,7 +209,7 @@ export default function POSPage() {
     if (
       paymentMethod === 'credit' &&
       !customer.retailCustomerId &&
-      !customer.customerName
+      !customer.customerName?.trim()
     ) {
       toast.error('Nasiya uchun mijoz tanlang yoki ism kiriting');
       return;
@@ -236,7 +245,13 @@ export default function POSPage() {
         date: new Date(),
         cashierName,
         warehouseName: activeWarehouse?.name || '',
-        items: cart.map(i => ({ name: i.name, quantity: i.quantity, price: i.price, amount: i.quantity * i.price })),
+        items: cart.map(i => ({
+          name: i.name,
+          quantity: i.quantity,
+          unit: i.unit,
+          price: i.price,
+          amount: i.quantity * i.price,
+        })),
         total: totalAmount,
         currency: cartCurrency,
         paymentMethod: methodApi,
@@ -249,6 +264,7 @@ export default function POSPage() {
       setIsCheckoutModalOpen(false);
       clearCart();
       setCashReceivedInput('');
+      setPaymentMethod('cash');
     } catch (err: unknown) {
       console.error(err);
       toast.error(formatApiError(err));
@@ -275,17 +291,21 @@ export default function POSPage() {
     setIsWarehouseOpen(false);
   };
   const creditCustomerOk =
-    !!customer.retailCustomerId || !!customer.customerName;
+    !!customer.retailCustomerId || !!customer.customerName?.trim();
 
-  const handleAddVariantToCart = (v: {
-    id: string;
-    productId: string;
-    productName: string;
-    name: string;
-    salePrice?: number | string;
-    currency?: string;
-    image?: string;
-  }) =>
+  const openCheckout = () => {
+    setIsCartOpenMobile(false);
+    setPaymentMethod('cash');
+    setCashReceivedInput(String(totalAmount));
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handleAddVariantToCart = (v: PosQuantityModalVariant) => {
+    const unit = normalizeProductUnit(v.unit);
+    if (allowsDecimalStock(unit)) {
+      setQuantityModalVariant(v);
+      return;
+    }
     addToCart({
       id: v.id,
       productId: v.productId,
@@ -293,11 +313,34 @@ export default function POSPage() {
       name: v.name,
       salePrice: v.salePrice,
       currency: v.currency,
+      unit: v.unit,
+      stockQuantity: v.stockQuantity,
       image: v.image,
     });
+  };
+
+  const handleQuantityConfirm = (
+    v: PosQuantityModalVariant,
+    quantity: number,
+  ) => {
+    addToCart({
+      id: v.id,
+      productId: v.productId,
+      productName: v.productName,
+      name: v.name,
+      salePrice: v.salePrice,
+      currency: v.currency,
+      unit: v.unit,
+      stockQuantity: v.stockQuantity,
+      image: v.image,
+      quantity,
+    });
+  };
 
   return (
-    <div className={`h-screen bg-[#050505] text-white flex flex-col md:flex-row overflow-hidden p-4 md:p-8 gap-4 md:gap-8 ${theme === 'light' ? 'pos-light-theme' : ''}`}>
+    <div
+      className={`pos-shell h-screen flex flex-col md:flex-row overflow-hidden p-4 md:p-8 gap-4 md:gap-8 bg-[var(--pos-bg)] ${theme === 'light' ? 'pos-theme-light' : ''}`}
+    >
       <div className="flex-1 flex flex-col gap-2 min-w-0 min-h-0">
         <PosBarcodeScanner
           warehouseId={selectedWarehouseId}
@@ -330,7 +373,7 @@ export default function POSPage() {
           onLogout={() => authService.logout()}
           onAddToCart={handleAddVariantToCart}
           theme={theme}
-          onThemeToggle={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+          onThemeToggle={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         />
       </div>
 
@@ -350,12 +393,9 @@ export default function POSPage() {
         onCustomerChange={setCustomer}
         onClearCart={clearCart}
         onCloseMobile={() => setIsCartOpenMobile(false)}
-        onUpdateQuantity={updateQuantity}
+        onSetQuantity={setItemQuantity}
         onRemove={removeFromCart}
-        onCheckout={() => {
-          setIsCartOpenMobile(false);
-          setIsCheckoutModalOpen(true);
-        }}
+        onCheckout={openCheckout}
         onEditPrice={setPriceEditItem}
         showPriceEdit={showPriceEdit}
         sessions={sessions}
@@ -374,10 +414,12 @@ export default function POSPage() {
         cashReceivedInput={cashReceivedInput}
         isProcessing={isProcessing}
         creditCustomerOk={creditCustomerOk}
+        customer={customer}
         formatMoney={formatMoney}
         onClose={() => setIsCheckoutModalOpen(false)}
         onPaymentMethodChange={setPaymentMethod}
         onCashInputChange={setCashReceivedInput}
+        onCustomerChange={setCustomer}
         onConfirm={handleConfirmPayment}
       />
 
@@ -390,6 +432,14 @@ export default function POSPage() {
         formatMoney={formatMoney}
         onClose={() => setPriceEditItem(null)}
         onSave={updateItemPrice}
+      />
+
+      <PosQuantityModal
+        open={!!quantityModalVariant}
+        variant={quantityModalVariant}
+        formatMoney={formatMoney}
+        onClose={() => setQuantityModalVariant(null)}
+        onConfirm={handleQuantityConfirm}
       />
 
       <PosReceiptPrintModal

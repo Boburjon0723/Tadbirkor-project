@@ -1,4 +1,5 @@
-import { Controller, Get, Body, Patch, Post, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Post, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import { IntakeSettingsWriteGuard } from '../../common/guards/intake-settings-write.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CompaniesService } from './companies.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -10,6 +11,7 @@ import { UpdateFeatureDto } from './dto/update-feature.dto';
 import { UpdateWarehouseBundleDto } from './dto/update-warehouse-bundle.dto';
 import { UpsertTelegramBindingDto } from './dto/upsert-telegram-binding.dto';
 import { RemoveTelegramBindingDto } from './dto/remove-telegram-binding.dto';
+import { UpdateIntakeSettingsDto } from './dto/update-intake-settings.dto';
 
 @Controller('companies')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -35,6 +37,27 @@ export class CompaniesController {
   @Permissions(Permission.POS_VIEW)
   getPosSettings(@Request() req: any) {
     return this.companiesService.getPosSettings(req.user.companyId);
+  }
+
+  /** Ombor kirimi qoidalari (omborchi ham o'qishi kerak) */
+  @Get('intake-settings')
+  @Permissions(Permission.WAREHOUSE_VIEW)
+  getIntakeSettings(
+    @Request() req: any,
+    @Query('warehouseId') warehouseId?: string,
+  ) {
+    return this.companiesService.getIntakeSettings(
+      req.user.companyId,
+      warehouseId,
+      req.user.sub,
+    );
+  }
+
+  @Patch('intake-settings')
+  @UseGuards(IntakeSettingsWriteGuard)
+  @Permissions(Permission.WAREHOUSE_VIEW)
+  updateIntakeSettings(@Request() req: any, @Body() dto: UpdateIntakeSettingsDto) {
+    return this.companiesService.updateIntakeSettings(req.user.companyId, dto);
   }
 
   @Patch('features')

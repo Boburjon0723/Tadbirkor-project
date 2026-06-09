@@ -943,7 +943,7 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
     }
 
     try {
-      const linkedUser = await this.prisma.user.findUnique({
+      const linkedUser = await this.prisma.user.findFirst({
         where: { telegramChatId: chatId },
         select: { id: true },
       });

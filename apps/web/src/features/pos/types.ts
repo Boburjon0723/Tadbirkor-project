@@ -1,4 +1,5 @@
 import type { SaleCurrency } from '@/lib/currency';
+import type { ProductUnitCode } from '@/lib/product-units';
 
 export interface PosCartItem {
   variantId: string;
@@ -8,6 +9,8 @@ export interface PosCartItem {
   listPrice: number;
   price: number;
   currency: SaleCurrency;
+  unit: ProductUnitCode;
   quantity: number;
+  stockQuantity?: number;
   image?: string;
 }

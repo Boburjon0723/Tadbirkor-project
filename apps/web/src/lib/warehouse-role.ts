@@ -1,5 +1,6 @@
 import type { SessionRole } from '@/hooks/use-session';
 import type { WarehouseFieldConfig } from '@/features/product-modal/product-modal-utils';
+import { isInventoryCatalogReadOnly as isCatalogReadOnly } from '@/lib/role-access';
 
 export function normalizeSessionRole(role: string | undefined): SessionRole | string {
   return String(role || 'owner').toLowerCase();
@@ -9,9 +10,9 @@ export function isWarehouseRole(role: string | undefined): boolean {
   return normalizeSessionRole(role) === 'warehouse';
 }
 
-/** Katalog: faqat qoldiq ko‘rish, tahrirlash/import yo‘q */
+/** Katalog: omborchi va sotuvchi — faqat qoldiq, narx/tahrir cheklangan */
 export function isInventoryCatalogReadOnly(role: string | undefined): boolean {
-  return isWarehouseRole(role);
+  return isCatalogReadOnly(role);
 }
 
 /** Omborchi: katalog jadvali va batafsilda narx ustunlari ko‘rinmasin */

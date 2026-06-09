@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from '@/hooks/use-session';
+import { canManageWarehouses } from '@/lib/role-access';
 import { 
   Warehouse, 
   ArrowLeftRight, 
@@ -21,10 +23,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWarehouses, useStockBalances, useStockMovements, useInventoryActions } from '@/hooks/warehouse/use-warehouse';
 
 import { CreateWarehouseModal } from '@/components/CreateWarehouseModal';
+import { WarehouseHistoryList } from '@/features/warehouse/WarehouseHistoryList';
 import { toast } from '@/lib/toast';
 import { confirmAction } from '@/components/ConfirmDialog';
 export default function WarehousePage() {
-  const [activeTab, setActiveTab] = useState<'balances' | 'history' | 'list'>('balances');
+  const { data: session } = useSession();
+  const role = session?.role ?? 'owner';
+  const isAccountant = role === 'accountant';
+  const canManage = canManageWarehouses(role);
+  const [activeTab, setActiveTab] = useState<'balances' | 'history' | 'list'>(
+    isAccountant ? 'history' : 'balances',
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
@@ -54,8 +63,19 @@ export default function WarehousePage() {
   const stats = [
     { title: "Jami Omborlar", value: warehouses?.length || 0, icon: Warehouse, color: "blue" },
     { title: "Mahsulot Qoldig'i", value: balances?.reduce((sum: number, b: any) => sum + Number(b.quantity), 0) || 0, icon: Package, color: "purple" },
-    { title: "Bugungi Kirim", value: movements?.filter((m: any) => m.type === 'IN').length || 0, icon: TrendingUp, color: "emerald" },
-    { title: "Bugungi Chiqim", value: movements?.filter((m: any) => m.type === 'OUT').length || 0, icon: TrendingDown, color: "red" },
+    {
+      title: "Bugungi Kirim",
+      value:
+        movements?.filter((m: any) => m.type === 'IN' || m.kind === 'intake').length || 0,
+      icon: TrendingUp,
+      color: "emerald",
+    },
+    {
+      title: "Bugungi Chiqim",
+      value: movements?.filter((m: any) => m.kind === 'single' && m.type === 'OUT').length || 0,
+      icon: TrendingDown,
+      color: "red",
+    },
   ];
 
   const handleDeleteWarehouse = async (id: string, name: string) => {
@@ -79,7 +99,12 @@ export default function WarehousePage() {
 
   return (
     <div className="space-y-10 pb-20">
-      <CreateWarehouseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} />
+      {canManage && (
+        <CreateWarehouseModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
+      )}
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -87,15 +112,18 @@ export default function WarehousePage() {
           <h1 className="text-4xl font-black tracking-tight mb-2">Ombor <span className="text-purple-500">Boshqaruvi</span></h1>
           <p className="text-gray-400 text-lg">Zaxiralarni nazorat qilish, ko'chirish va amallar tarixi.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-3 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl font-black hover:bg-white/10 transition-all text-blue-400"
-          >
-            <Plus size={20} />
-            Yangi Ombor
-          </button>
-        </div>
+        {canManage && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-3 px-6 py-4 bg-white/5 border border-white/10 rounded-2xl font-black hover:bg-white/10 transition-all text-blue-400"
+            >
+              <Plus size={20} />
+              Yangi Ombor
+            </button>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -244,46 +272,7 @@ export default function WarehousePage() {
         )}
 
         {activeTab === 'history' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-white/[0.03] border-b border-white/5">
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Sana</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Mahsulot</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Turi</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Miqdor</th>
-                  <th className="px-10 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Izoh</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {isLoadingMovements ? (
-                  <tr><td colSpan={5} className="py-20 text-center">Yuklanmoqda...</td></tr>
-                ) : movements?.length === 0 ? (
-                  <tr><td colSpan={5} className="py-20 text-center text-gray-500 font-bold">Harakatlar tarixi bo'sh</td></tr>
-                ) : movements?.map((m: any, idx: number) => (
-                  <motion.tr 
-                    key={m.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="hover:bg-white/[0.02] transition-colors"
-                  >
-                    <td className="px-10 py-6 text-xs text-gray-500">{new Date(m.createdAt).toLocaleString()}</td>
-                    <td className="px-10 py-6">
-                      <p className="font-bold text-sm">{m.productVariant.product.name}</p>
-                      <p className="text-[10px] text-gray-500">{m.productVariant.name}</p>
-                    </td>
-                    <td className="px-10 py-6">
-                      <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${m.type === 'IN' ? 'bg-emerald-400/10 text-emerald-400' : 'bg-red-400/10 text-red-400'}`}>
-                        {m.type === 'IN' ? 'Kirim' : 'Chiqim'}
-                      </span>
-                    </td>
-                    <td className="px-10 py-6 font-black">{m.type === 'IN' ? '+' : '-'}{m.quantity}</td>
-                    <td className="px-10 py-6 text-sm text-gray-500">{m.note || '-'}</td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <WarehouseHistoryList items={movements} isLoading={isLoadingMovements} />
         )}
 
         {activeTab === 'list' && (
@@ -309,14 +298,17 @@ export default function WarehousePage() {
                     <button className="p-3 bg-white/5 rounded-xl hover:bg-blue-600 hover:text-white transition-all">
                       <FileText size={18} />
                     </button>
-                    <button
-                      onClick={() => handleDeleteWarehouse(w.id, w.name)}
-                      disabled={deleteWarehouse.isPending}
-                      className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all disabled:opacity-50"
-                      title="O'chirish"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteWarehouse(w.id, w.name)}
+                        disabled={deleteWarehouse.isPending}
+                        className="p-3 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all disabled:opacity-50"
+                        title="O'chirish"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

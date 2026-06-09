@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Axis ERP - Ombor Kirimi</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@700;800;900&amp;family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#adc6ff",
+                    "on-error": "#690005",
+                    "surface": "#0e1511",
+                    "on-primary-container": "#00422b",
+                    "surface-dim": "#0e1511",
+                    "on-primary": "#003824",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container-lowest": "#09100c",
+                    "primary-fixed-dim": "#4edea3",
+                    "primary-container": "#10b981",
+                    "on-error-container": "#ffdad6",
+                    "inverse-primary": "#006c49",
+                    "on-secondary-fixed-variant": "#004395",
+                    "tertiary": "#ffb95f",
+                    "outline": "#86948a",
+                    "surface-tint": "#4edea3",
+                    "on-surface-variant": "#bbcabf",
+                    "inverse-on-surface": "#2b322d",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-primary-fixed": "#002113",
+                    "on-secondary-fixed": "#001a42",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "error-container": "#93000a",
+                    "tertiary-container": "#e29100",
+                    "on-background": "#dde4dd",
+                    "inverse-surface": "#dde4dd",
+                    "surface-bright": "#343b36",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "surface-container-highest": "#2f3632",
+                    "on-surface": "#dde4dd",
+                    "background": "#0e1511",
+                    "surface-container-high": "#242c27",
+                    "on-tertiary-container": "#523200",
+                    "outline-variant": "#3c4a42",
+                    "error": "#ffb4ab",
+                    "on-secondary": "#002e6a",
+                    "surface-container": "#1a211d",
+                    "primary-fixed": "#6ffbbe",
+                    "surface-variant": "#2f3632",
+                    "on-secondary-container": "#e6ecff",
+                    "primary": "#4edea3",
+                    "surface-container-low": "#161d19",
+                    "secondary-container": "#0566d9",
+                    "on-tertiary": "#472a00",
+                    "on-primary-fixed-variant": "#005236",
+                    "tertiary-fixed": "#ffddb8"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "touch-target-min": "48px",
+                    "element-padding": "12px",
+                    "container-margin": "24px",
+                    "button-height": "56px",
+                    "stack-gap": "16px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Hanken Grotesk"],
+                    "label-status": ["Inter"],
+                    "label-caps": ["Space Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "mono": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-sm-mobile": ["16px", {"lineHeight": "22px", "fontWeight": "700"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass {
+            background: rgba(10, 10, 12, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .scanner-pulse {
+            animation: borderPulse 2s infinite ease-in-out;
+        }
+
+        @keyframes borderPulse {
+            0% { border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2); }
+            50% { border-color: rgba(16, 185, 129, 1); box-shadow: 0 0 20px 0 rgba(16, 185, 129, 0.4); }
+            100% { border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2); }
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface selection:bg-primary/30 min-h-screen font-body-md overflow-hidden flex flex-col">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10 flex items-center h-14 px-6">
+<button class="active:scale-95 transition-transform duration-200 mr-4">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="flex flex-col flex-grow">
+<h1 class="font-headline-sm text-headline-sm-mobile font-bold text-on-surface">KIR-20260609-0001</h1>
+</div>
+<div class="px-3 py-1 rounded-full bg-tertiary/20 text-tertiary text-label-status uppercase">
+            DRAFT
+        </div>
+</header>
+<main class="flex-grow mt-14 mb-20 overflow-hidden flex flex-col">
+<!-- Scan Zone (Upper 40%) -->
+<section class="p-6 bg-gradient-to-b from-surface-container-low to-surface flex flex-col gap-6 flex-shrink-0">
+<!-- Mode & Stepper Header -->
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-2 bg-surface-container-highest/50 px-3 py-1.5 rounded-full border border-white/5">
+<span class="material-symbols-outlined text-[18px] text-primary">barcode_scanner</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Har skaner +1</span>
+</div>
+<div class="flex items-center glass rounded-xl p-1 overflow-hidden">
+<button class="w-10 h-10 flex items-center justify-center active:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<div class="w-12 text-center font-headline-sm text-primary">1</div>
+<button class="w-10 h-10 flex items-center justify-center active:bg-white/10 transition-colors">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+<!-- Huge Input Field -->
+<div class="relative group">
+<div class="absolute -inset-1 bg-primary/20 rounded-[22px] blur opacity-25 group-focus-within:opacity-50 transition-opacity"></div>
+<input autofocus="" class="w-full h-20 glass rounded-[20px] px-6 text-2xl font-mono text-center scanner-pulse border-2 outline-none focus:border-primary transition-all placeholder:text-on-surface-variant/40" placeholder="Shtrix-kodni skanerlang..." type="text"/>
+</div>
+<!-- Feedback Strip -->
+<div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+<div class="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/20">
+<span class="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+<span class="text-xs font-semibold">Cola 0.5L +2</span>
+</div>
+<div class="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/20">
+<span class="material-symbols-outlined text-[16px] text-primary">check_circle</span>
+<span class="text-xs font-semibold">Snickers +1</span>
+</div>
+<div class="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-error/10 rounded-lg border border-error/20">
+<span class="material-symbols-outlined text-[16px] text-error">cancel</span>
+<span class="text-xs font-semibold text-error">Noma'lum</span>
+</div>
+</div>
+</section>
+<!-- Lines List (Lower 60%) -->
+<section class="flex-grow overflow-y-auto px-6 py-4 space-y-4 no-scrollbar">
+<div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-2">Qabul qilingan tovarlar</div>
+<!-- Item Row 1 -->
+<div class="glass p-4 rounded-[20px] flex items-center gap-4 active:scale-[0.98] transition-all">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional, high-contrast product photograph of a classic red Coca-Cola bottle against a deep charcoal background. The lighting is crisp and industrial, highlighting the condensation on the bottle. The overall aesthetic is clean, modern, and high-performance, fitting for a professional B2B warehouse management interface with a dark mode color palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDH0eMkaSMtw3Ukk9eTfxgHQVgfu7G8r6kikjFMo229N8F1fB01BwqrstZxZHyV_IhuXwaf857Lv_2-cn4K3_dWc3UxrgXdE8MbFDjyaYpdHtICvezoHrqU7C6J2sa7mHOABC_4JYixfVJnpvjgPwug8QMDPGLAtahLV9io1cBcLkUg35pp-MPxYwF6IzPuvVprztWrYUOW09o49GjQDTJFSJ-9QSIJO-8rgLls4dlx60BKoR7WUtTGoXNIzYrxEc6qElB728gATx0"/>
+</div>
+<div class="flex-grow">
+<div class="font-headline-sm text-headline-sm-mobile text-on-surface">Coca-Cola Classic 0.5L</div>
+<div class="font-mono text-[11px] text-on-surface-variant">5449000000996</div>
+</div>
+<div class="text-right">
+<div class="text-xl font-bold text-primary">12</div>
+<div class="text-[10px] font-label-caps text-on-surface-variant">DONA</div>
+</div>
+</div>
+<!-- Item Row 2 -->
+<div class="glass p-4 rounded-[20px] flex items-center gap-4 active:scale-[0.98] transition-all">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A studio close-up of a Snickers chocolate bar, showing its textured wrapper with rich colors against a dark, moody background. The scene is lit with professional industrial lighting, creating sharp highlights and deep shadows. The visual style is premium and technical, aligning with a high-end warehouse inventory system designed for dark mode clarity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC15yUGBWiF7a_Y70BkPb1mtKR8OaREO67b6k0pZUjcW3ay8M5JVqEgm4oO0tw_egKHZGljQnABEI75QpBZUAH2mBMWKxdkXInZUrxicUBzg-xy0HZpLR2Nn7l103Uj7oGbyyAcYJSSI88ggsRIGxi_cmOux4SUVT0rBx33xNiQRhyFrJk6lTFjVxrwr_O3uFH1rIV0QJRatG-YuQwNn5s1qireIwl8hRHU5Iv9GPtgX27kL3rcLJryYiiZI-9Xeo0P4cUobmLVnWQ"/>
+</div>
+<div class="flex-grow">
+<div class="font-headline-sm text-headline-sm-mobile text-on-surface">Snickers Super 80g</div>
+<div class="font-mono text-[11px] text-on-surface-variant">5000159461122</div>
+</div>
+<div class="text-right">
+<div class="text-xl font-bold text-primary">24</div>
+<div class="text-[10px] font-label-caps text-on-surface-variant">DONA</div>
+</div>
+</div>
+<!-- Item Row 3 -->
+<div class="glass p-4 rounded-[20px] flex items-center gap-4 active:scale-[0.98] transition-all opacity-80">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A minimalist product shot of a clear plastic water bottle on a dark, reflective surface. Cold blue and green accent lighting creates a futuristic, industrial atmosphere. The style is sleek and technical, echoing a high-contrast B2B application interface. The composition is centered and emphasizes clarity and professional inventory management." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCowRWvMNwiXzKGYL9QyyiRm2ufTsuWkOdz_UTTxhJcCmqaUK0AyCPz_F08Ke2Ks5pAZ_2ECShUFevc9yr7e-uViOJEGXSYQJPO4BYR-D-2wIvllv1kgUEV_XTf0Tmb4bl8ThRFV8_RZC6dhGGSnUE4h_ww8e8wt64CGfS5jXfbeu8r_kp02GeDYJreBxAJuZfQ-ryGFOQN4I4eebY1oH6ZpG5qh-l4jL6CoQIOI9AfPDCMPpSNI_G4ga3zA6NwbXcT_OvgYq00_mo"/>
+</div>
+<div class="flex-grow">
+<div class="font-headline-sm text-headline-sm-mobile text-on-surface">Moychay Blue 1.5L</div>
+<div class="font-mono text-[11px] text-on-surface-variant">4607065000012</div>
+</div>
+<div class="text-right">
+<div class="text-xl font-bold text-primary">12</div>
+<div class="text-[10px] font-label-caps text-on-surface-variant">DONA</div>
+</div>
+</div>
+<!-- Empty Space for scrolling -->
+<div class="h-10"></div>
+</section>
+</main>
+<!-- Sticky Bottom Bar -->
+<footer class="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-white/15 h-20 px-6 flex items-center justify-between pb-safe">
+<div class="flex flex-col">
+<span class="text-on-surface-variant font-label-caps text-label-caps uppercase tracking-wider">JAMI</span>
+<span class="text-on-surface font-headline-sm">12 poz · <span class="text-primary">48 dona</span></span>
+</div>
+<button class="bg-primary text-on-primary-container px-8 h-12 rounded-xl font-headline-sm flex items-center gap-2 active:scale-95 transition-all shadow-lg shadow-primary/20">
+<span>Tasdiqlash</span>
+<span class="material-symbols-outlined text-[20px]">send</span>
+</button>
+</footer>
+<script>
+        // Micro-interactions and feedback simulation
+        const scannerInput = document.querySelector('input');
+        
+        scannerInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                // Simulate a scan success
+                const val = this.value;
+                this.value = '';
+                
+                // Visual feedback
+                this.classList.add('border-primary');
+                setTimeout(() => {
+                    this.classList.remove('border-primary');
+                }, 300);
+
+                console.log('Scanned:', val);
+            }
+        });
+
+        // Prevention of pull-to-refresh on mobile
+        document.body.addEventListener('touchmove', function(e) {
+            if (e.target.closest('.overflow-y-auto')) return;
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body></html>

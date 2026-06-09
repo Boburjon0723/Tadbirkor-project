@@ -35,11 +35,9 @@ import { useCompanyRealtime } from '@/hooks/use-company-realtime';
 import { useOrderAnalytics, useStockAnalytics } from '@/hooks/reports/use-analytics';
 import { useSession } from '@/hooks/use-session';
 import { isModuleKeyEnabled } from '@/lib/feature-modules';
+import { canSeeFinanceKpi } from '@/lib/role-access';
 
 type Role = 'owner' | 'manager' | 'accountant' | 'warehouse' | 'sales';
-
-/** Moliya KPI (debitor/kreditor) — faqat qarz moduliga ruxsati bor rollar */
-const ROLES_WITH_DEBT_KPI: Role[] = ['owner', 'manager', 'accountant'];
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -187,7 +185,7 @@ export default function DashboardPage() {
       {/* KPI Cards Grid — omborchi/sotuvchi: faqat operatsion (chiqim + qabul) */}
       <div
         className={`grid gap-4 md:gap-6 ${
-          ROLES_WITH_DEBT_KPI.includes(role)
+          canSeeFinanceKpi(role)
             ? 'grid-cols-2 lg:grid-cols-4'
             : role === 'warehouse'
               ? 'grid-cols-2 lg:grid-cols-3 max-w-5xl'
@@ -205,7 +203,7 @@ export default function DashboardPage() {
             trend="Saralash"
           />
         )}
-        {ROLES_WITH_DEBT_KPI.includes(role) && (
+        {canSeeFinanceKpi(role) && (
           <>
             <StatCard title="Debitorlik" value={formatMoney(dashboardData?.stats.totalReceivables || 0)} icon={<ArrowDownLeft size={20} />} color="emerald" trend="Balans" />
             <StatCard title="Kreditorlik" value={formatMoney(dashboardData?.stats.totalPayables || 0)} icon={<ArrowUpRight size={20} />} color="red" trend="Mulk" />

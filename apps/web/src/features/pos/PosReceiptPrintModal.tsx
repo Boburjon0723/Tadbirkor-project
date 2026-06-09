@@ -4,13 +4,20 @@ import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Printer, FileText, CheckCircle } from 'lucide-react';
 import { SaleCurrency, saleCurrencySuffix } from '@/lib/currency';
+import { formatStockQuantity } from '@/lib/product-units';
 
 export type ReceiptData = {
   receiptNumber?: string;
   date: Date;
   cashierName: string;
   warehouseName: string;
-  items: { name: string; quantity: number; price: number; amount: number }[];
+  items: {
+    name: string;
+    quantity: number;
+    unit?: string;
+    price: number;
+    amount: number;
+  }[];
   total: number;
   currency: SaleCurrency;
   paymentMethod: 'CASH' | 'CARD' | 'CREDIT';
@@ -51,15 +58,18 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
     let htmlContent = '';
 
     if (format === 'thermal') {
-      const itemsHtml = data.items.map(i => `
+      const itemsHtml = data.items.map(i => {
+        const qtyText = formatStockQuantity(i.quantity, i.unit);
+        return `
         <div class="flex">
           <div style="flex: 1; padding-right: 10px;">${i.name}</div>
           <div style="text-align: right; white-space: nowrap;">
-            ${i.quantity} x ${i.price.toLocaleString('en-US')}
+            ${qtyText} x ${i.price.toLocaleString('en-US')}
             <br/><b>${i.amount.toLocaleString('en-US')} ${suffix}</b>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
 
       htmlContent = `
         <html>
@@ -120,7 +130,7 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
         <tr>
           <td class="center">${idx + 1}</td>
           <td>${i.name}</td>
-          <td class="center">${i.quantity}</td>
+          <td class="center">${formatStockQuantity(i.quantity, i.unit)}</td>
           <td class="right">${i.price.toLocaleString('en-US')}</td>
           <td class="right bold">${i.amount.toLocaleString('en-US')}</td>
         </tr>
@@ -237,7 +247,10 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
   return (
     <AnimatePresence>
       {open && data && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center p-6"
+          data-revert-theme="true"
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -249,20 +262,20 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[2rem] p-8 relative shadow-2xl"
+            className="w-full max-w-md bg-[var(--pos-panel)] border border-[var(--pos-border)] rounded-[2rem] p-8 relative shadow-2xl"
           >
             <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/10 rounded-full blur-[60px] -mr-20 -mt-20 pointer-events-none" />
             
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-6 right-6 p-2 rounded-xl bg-white/5 text-gray-500 hover:text-white transition-all z-10"
+              className="absolute top-6 right-6 p-2 rounded-xl bg-slate-800/50 text-gray-500 hover:text-white transition-all z-10"
             >
               <X size={20} />
             </button>
 
             <div className="flex flex-col items-center text-center mb-8 relative z-10">
-              <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-emerald-500/10 text-[var(--pos-money)] rounded-full flex items-center justify-center mb-4">
                 <CheckCircle size={32} />
               </div>
               <h2 className="text-2xl font-black text-white mb-2">Sotuv bajarildi!</h2>
@@ -276,9 +289,9 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
                 type="button"
                 disabled={printing}
                 onClick={() => handlePrint('thermal')}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-blue-500/50 transition-all text-left group"
+                className="w-full flex items-center gap-4 p-4 rounded-xl border border-[var(--pos-border)] bg-slate-800/50 hover:bg-white/10 hover:border-blue-500/50 transition-all text-left group"
               >
-                <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 bg-blue-500/10 text-cyan-300 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Printer size={24} />
                 </div>
                 <div className="flex-1">
@@ -291,7 +304,7 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
                 type="button"
                 disabled={printing}
                 onClick={() => handlePrint('a4')}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-purple-500/50 transition-all text-left group"
+                className="w-full flex items-center gap-4 p-4 rounded-xl border border-[var(--pos-border)] bg-slate-800/50 hover:bg-white/10 hover:border-purple-500/50 transition-all text-left group"
               >
                 <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                   <FileText size={24} />
@@ -303,7 +316,7 @@ export function PosReceiptPrintModal({ open, data, onClose, formatMoney }: Props
               </button>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-white/5 relative z-10">
+            <div className="mt-6 pt-6 border-t border-[var(--pos-border)] relative z-10">
               <button
                 type="button"
                 onClick={onClose}

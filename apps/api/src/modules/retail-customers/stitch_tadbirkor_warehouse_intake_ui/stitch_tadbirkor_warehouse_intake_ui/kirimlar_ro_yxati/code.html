@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800;900&amp;family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;family=Space+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        body {
+            background-color: #050505;
+            color: #dde4dd;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .status-pill-draft { background: rgba(255, 185, 95, 0.2); color: #ffb95f; }
+        .status-pill-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .status-pill-cancelled { background: rgba(255, 180, 171, 0.2); color: #ffb4ab; }
+        
+        /* Hide scrollbars */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#adc6ff",
+                        "on-error": "#690005",
+                        "surface": "#0e1511",
+                        "on-primary-container": "#00422b",
+                        "surface-dim": "#0e1511",
+                        "on-primary": "#003824",
+                        "secondary-fixed": "#d8e2ff",
+                        "surface-container-lowest": "#09100c",
+                        "primary-fixed-dim": "#4edea3",
+                        "primary-container": "#10b981",
+                        "on-error-container": "#ffdad6",
+                        "inverse-primary": "#006c49",
+                        "on-secondary-fixed-variant": "#004395",
+                        "tertiary": "#ffb95f",
+                        "outline": "#86948a",
+                        "surface-tint": "#4edea3",
+                        "on-surface-variant": "#bbcabf",
+                        "inverse-on-surface": "#2b322d",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-primary-fixed": "#002113",
+                        "on-secondary-fixed": "#001a42",
+                        "secondary-fixed-dim": "#adc6ff",
+                        "error-container": "#93000a",
+                        "tertiary-container": "#e29100",
+                        "on-background": "#dde4dd",
+                        "inverse-surface": "#dde4dd",
+                        "surface-bright": "#343b36",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary-fixed-dim": "#ffb95f",
+                        "surface-container-highest": "#2f3632",
+                        "on-surface": "#dde4dd",
+                        "background": "#050505",
+                        "surface-container-high": "#242c27",
+                        "on-tertiary-container": "#523200",
+                        "outline-variant": "#3c4a42",
+                        "error": "#ffb4ab",
+                        "on-secondary": "#002e6a",
+                        "surface-container": "#1a211d",
+                        "primary-fixed": "#6ffbbe",
+                        "surface-variant": "#2f3632",
+                        "on-secondary-container": "#e6ecff",
+                        "primary": "#10b981",
+                        "surface-container-low": "#161d19",
+                        "secondary-container": "#0566d9",
+                        "on-tertiary": "#472a00",
+                        "on-primary-fixed-variant": "#005236",
+                        "tertiary-fixed": "#ffddb8"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "20px",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "touch-target-min": "48px",
+                        "element-padding": "12px",
+                        "container-margin": "24px",
+                        "button-height": "56px",
+                        "stack-gap": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Hanken Grotesk"],
+                        "label-status": ["Inter"],
+                        "label-caps": ["Space Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                        "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                        "headline-sm-mobile": ["16px", {"lineHeight": "22px", "fontWeight": "700"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface selection:bg-primary/30">
+<!-- Top Navigation Anchor -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-white/10 flex items-center h-14 px-container-margin w-full max-w-full">
+<div class="flex items-center gap-4 w-full">
+<button class="active:scale-95 transition-transform duration-200 p-2 -ml-2 rounded-full hover:bg-white/5">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<div class="flex flex-col">
+<h1 class="font-headline-sm text-headline-sm-mobile font-bold text-on-surface">Ombor kirimi</h1>
+</div>
+<div class="ml-auto">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-28 px-container-margin max-w-2xl mx-auto">
+<!-- Hero Section / Title -->
+<div class="mb-8">
+<h2 class="font-headline-lg text-headline-lg text-white mb-1">Xarid va Qabul</h2>
+<p class="font-body-md text-on-surface-variant">Qo'lda va skaner orqali mahsulot qabul qilish jarayonini boshqaring</p>
+</div>
+<!-- Filter Chips (Horizontal) -->
+<div class="flex gap-3 overflow-x-auto no-scrollbar mb-8 -mx-container-margin px-container-margin pb-2">
+<button class="flex-shrink-0 px-6 py-2 rounded-full bg-secondary-container text-white font-label-status active:scale-95 transition-all">Hammasi</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full glass-card text-on-surface-variant font-label-status active:scale-95 transition-all">Qoralama</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full glass-card text-on-surface-variant font-label-status active:scale-95 transition-all">Yakunlangan</button>
+<button class="flex-shrink-0 px-6 py-2 rounded-full glass-card text-on-surface-variant font-label-status active:scale-95 transition-all">Bekor qilingan</button>
+</div>
+<!-- Intake List -->
+<div class="flex flex-col gap-4">
+<!-- Card 1: Completed -->
+<div class="glass-card rounded-2xl p-5 relative overflow-hidden group active:scale-[0.98] transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-primary tracking-widest mb-1">REF: KIR-00892</span>
+<h3 class="font-headline-sm text-white">Asosiy Omborхоna</h3>
+</div>
+<span class="status-pill-completed px-3 py-1 rounded-full font-label-status text-[11px] uppercase tracking-wider">TUGALLANGAN</span>
+</div>
+<div class="flex items-center gap-6 mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">calendar_today</span>
+<span class="font-body-md text-sm text-on-surface-variant">Okt 24, 2023</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">inventory_2</span>
+<span class="font-body-md text-sm text-on-surface-variant">12 ta mahsulot · 450 dona</span>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-4 border-t border-white/5">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xs">person</span>
+</div>
+<span class="font-body-md text-xs text-on-surface-variant">Mas'ul: Alisher V.</span>
+<div class="ml-auto flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A macro close-up of a fresh green leaf with intricate vein patterns, illuminated by a soft, cinematic side light in a dark warehouse environment. The aesthetic is industrial yet organic, using a deep emerald and black color palette to convey high performance and precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDR7zUElgNfJ4pMLu2-JGeUn-0t1Y_a57bSl5XpcYxnlbay_VL3nMC3impXDt0xFBDuFBWcv26idbfDXx6uDjvEnYDJ49W4P8IbBctg58YgVvj7ABeIapG-DRIhVpPUr8DYCCDpegHvBMn2R1DNV1PlLazPDlTczG3y8Gz-635crz4Ev9r6az5TtASzJQZmHb5dMBPa9daJH8lrxxf5oHb_b7wY649N-FxQpGE4nd_S1a7NujkyPAFQ_SFFxZ-hRQfmtacBKFG70s"/>
+</div>
+<div class="w-6 h-6 rounded-full border-2 border-surface bg-surface-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Close-up of organized metallic logistics equipment in a dim industrial space, accented with glowing emerald light strips. The composition emphasizes depth and technical detail, reflecting a modern B2B warehouse atmosphere with high-contrast surfaces and premium glass-like textures." src="https://lh3.googleusercontent.com/aida-public/AB6AXuALFYAQdgOY5zBhjUGeXgVzSAgyUMZzRsEJLng1FbK5FoB4WCXkDwL0fmwPVjPhJ2QYBSEJGvJjiZCpnYFZHgsdlGMJsRQkUKZ44IoCH8Bv9M5Cp5OU2XvmDjYrkGWgyl-PFPGqS0EqXrZsQ_2C4Ec3fC-9Qb-qv_aH5OIHSZA2ZdHArOjYd55vlkXVftb9MiHWKUh_hm7uMUnxmLZN6IvaF6VzCmH8gPPP6MgwgdvGFaGPLyF2FwiDKotVW2jp_Q-yuOkTLyQlAm4"/>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2: Draft -->
+<div class="glass-card rounded-2xl p-5 relative overflow-hidden group active:scale-[0.98] transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-primary tracking-widest mb-1">REF: KIR-00910</span>
+<h3 class="font-headline-sm text-white">Tashqi Terminal A</h3>
+</div>
+<span class="status-pill-draft px-3 py-1 rounded-full font-label-status text-[11px] uppercase tracking-wider">QORALAMA</span>
+</div>
+<div class="flex items-center gap-6 mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">calendar_today</span>
+<span class="font-body-md text-sm text-on-surface-variant">Bugun, 09:45</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">inventory_2</span>
+<span class="font-body-md text-sm text-on-surface-variant">4 ta mahsulot · 82 dona</span>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-4 border-t border-white/5">
+<div class="w-8 h-8 rounded-full bg-tertiary/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary text-xs" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+</div>
+<span class="font-body-md text-xs text-on-surface-variant">Tahrirlash kutilmoqda</span>
+<span class="ml-auto material-symbols-outlined text-on-surface-variant">chevron_right</span>
+</div>
+</div>
+<!-- Card 3: Cancelled -->
+<div class="glass-card rounded-2xl p-5 relative overflow-hidden opacity-70 group active:scale-[0.98] transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant tracking-widest mb-1">REF: KIR-00885</span>
+<h3 class="font-headline-sm text-white">Muzlatgich Ombori</h3>
+</div>
+<span class="status-pill-cancelled px-3 py-1 rounded-full font-label-status text-[11px] uppercase tracking-wider">BEKOR QILINGAN</span>
+</div>
+<div class="flex items-center gap-6 mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">calendar_today</span>
+<span class="font-body-md text-sm text-on-surface-variant">Okt 22, 2023</span>
+</div>
+</div>
+<div class="flex items-center gap-2 pt-4 border-t border-white/5">
+<span class="font-body-md text-xs text-error">Hujjatda xatolik aniqlangan</span>
+</div>
+</div>
+<!-- Card 4: Another Completed -->
+<div class="glass-card rounded-2xl p-5 relative overflow-hidden group active:scale-[0.98] transition-all duration-200">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-primary tracking-widest mb-1">REF: KIR-00884</span>
+<h3 class="font-headline-sm text-white">Xomashyo Bo'limi</h3>
+</div>
+<span class="status-pill-completed px-3 py-1 rounded-full font-label-status text-[11px] uppercase tracking-wider">TUGALLANGAN</span>
+</div>
+<div class="flex items-center gap-6 mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">calendar_today</span>
+<span class="font-body-md text-sm text-on-surface-variant">Okt 21, 2023</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">inventory_2</span>
+<span class="font-body-md text-sm text-on-surface-variant">25 ta mahsulot · 1.2k dona</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB: Add New Intake -->
+<button class="fixed bottom-24 right-6 w-16 h-16 rounded-full bg-secondary-container text-white shadow-2xl flex items-center justify-center active:scale-90 transition-all duration-200 z-50">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+<!-- Bottom Navigation Shell -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface/90 dark:bg-surface/90 backdrop-blur-xl border-t border-white/15 rounded-t-xl flex justify-around items-center h-20 px-4 pb-safe w-full">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">barcode_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Skaner</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Ro‘yxat</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container/20 text-primary rounded-xl px-4 py-2 active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="font-label-caps text-label-caps mt-1">Hujjatlar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Sozlamalar</span>
+</a>
+</nav>
+<script>
+        // Simple Interaction logic
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('click', () => {
+                // Future: Navigate to details
+                console.log('Navigate to intake details');
+            });
+        });
+
+        // Pull to refresh effect mockup
+        let touchstartY = 0;
+        let touchendY = 0;
+        
+        document.addEventListener('touchstart', e => {
+            touchstartY = e.changedTouches[0].screenY;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchendY = e.changedTouches[0].screenY;
+            if (touchendY > touchstartY + 100 && window.scrollY === 0) {
+                // Trigger refresh animation
+                document.body.style.opacity = '0.7';
+                setTimeout(() => {
+                    document.body.style.opacity = '1';
+                }, 800);
+            }
+        });
+    </script>
+</body></html>

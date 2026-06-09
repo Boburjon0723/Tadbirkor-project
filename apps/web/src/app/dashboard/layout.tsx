@@ -28,6 +28,7 @@ import {
   Loader2,
   CreditCard,
   Crown,
+  PackagePlus,
 } from 'lucide-react';
 import { useTranslation } from '@/context/LanguageContext';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -176,6 +177,7 @@ export default function DashboardLayout({
         BarChart3,
         Link2,
         Settings,
+        PackagePlus,
       }),
     [],
   );

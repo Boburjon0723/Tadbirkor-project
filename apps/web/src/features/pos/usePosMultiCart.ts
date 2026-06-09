@@ -7,6 +7,13 @@ import {
   type SaleCurrency,
 } from '@/lib/currency';
 import { toast } from '@/lib/toast';
+import {
+  minSaleQuantity,
+  normalizeProductUnit,
+  normalizeStockInput,
+  quantityStep,
+  type ProductUnitCode,
+} from '@/lib/product-units';
 import type { PosCartItem } from './types';
 import type { PosCustomerSelection } from './PosCustomerStrip';
 
@@ -110,10 +117,18 @@ export function usePosMultiCart() {
       name: string;
       salePrice?: number | string;
       currency?: string;
+      unit?: string;
+      stockQuantity?: number;
       image?: string;
+      quantity?: number;
     }) => {
       const currency = normalizeSaleCurrency(variant.currency);
       const listPrice = Number(variant.salePrice || 0);
+      const unit = normalizeProductUnit(variant.unit) as ProductUnitCode;
+      const step = quantityStep(unit);
+      const initialQty = variant.quantity !== undefined
+        ? normalizeStockInput(variant.quantity, unit)
+        : minSaleQuantity(unit);
 
       updateActive((s) => {
         if (s.cart.length > 0 && s.cart[0].currency !== currency) {
@@ -124,11 +139,18 @@ export function usePosMultiCart() {
         }
         const existing = s.cart.find((item) => item.variantId === variant.id);
         if (existing) {
+          const addQty = variant.quantity !== undefined ? initialQty : step;
+          const nextQty = normalizeStockInput(existing.quantity + addQty, unit);
+          const maxStock = existing.stockQuantity;
+          if (maxStock !== undefined && nextQty > maxStock) {
+            toast.error('Ombordagi qoldiqdan oshib ketdi');
+            return s;
+          }
           return {
             ...s,
             cart: s.cart.map((item) =>
               item.variantId === variant.id
-                ? { ...item, quantity: item.quantity + 1 }
+                ? { ...item, quantity: nextQty }
                 : item,
             ),
           };
@@ -145,7 +167,9 @@ export function usePosMultiCart() {
               listPrice,
               price: listPrice,
               currency,
-              quantity: 1,
+              unit,
+              quantity: initialQty,
+              stockQuantity: variant.stockQuantity,
               image: variant.image,
             },
           ],
@@ -165,15 +189,20 @@ export function usePosMultiCart() {
     [updateActive],
   );
 
-  const updateQuantity = useCallback(
-    (variantId: string, delta: number) => {
+  const setItemQuantity = useCallback(
+    (variantId: string, quantity: number) => {
       updateActive((s) => ({
         ...s,
-        cart: s.cart.map((item) =>
-          item.variantId === variantId
-            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-            : item,
-        ),
+        cart: s.cart.map((item) => {
+          if (item.variantId !== variantId) return item;
+          const minQty = minSaleQuantity(item.unit);
+          const next = normalizeStockInput(Math.max(minQty, quantity), item.unit);
+          if (item.stockQuantity !== undefined && next > item.stockQuantity) {
+            toast.error('Ombordagi qoldiqdan oshib ketdi');
+            return item;
+          }
+          return { ...item, quantity: next };
+        }),
       }));
     },
     [updateActive],
@@ -202,7 +231,7 @@ export function usePosMultiCart() {
     [updateActive],
   );
 
-  const itemCount = cart.reduce((a, b) => a + b.quantity, 0);
+  const itemCount = cart.length;
 
   return {
     /* multi-cart */
@@ -220,7 +249,7 @@ export function usePosMultiCart() {
     formatMoney,
     addToCart,
     removeFromCart,
-    updateQuantity,
+    setItemQuantity,
     updateItemPrice,
     clearCart,
     setCustomer,

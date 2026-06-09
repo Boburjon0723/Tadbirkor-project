@@ -12,6 +12,7 @@ export const DASHBOARD_PREFETCH_PATHS = [
   '/dashboard/warehouse',
   '/dashboard/picking',
   '/dashboard/inventory-count',
+  '/dashboard/warehouse-intake',
   '/dashboard/reports',
   '/dashboard/settings',
   '/dashboard/pos',

@@ -19,6 +19,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ModuleSettingsGrouped } from '@/components/settings/ModuleSettingsGrouped';
 import { SettingsProfileTab } from '@/components/settings/SettingsProfileTab';
 import { SettingsCompanyForm } from '@/components/settings/SettingsCompanyForm';
+import { SettingsIntakeSection } from '@/components/settings/SettingsIntakeSection';
 import { SettingsEmployeesRolesTab } from '@/components/settings/SettingsEmployeesRolesTab';
 import { SettingsArchitectureTab } from '@/components/settings/SettingsArchitectureTab';
 import { SettingsSecurityTab } from '@/components/settings/SettingsSecurityTab';
@@ -155,6 +156,9 @@ export default function SettingsPage() {
               }}
               canWrite={canWrite}
             />
+            <div className="mt-8">
+              <SettingsIntakeSection canWrite={canWrite} />
+            </div>
           </div>
         )}
         {activeTab === 'modullar' && <ModuleSettingsGrouped />}

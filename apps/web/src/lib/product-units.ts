@@ -69,6 +69,19 @@ export function stockInputStep(unit?: string | null): string {
   return allowsDecimalStock(unit) ? '0.0001' : '1';
 }
 
+/** POS savatda +/- tugmalari qadami */
+export function quantityStep(unit?: string | null): number {
+  const u = normalizeProductUnit(unit);
+  if (u === 'kg') return 0.1;
+  if (u === 'l') return 0.5;
+  if (u === 'm') return 0.1;
+  return 1;
+}
+
+export function minSaleQuantity(unit?: string | null): number {
+  return allowsDecimalStock(unit) ? 0.0001 : 1;
+}
+
 /** Raqam, bo‘sh yoki kiritish paytidagi qisman matn ("12.") */
 export type StockFieldValue = number | '' | string;
 

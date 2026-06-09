@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateFeatureDto } from './dto/update-feature.dto';
@@ -13,6 +18,13 @@ import {
   WAREHOUSE_SECTION_FEATURE_DEFS,
   WAREHOUSE_SECTION_FEATURE_KEYS,
 } from '../../common/warehouse-section-features';
+import { UpdateIntakeSettingsDto } from './dto/update-intake-settings.dto';
+import {
+  mergeIntakeSettingsPatch,
+  normalizeIntakeSettings,
+  resolveWarehouseIntakeSettings,
+} from '../../common/warehouse-intake-settings.util';
+import { WarehouseScopeService } from '../users/services/warehouse-scope.service';
 
 const FEATURES_CACHE_TTL_MS = Number(process.env.FEATURES_CACHE_TTL_MS || 300_000);
 
@@ -22,6 +34,7 @@ export class CompaniesService {
     private prisma: PrismaService,
     private telegramLinkService: TelegramLinkService,
     private cache: AppCacheService,
+    private warehouseScopeService: WarehouseScopeService,
   ) {}
 
   private invalidateFeatureCache(companyId: string) {
@@ -261,6 +274,66 @@ export class CompaniesService {
       posCreditEnabled: !!company?.posCreditEnabled,
       posMaxDiscountPercent: maxPct,
     };
+  }
+
+  async getIntakeSettings(
+    companyId: string,
+    warehouseId?: string,
+    userId?: string,
+  ) {
+    await this.assertFeatureEnabled(companyId, 'WAREHOUSE_INTAKE');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { warehouseIntakeSettings: true },
+    });
+    if (!company) throw new NotFoundException('Kompaniya topilmadi');
+
+    let warehouseFieldConfig: unknown = null;
+    const wid = warehouseId?.trim();
+    if (wid) {
+      if (userId) {
+        const scope = await this.warehouseScopeService.getForUser(companyId, userId);
+        if (!this.warehouseScopeService.isAllowed(scope, wid)) {
+          throw new ForbiddenException('Ushbu ombor sozlamalariga ruxsat yo‘q');
+        }
+      }
+      const warehouse = await this.prisma.warehouse.findFirst({
+        where: { id: wid, companyId },
+        select: { fieldConfig: true },
+      });
+      if (!warehouse) throw new NotFoundException('Ombor topilmadi');
+      warehouseFieldConfig = warehouse.fieldConfig;
+    }
+
+    const settings = resolveWarehouseIntakeSettings(
+      company.warehouseIntakeSettings,
+      warehouseFieldConfig,
+    );
+    return {
+      settings,
+      warehouseId: warehouseId?.trim() || null,
+    };
+  }
+
+  async updateIntakeSettings(companyId: string, dto: UpdateIntakeSettingsDto) {
+    await this.assertFeatureEnabled(companyId, 'WAREHOUSE_INTAKE');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { warehouseIntakeSettings: true },
+    });
+    if (!company) throw new NotFoundException('Kompaniya topilmadi');
+
+    const current = normalizeIntakeSettings(
+      company.warehouseIntakeSettings as Record<string, unknown> | null,
+    );
+    const settings = mergeIntakeSettingsPatch(current, dto);
+
+    await this.prisma.company.update({
+      where: { id: companyId },
+      data: { warehouseIntakeSettings: settings as object },
+    });
+
+    return { settings };
   }
 
   private async upsertCompanyFeatures(

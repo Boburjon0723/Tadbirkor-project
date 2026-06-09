@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800;900&amp;family=Space+Grotesk:wght@700&amp;family=Inter:wght@400;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;family=Space+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#ffdad6",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "surface-container-high": "#242c27",
+                    "on-tertiary-container": "#523200",
+                    "inverse-surface": "#dde4dd",
+                    "outline-variant": "#3c4a42",
+                    "secondary-container": "#0566d9",
+                    "primary-container": "#10b981",
+                    "surface-dim": "#0e1511",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-surface": "#dde4dd",
+                    "on-tertiary": "#472a00",
+                    "inverse-on-surface": "#2b322d",
+                    "on-secondary-fixed": "#001a42",
+                    "error": "#ffb4ab",
+                    "surface-container-highest": "#2f3632",
+                    "secondary": "#adc6ff",
+                    "on-primary-fixed": "#002113",
+                    "surface-container-lowest": "#09100c",
+                    "tertiary-container": "#e29100",
+                    "surface-container": "#1a211d",
+                    "secondary-fixed": "#d8e2ff",
+                    "on-primary-fixed-variant": "#005236",
+                    "primary-fixed": "#6ffbbe",
+                    "on-secondary": "#002e6a",
+                    "outline": "#86948a",
+                    "inverse-primary": "#006c49",
+                    "surface-bright": "#343b36",
+                    "on-surface-variant": "#bbcabf",
+                    "surface": "#0e1511",
+                    "primary": "#4edea3",
+                    "surface-tint": "#4edea3",
+                    "surface-variant": "#2f3632",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "on-secondary-fixed-variant": "#004395",
+                    "on-secondary-container": "#e6ecff",
+                    "tertiary-fixed": "#ffddb8",
+                    "surface-container-low": "#161d19",
+                    "tertiary": "#ffb95f",
+                    "on-primary-container": "#00422b",
+                    "error-container": "#93000a",
+                    "on-background": "#dde4dd",
+                    "on-primary": "#003824",
+                    "background": "#0e1511",
+                    "on-error": "#690005",
+                    "primary-fixed-dim": "#4edea3",
+                    "on-tertiary-fixed-variant": "#653e00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "element-padding": "12px",
+                    "button-height": "56px",
+                    "stack-gap": "16px",
+                    "touch-target-min": "48px"
+            },
+            "fontFamily": {
+                    "headline-xl": ["Hanken Grotesk"],
+                    "label-caps": ["Space Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "label-status": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "headline-sm-mobile": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "label-caps-mobile": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(26, 33, 29, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab-indicator {
+            box-shadow: 0 0 15px rgba(78, 222, 163, 0.3);
+        }
+        body {
+            background-color: #0e1511;
+            color: #dde4dd;
+            -webkit-tap-highlight-color: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-white/10 flex items-center h-14 px-container-margin w-full max-w-full">
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-primary active:scale-95 transition-transform duration-200">arrow_back</button>
+<h1 class="font-headline-sm text-headline-sm-mobile font-bold text-on-surface">Ombor kirimi</h1>
+</div>
+<button class="flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 active:scale-95 transition-all">
+<span class="font-label-status text-label-status text-on-surface-variant">Asosiy ombor</span>
+<span class="material-symbols-outlined text-[16px] text-primary">expand_more</span>
+</button>
+</div>
+</header>
+<main class="pt-20 px-container-margin space-y-6">
+<!-- Action Section -->
+<section class="space-y-6">
+<button class="w-full h-[56px] bg-primary text-on-primary font-headline-sm flex items-center justify-center gap-2 rounded-xl shadow-[0_0_20px_rgba(78,222,163,0.2)] border-t border-white/20 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">add</span>
+                + Yangi kirim
+            </button>
+<!-- Filters -->
+<div class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scrollbar">
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-primary text-on-primary font-label-status">Barchasi</button>
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-tertiary/20 text-tertiary border border-tertiary/30 font-label-status">DRAFT</button>
+<button class="whitespace-nowrap px-6 py-2 rounded-full bg-primary/20 text-primary border border-primary/30 font-label-status">TUGALLANGAN</button>
+</div>
+</section>
+<!-- List Section -->
+<section class="space-y-stack-gap">
+<!-- Item Card 1 -->
+<div class="glass-card p-4 rounded-[20px] relative overflow-hidden group active:scale-[0.99] transition-transform">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps-mobile text-on-surface-variant">KIR-20260609-0001</span>
+<span class="px-3 py-1 rounded-full bg-primary/20 text-primary font-label-status text-[10px]">TUGALLANGAN</span>
+</div>
+<div class="space-y-1">
+<h3 class="font-headline-sm text-on-surface">Ombor kirimi: S-021</h3>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">inventory_2</span>
+<span class="font-body-md text-body-md">5 qator · 34 dona · bugun 14:32</span>
+</div>
+</div>
+<div class="absolute right-4 bottom-4 opacity-20 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-primary">chevron_right</span>
+</div>
+</div>
+<!-- Item Card 2 -->
+<div class="glass-card p-4 rounded-[20px] relative overflow-hidden active:scale-[0.99] transition-transform">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps-mobile text-on-surface-variant">KIR-20260609-0002</span>
+<span class="px-3 py-1 rounded-full bg-tertiary/20 text-tertiary font-label-status text-[10px]">DRAFT</span>
+</div>
+<div class="space-y-1">
+<h3 class="font-headline-sm text-on-surface">Ombor kirimi: T-992</h3>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">pending_actions</span>
+<span class="font-body-md text-body-md">12 qator · 112 dona · bugun 12:15</span>
+</div>
+</div>
+</div>
+<!-- Item Card 3 -->
+<div class="glass-card p-4 rounded-[20px] relative overflow-hidden active:scale-[0.99] transition-transform">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps-mobile text-on-surface-variant">KIR-20260608-0114</span>
+<span class="px-3 py-1 rounded-full bg-primary/20 text-primary font-label-status text-[10px]">TUGALLANGAN</span>
+</div>
+<div class="space-y-1">
+<h3 class="font-headline-sm text-on-surface">Ombor kirimi: B-102</h3>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">inventory_2</span>
+<span class="font-body-md text-body-md">2 qator · 14 dona · kecha 18:45</span>
+</div>
+</div>
+</div>
+<!-- Item Card 4 -->
+<div class="glass-card p-4 rounded-[20px] relative overflow-hidden active:scale-[0.99] transition-transform">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-caps text-label-caps-mobile text-on-surface-variant">KIR-20260608-0112</span>
+<span class="px-3 py-1 rounded-full bg-primary/20 text-primary font-label-status text-[10px]">TUGALLANGAN</span>
+</div>
+<div class="space-y-1">
+<h3 class="font-headline-sm text-on-surface">Ombor kirimi: X-771</h3>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">inventory_2</span>
+<span class="font-body-md text-body-md">8 qator · 200 dona · kecha 10:20</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Decorative Background Shader -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-40">
+
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface/90 dark:bg-surface/90 backdrop-blur-xl border-t border-white/15 shadow-2xl flex justify-around items-center h-20 px-4 pb-safe">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">barcode_scanner</span>
+<span class="font-label-caps text-label-caps mt-1">Skaner</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container/20 text-primary rounded-xl px-4 py-2 active:scale-90 transition-all duration-200 active-tab-indicator">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="font-label-caps text-label-caps mt-1">Ro‘yxat</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">description</span>
+<span class="font-label-caps text-label-caps mt-1">Hujjatlar</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-container-highest active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps mt-1">Sozlamalar</span>
+</button>
+</nav>
+<script>
+        // Micro-interactions for list cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.addEventListener('touchstart', () => {
+                card.style.borderColor = 'rgba(78, 222, 163, 0.4)';
+            });
+            card.addEventListener('touchend', () => {
+                card.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            });
+        });
+
+        // Filter toggle simulation
+        const filters = document.querySelectorAll('button[class*="rounded-full"]');
+        filters.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Simplified UI toggle
+                if (!btn.classList.contains('bg-primary')) {
+                    // Logic would go here to swap styles
+                    console.log('Filter selected:', btn.innerText);
+                }
+            });
+        });
+    </script>
+</body></html>

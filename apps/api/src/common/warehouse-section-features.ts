@@ -5,6 +5,7 @@ export const WAREHOUSE_SECTION_FEATURE_KEYS = [
   'WAREHOUSE_PICKING',
   'WAREHOUSE_ATP',
   'WAREHOUSE_INVENTORY_COUNT',
+  'WAREHOUSE_INTAKE',
 ] as const;
 
 export type WarehouseSectionFeatureKey =
@@ -40,6 +41,11 @@ export const WAREHOUSE_SECTION_FEATURE_DEFS: {
     name: 'Inventarizatsiya',
     description: 'Sanash, farq, tasdiqlash va ombor bloklari.',
   },
+  {
+    key: 'WAREHOUSE_INTAKE',
+    name: 'Ombor kirimi',
+    description: 'Qo‘lda va skaner orqali mahsulot kirimi (hujjat asosida).',
+  },
 ];
 
 /** Bog‘liq bo‘limlar — bitta nom, bitta tugma */
@@ -56,7 +62,7 @@ export const WAREHOUSE_FEATURE_BUNDLES: {
     name: 'Asosiy ombor',
     description:
       'Mahsulotlar, qoldiq, kirim/chiqim va qo‘lda tuzatish — boshqa bo‘limlar uchun asos.',
-    featureKeys: ['WAREHOUSE_BASIC', 'STOCK_ADJUSTMENT'],
+    featureKeys: ['WAREHOUSE_BASIC', 'STOCK_ADJUSTMENT', 'WAREHOUSE_INTAKE'],
   },
   {
     id: 'b2b_outbound',

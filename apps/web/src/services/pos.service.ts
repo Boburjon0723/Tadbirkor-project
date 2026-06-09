@@ -35,6 +35,7 @@ export type PosCatalogItem = {
   barcode?: string | null;
   salePrice: number;
   currency?: string;
+  unit?: string;
   image?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;

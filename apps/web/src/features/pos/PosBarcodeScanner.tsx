@@ -45,6 +45,7 @@ export type PosQuickSearchItem = {
   barcode: string | null;
   salePrice: number;
   currency: string;
+  unit?: string;
   stock: number | null;
 };
 
@@ -55,6 +56,8 @@ type CartVariantInput = {
   name: string;
   salePrice?: number;
   currency?: string;
+  unit?: string;
+  stockQuantity?: number;
 };
 
 type Props = {
@@ -102,6 +105,8 @@ export function PosBarcodeScanner({ warehouseId, onAddItem, disabled }: Props) {
           name: item.name,
           salePrice: item.salePrice,
           currency: item.currency,
+          unit: item.unit,
+          stockQuantity: item.stock ?? undefined,
         });
         setStatus('idle');
       } catch (err: unknown) {
@@ -121,14 +126,14 @@ export function PosBarcodeScanner({ warehouseId, onAddItem, disabled }: Props) {
     <div className="flex items-center gap-2 text-xs font-bold shrink-0 px-1">
       {status === 'idle' && (
         <>
-          <ScanLine size={14} className="text-emerald-500" />
-          <span className="text-gray-500">Skaner tayyor</span>
+          <ScanLine size={14} className="text-[var(--pos-money)]" />
+          <span className="text-[var(--pos-muted)]">Skaner tayyor</span>
         </>
       )}
       {status === 'loading' && (
         <>
-          <Loader2 size={14} className="text-blue-500 animate-spin" />
-          <span className="text-gray-400">Qidirilmoqda...</span>
+          <Loader2 size={14} className="text-[var(--pos-accent)] animate-spin" />
+          <span className="text-[var(--pos-muted)]">Qidirilmoqda...</span>
         </>
       )}
       {status === 'notfound' && (

@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="uz"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ombor Kirimi | WMS Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;700;800;900&amp;family=Inter:wght@400;600&amp;family=Space+Grotesk:wght@700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&amp;family=Inter:wght@100..900&amp;family=Space+Grotesk:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#343b36",
+                    "on-primary-fixed-variant": "#005236",
+                    "on-primary-fixed": "#002113",
+                    "on-tertiary-container": "#523200",
+                    "tertiary": "#ffb95f",
+                    "secondary-fixed": "#d8e2ff",
+                    "on-surface-variant": "#bbcabf",
+                    "outline-variant": "#3c4a42",
+                    "on-secondary-fixed-variant": "#004395",
+                    "on-primary-container": "#00422b",
+                    "on-background": "#dde4dd",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-highest": "#2f3632",
+                    "error": "#ffb4ab",
+                    "on-surface": "#dde4dd",
+                    "on-secondary-container": "#e6ecff",
+                    "inverse-on-surface": "#2b322d",
+                    "surface-container-low": "#161d19",
+                    "primary-fixed-dim": "#4edea3",
+                    "surface-tint": "#4edea3",
+                    "surface-container-lowest": "#09100c",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "primary": "#4edea3",
+                    "tertiary-container": "#e29100",
+                    "on-primary": "#003824",
+                    "secondary-container": "#0566d9",
+                    "primary-container": "#10b981",
+                    "on-secondary-fixed": "#001a42",
+                    "secondary": "#adc6ff",
+                    "outline": "#86948a",
+                    "tertiary-fixed": "#ffddb8",
+                    "error-container": "#93000a",
+                    "on-tertiary-fixed": "#2a1700",
+                    "on-error": "#690005",
+                    "surface-container": "#1a211d",
+                    "surface-dim": "#0e1511",
+                    "tertiary-fixed-dim": "#ffb95f",
+                    "surface-container-high": "#242c27",
+                    "surface": "#0e1511",
+                    "on-secondary": "#002e6a",
+                    "background": "#0e1511",
+                    "primary-fixed": "#6ffbbe",
+                    "on-tertiary": "#472a00",
+                    "inverse-primary": "#006c49",
+                    "surface-variant": "#2f3632",
+                    "on-tertiary-fixed-variant": "#653e00",
+                    "inverse-surface": "#dde4dd"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "24px",
+                    "stack-gap": "16px",
+                    "button-height": "56px",
+                    "touch-target-min": "48px",
+                    "element-padding": "12px"
+            },
+            "fontFamily": {
+                    "headline-sm": ["Hanken Grotesk"],
+                    "label-status": ["Inter"],
+                    "headline-xl": ["Hanken Grotesk"],
+                    "body-lg": ["Inter"],
+                    "label-caps": ["Space Grotesk"],
+                    "headline-lg": ["Hanken Grotesk"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "700"}],
+                    "label-status": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                    "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-caps": ["10px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "800"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #050505;
+            color: #dde4dd;
+            overflow-x: hidden;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+        }
+        .sidebar-item-active {
+            background: rgba(5, 102, 217, 0.15);
+            color: #adc6ff;
+            border-right: 3px solid #0566d9;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #2f3632;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="font-body-md antialiased">
+<!-- Persistent Left Sidebar -->
+<aside class="fixed left-0 top-0 h-screen w-[280px] bg-[#080808] border-r border-white/5 z-50 flex flex-col">
+<div class="p-8">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary font-bold">inventory_2</span>
+</div>
+<span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">WMS PRO</span>
+</div>
+</div>
+<nav class="flex-1 px-4 py-4 space-y-2">
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-lg">Asosiy panel</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl sidebar-item-active transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">barcode_scanner</span>
+<span class="font-body-lg">Ombor kirimi</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">inventory</span>
+<span class="font-body-lg">Ro‘yxat</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-lg">Hujjatlar</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-xl text-on-surface-variant hover:bg-white/5 transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-lg">Sozlamalar</span>
+</a>
+</nav>
+<div class="p-6 mt-auto border-t border-white/5">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User" class="w-full h-full object-cover" data-alt="A professional warehouse manager portrait with a neutral expression, wearing a clean industrial uniform. High-key studio lighting with a soft gray background, emphasizing a clean B2B software professional look. The style is sharp, corporate, and minimalist." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoWSspircSSxHKIKlbHKg9JQMoRWrnStHdDnl9m2R7IviWOBcni1DA7Ji2v-xIYWMuK6kkQRLjL26-wFREamP4HDcWzeD5HinJ32f6TDIf1wT7kREJmwT46fUpfC35j3QKX5Kvm8KX-lqTRZmCymPSIHsissQG2qXOHrY-OUoJxHVsURtG7oCrsFfs68AvGGYDFuQTAb8xrvESXvWi-tENDC0Oik0cod39y-0_QaZ7bAGonyQ11NUP7Ik1CdxrKOAVT1Kdkl1AsQk"/>
+</div>
+<div>
+<p class="font-body-md font-bold text-on-surface">Azizbek R.</p>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant">Operator</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="ml-[280px] min-h-screen">
+<!-- Header -->
+<header class="h-16 px-container-margin border-b border-white/5 flex items-center justify-between sticky top-0 bg-background/80 backdrop-blur-xl z-40">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-surface-variant">arrow_back</span>
+<div class="h-6 w-px bg-white/10 mx-2"></div>
+<h1 class="font-headline-sm text-headline-sm">Ombor kirimi</h1>
+<span class="px-3 py-1 rounded-full bg-tertiary-container/20 text-tertiary font-label-status text-label-status uppercase tracking-wider">Qoralama</span>
+</div>
+<div class="flex items-center gap-6">
+<span class="text-on-surface-variant font-label-caps">KIR-20260609-0001</span>
+<div class="flex gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5">
+<span class="material-symbols-outlined text-on-surface-variant">search</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white/5 relative">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<div class="absolute top-2.5 right-2.5 w-2 h-2 bg-primary rounded-full"></div>
+</button>
+</div>
+</div>
+</header>
+<!-- Two Column Layout -->
+<main class="p-container-margin flex gap-stack-gap">
+<!-- LEFT COLUMN (55%) -->
+<section class="w-[55%] space-y-6">
+<!-- Intake Controls -->
+<div class="glass-card p-6 space-y-6">
+<div class="space-y-2">
+<label class="text-on-surface-variant font-label-caps text-label-caps">SHTRIX KODNI SKANERLANG</label>
+<div class="flex gap-3">
+<div class="relative flex-1">
+<input class="w-full h-button-height bg-surface-container border-white/10 rounded-xl px-4 font-mono text-lg text-white focus:ring-2 focus:ring-secondary-container transition-all outline-none" placeholder="692134567890..." type="text" value="692100010022"/>
+<span class="material-symbols-outlined absolute right-4 top-4 text-on-surface-variant">barcode</span>
+</div>
+<div class="flex items-center h-button-height bg-surface-container border border-white/10 rounded-xl px-2">
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary active:scale-90 transition-all">
+<span class="material-symbols-outlined">remove</span>
+</button>
+<input class="w-12 bg-transparent border-none text-center font-bold text-headline-sm focus:ring-0 p-0" type="number" value="1"/>
+<button class="w-10 h-10 flex items-center justify-center text-on-surface hover:text-primary active:scale-90 transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex gap-3 items-center">
+<button class="h-button-height px-8 bg-secondary-container text-on-secondary-container font-headline-sm rounded-xl active:scale-95 transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">scan</span>
+                                Skaner qilish
+                            </button>
+<a class="text-on-surface-variant hover:text-white font-body-md underline underline-offset-4 ml-4" href="#">Qo'lda qo'shish</a>
+</div>
+<div class="flex items-center gap-2 bg-primary-container/10 px-4 py-2 rounded-full border border-primary/20">
+<div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+<span class="text-primary font-label-status text-label-status uppercase">Tez rejim: skaner + miqdor</span>
+</div>
+</div>
+</div>
+<!-- Product Table -->
+<div class="glass-card overflow-hidden">
+<div class="px-6 py-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+<h3 class="font-headline-sm text-on-surface">Kirim ro‘yxati</h3>
+<span class="text-on-surface-variant font-label-caps">Yangilangan: 14:42</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-caps text-label-caps">
+<th class="px-6 py-4">Rasm</th>
+<th class="px-6 py-4">Mahsulot nomi</th>
+<th class="px-6 py-4">SKU/Barcode</th>
+<th class="px-6 py-4">Miqdor</th>
+<th class="px-6 py-4 text-center">Skaner</th>
+<th class="px-6 py-4"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<!-- Row 1 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="High-end industrial product shot of a minimalist white watch on a dark background with dramatic side lighting. The style is professional B2B photography, emphasizing clean lines and technological precision. Deep blacks and high contrast reflections." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzh_IUlBYKKqRB4vHoyJOobxjeqKCCEtmmefFtN5tEnOPVvrRlgMZlaJD8wR5aUd5oNo8kl_nfGyB_fA87-8obhw7H1tpl4s6rStCXdkzNzqoBUc4SWqBnT4nVmDhSsRWGGRz-jv2b52DDu6qAfrWPMTE8llWWqr35D-K2PwheyVq7qhxQnFevSNLUwZI9XRox79uWfaWEqHVvVwr7zduoTmnqYzpQaESIrml-V7xq1s2nhbLIJ-vQho0D_iwSH_m7Wce24bZTgMM"/>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="font-body-lg font-bold text-on-surface">Apple Watch Series 9</p>
+<p class="text-xs text-on-surface-variant">Midnight Aluminum, 45mm</p>
+</td>
+<td class="px-6 py-4 font-mono text-sm text-on-surface-variant">4500982210</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-primary">12</span>
+<span class="text-xs text-on-surface-variant">dona</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-error hover:bg-error/10 rounded-lg">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Premium wireless headphones photographed in a sleek warehouse setting. Dark obsidian surface with subtle cyan lighting highlights the product's texture and modern design. The mood is sophisticated, technical, and high-quality industrial aesthetics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzBkqcpcYVTnyzGwSnugULgSqI9Q3QQG-Eo3TW3rhPn_2WDNT7yW9gYIh7vYogJAZSCFFLJY1HZ1fCiD-u8vkXG1U4-1c9TwwFjMxSpAfoGaGJQiwPE02AwaBPF8wK9uxj894K-0zhmytWQCjCpjBKET1X2ycYTZSng1aAqV12qwsMw7VPQBkuMvJGPRgwVIZYHDGAeoM8KR1KASde4Fw3I1Hv7u48RaMFNz-P2IqsG9ft-3tAXNG_NLn4sh1er0ZfSUGwh7B4sOY"/>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="font-body-lg font-bold text-on-surface">Bose QuietComfort Ultra</p>
+<p class="text-xs text-on-surface-variant">Soft White, Noise Cancelling</p>
+</td>
+<td class="px-6 py-4 font-mono text-sm text-on-surface-variant">8800112233</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-primary">8</span>
+<span class="text-xs text-on-surface-variant">dona</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-error hover:bg-error/10 rounded-lg">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="A modern industrial digital camera lens on a workbench. The image features shallow depth of field, focused on the glass element. Dark, low-key lighting with emerald green accents reflecting off the metal surfaces. Technical, high-performance visual style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHGuZ-uxFFoK3rIBISJzpzHRH3ptKmgcwJyCDMV12ve68Qxmk4RGV00SLswzobmqpDfMorXF0FNQGo81GE1JUc_7Cr3Xvzy3-xJurEY1JXEChnuloWDh-pZ75fzVFrYqgX2L5nNO_2Zu6yPfzDNpvlgW9lycb5Bv3nF50PHUldxzQUiTvdstkQQk05m2s6xBNUIVRVFwrgg8wdXk-hAEqyg-pdutXtgugQ41FOgZO7dc-CjwFkHI3EVGCO2e1Woh1mXU_8LiGd12Y"/>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="font-body-lg font-bold text-on-surface">Sony Alpha A7 IV Body</p>
+<p class="text-xs text-on-surface-variant">Black, Full Frame</p>
+</td>
+<td class="px-6 py-4 font-mono text-sm text-on-surface-variant">5400332211</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-on-surface">15</span>
+<span class="text-xs text-on-surface-variant">dona</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-on-surface-variant">hourglass_empty</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-error hover:bg-error/10 rounded-lg">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-6 py-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden border border-white/10 text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined">image</span>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="font-body-lg font-bold text-on-surface">Samsung 990 Pro 2TB</p>
+<p class="text-xs text-on-surface-variant">NVMe SSD, Heatsink</p>
+</td>
+<td class="px-6 py-4 font-mono text-sm text-on-surface-variant">7711445500</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-primary">10</span>
+<span class="text-xs text-on-surface-variant">dona</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-error hover:bg-error/10 rounded-lg">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-white/5 transition-colors group border-b-0">
+<td class="px-6 py-4">
+<div class="w-12 h-12 rounded-lg bg-surface-container overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Futuristic gaming mouse with rgb lighting glowing through its honeycomb structure. The setting is a dark tech laboratory with moody blue and purple background light. Minimalist product presentation for a modern inventory management dashboard." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpOOE77Am3tnJ43IePViUjfTH_bNDJQO7gydcXe64v0aRPEnWFAt988dGWZgYN-VpSO4D1luFzaiH5hNnOQQCTsBPVfUNOmge0tQTKnCVLAAdHkH6uYujNVZZwDIyGMeVWVoXHp7TMu55LkCoyc2bdh17FIuvDMkDEVZZ9Vt_eVvYveWvTsrE55bUkNQ8j1Uf6dyKN2R3Lv9BvbTjyeX_4LUGb-Q55ka7EZznm18ZWL-co6EVdt4-OzlCGbdx6srl9B2H_JzOJsAQ"/>
+</div>
+</td>
+<td class="px-6 py-4">
+<p class="font-body-lg font-bold text-on-surface">Logitech G Pro X Superlight</p>
+<p class="text-xs text-on-surface-variant">White, Wireless Gaming</p>
+</td>
+<td class="px-6 py-4 font-mono text-sm text-on-surface-variant">2233669911</td>
+<td class="px-6 py-4">
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-on-surface">3</span>
+<span class="text-xs text-on-surface-variant">dona</span>
+</div>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="material-symbols-outlined text-on-surface-variant">hourglass_empty</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="opacity-0 group-hover:opacity-100 transition-opacity p-2 text-error hover:bg-error/10 rounded-lg">
+<span class="material-symbols-outlined">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-6 py-4 border-t border-white/5 bg-white/2 flex justify-between items-center">
+<p class="font-body-md text-on-surface-variant">
+                            Jami: <span class="text-on-surface font-bold">12 pozitsiya</span> · <span class="text-on-surface font-bold">48 dona</span>
+</p>
+<div class="flex gap-2">
+<button class="p-2 rounded-lg hover:bg-white/5 text-on-surface-variant active:scale-90 transition-all">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="p-2 rounded-lg hover:bg-white/5 text-on-surface-variant active:scale-90 transition-all">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN (45%) -->
+<aside class="w-[45%]">
+<div class="sticky top-20 glass-card p-8 space-y-8">
+<h3 class="font-headline-lg text-headline-lg text-on-surface">Qabul tafsilotlari</h3>
+<div class="space-y-6">
+<!-- Warehouse -->
+<div class="space-y-2">
+<label class="text-on-surface-variant font-label-caps text-label-caps">OMBOR</label>
+<div class="relative">
+<select class="w-full h-button-height bg-surface-container border-white/10 rounded-xl px-4 appearance-none text-white focus:ring-2 focus:ring-primary transition-all">
+<option>Asosiy ombor (Toshkent)</option>
+<option>Xold-zaxira ombori</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-4 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Partner -->
+<div class="space-y-2">
+<label class="text-on-surface-variant font-label-caps text-label-caps">HAMKOR / YETKAZIB BERUVCHI</label>
+<div class="relative">
+<select class="w-full h-button-height bg-surface-container border-white/10 rounded-xl px-4 appearance-none text-white focus:ring-2 focus:ring-primary transition-all">
+<option>Apple Inc. Logistics</option>
+<option>Samsung Electronics UZ</option>
+<option>Global Tech Distro</option>
+</select>
+<span class="material-symbols-outlined absolute right-4 top-4 text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Note -->
+<div class="space-y-2">
+<label class="text-on-surface-variant font-label-caps text-label-caps">IZOH (IXTIYORIY)</label>
+<textarea class="w-full bg-surface-container border-white/10 rounded-xl p-4 text-white focus:ring-2 focus:ring-primary transition-all min-h-[120px] resize-none" placeholder="Qabul bo'yicha maxsus ko'rsatmalar yoki eslatmalar..."></textarea>
+</div>
+</div>
+<div class="border-t border-white/10 pt-8 space-y-4">
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-lg">Jami mahsulot turlari</span>
+<span class="font-headline-sm text-on-surface">12 ta</span>
+</div>
+<div class="flex justify-between items-center text-on-surface-variant">
+<span class="font-body-lg">Jami miqdor (dona)</span>
+<span class="font-headline-sm text-on-surface">48 ta</span>
+</div>
+<div class="flex justify-between items-center pt-2">
+<span class="font-headline-lg text-headline-lg text-primary">Tasdiqlashga tayyor</span>
+<span class="material-symbols-outlined text-primary text-3xl">verified</span>
+</div>
+</div>
+<div class="space-y-4 pt-4">
+<button class="w-full h-[64px] bg-primary text-on-primary font-headline-sm text-headline-sm rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">inventory_2</span>
+                            Tasdiqlash va omborga kirim
+                        </button>
+<div class="flex justify-center">
+<button class="text-error font-body-lg hover:underline transition-all flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">close</span>
+                                Bekor qilish
+                            </button>
+</div>
+</div>
+</div>
+</aside>
+</main>
+</div>
+<!-- Micro-interaction Scripts -->
+<script>
+        // Quantity Stepper logic
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const parent = this.parentElement;
+                const input = parent.querySelector('input[type="number"]');
+                if(!input) return;
+                
+                let val = parseInt(input.value);
+                if(this.querySelector('span').innerText === 'add') {
+                    input.value = val + 1;
+                } else if(this.querySelector('span').innerText === 'remove') {
+                    if(val > 1) input.value = val - 1;
+                }
+            });
+        });
+
+        // Scan button pulse effect
+        const scanBtn = document.querySelector('button.bg-secondary-container');
+        if(scanBtn) {
+            scanBtn.addEventListener('click', () => {
+                scanBtn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Skanerlanmoqda...';
+                setTimeout(() => {
+                    scanBtn.innerHTML = '<span class="material-symbols-outlined">scan</span> Skaner qilish';
+                }, 1000);
+            });
+        }
+    </script>
+</body></html>

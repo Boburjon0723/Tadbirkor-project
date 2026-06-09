@@ -18,8 +18,8 @@ export const WAREHOUSE_FEATURE_BUNDLES: WarehouseFeatureBundle[] = [
     name: 'Asosiy ombor',
     desc: 'Katalog, qoldiq, kirim/chiqim va tuzatish',
     icon: Box,
-    featureKeys: ['WAREHOUSE_BASIC', 'STOCK_ADJUSTMENT'],
-    includesLabel: 'Mahsulotlar, qoldiq, harakatlar',
+    featureKeys: ['WAREHOUSE_BASIC', 'STOCK_ADJUSTMENT', 'WAREHOUSE_INTAKE'],
+    includesLabel: 'Mahsulotlar, qoldiq, kirim, harakatlar',
   },
   {
     id: 'b2b_outbound',

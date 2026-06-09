@@ -18,9 +18,20 @@ export type PosCustomerSelection = {
 type Props = {
   value: PosCustomerSelection;
   onChange: (v: PosCustomerSelection) => void;
+  tone?: 'catalog' | 'cart';
 };
 
-export function PosCustomerStrip({ value, onChange }: Props) {
+export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
+  const isCart = tone === 'cart';
+  const wrap = isCart
+    ? 'bg-[var(--pos-cart-card)] border-[var(--pos-cart-border)]'
+    : 'bg-[var(--pos-input-bg)] border-[var(--pos-border)]';
+  const labelColor = isCart ? 'text-[var(--pos-cart-muted)]' : 'text-[var(--pos-muted)]';
+  const textColor = isCart ? 'text-[var(--pos-cart-text)]' : 'text-[var(--pos-text)]';
+  const inputBg = isCart
+    ? 'bg-[var(--pos-cart-bg)] border-[var(--pos-cart-border)] text-[var(--pos-cart-text)]'
+    : 'bg-[var(--pos-input-bg)] border-[var(--pos-border)] text-[var(--pos-text)]';
+  const iconColor = isCart ? 'text-cyan-300' : 'text-[var(--pos-accent)]';
   const [query, setQuery] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showQuick, setShowQuick] = useState(false);
@@ -71,18 +82,18 @@ export function PosCustomerStrip({ value, onChange }: Props) {
   const showRecentLabel = pickerOpen && !query.trim() && results.length > 0;
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-2">
+    <div className={`${wrap} rounded-2xl p-3 space-y-2`}>
       <div className="flex items-center gap-2">
-        <User size={16} className="text-blue-400 shrink-0" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+        <User size={16} className={`${iconColor} shrink-0`} />
+        <span className={`text-[10px] font-black uppercase tracking-widest ${labelColor}`}>
           Mijoz
         </span>
-        <span className="text-sm font-bold text-white truncate flex-1">{label}</span>
+        <span className={`text-sm font-bold ${textColor} truncate flex-1`}>{label}</span>
         {(value.retailCustomerId || value.customerName) && (
           <button
             type="button"
             onClick={clear}
-            className="p-1 rounded-lg hover:bg-white/10 text-gray-500"
+            className={`p-1 rounded-lg hover:opacity-80 ${labelColor}`}
             aria-label="Tozalash"
           >
             <X size={14} />
@@ -110,15 +121,15 @@ export function PosCustomerStrip({ value, onChange }: Props) {
           }
         }}
         placeholder="Ism yoki telefon qidirish..."
-        className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-blue-500/50"
+        className={`w-full ${inputBg} rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--pos-accent)]`}
       />
       {pickerOpen && isFetching && (
         <div className="flex justify-center py-1">
-          <Loader2 className="animate-spin text-blue-500" size={16} />
+          <Loader2 className="animate-spin text-[var(--pos-accent)]" size={16} />
         </div>
       )}
       {showRecentLabel && (
-        <p className="text-[10px] font-black uppercase tracking-widest text-gray-600 px-1">
+        <p className={`text-[10px] font-black uppercase tracking-widest ${labelColor} px-1`}>
           Oxirgi mijozlar
         </p>
       )}
@@ -130,10 +141,10 @@ export function PosCustomerStrip({ value, onChange }: Props) {
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(c)}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-blue-600/20 text-sm font-bold"
+                className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--pos-accent)]/20 text-sm font-bold"
               >
                 {c.name}
-                {c.phone ? <span className="text-gray-500 ml-2">{c.phone}</span> : null}
+                {c.phone ? <span className={`${labelColor} ml-2`}>{c.phone}</span> : null}
               </button>
             </li>
           ))}
@@ -144,7 +155,7 @@ export function PosCustomerStrip({ value, onChange }: Props) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowQuick(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600/20 text-blue-300 text-sm font-black"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--pos-accent-soft)] text-[var(--pos-accent)] text-sm font-black"
         >
           <UserPlus size={16} /> &quot;{query.trim()}&quot; ni yangi mijoz qilish
         </button>
@@ -155,12 +166,12 @@ export function PosCustomerStrip({ value, onChange }: Props) {
             value={quickPhone}
             onChange={(e) => setQuickPhone(e.target.value)}
             placeholder="Telefon (ixtiyoriy)"
-            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold"
+            className={`flex-1 ${inputBg} rounded-xl px-3 py-2 text-xs font-bold`}
           />
           <button
             type="button"
             onClick={() => void quickAdd()}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-black"
+            className="px-4 py-2 rounded-xl bg-[var(--pos-accent)] text-white text-xs font-black"
           >
             Saqlash
           </button>
