@@ -9,7 +9,13 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  Permissions,
+  PermissionsAny,
+} from '../../common/decorators/permissions.decorator';
+import { Permission } from '../../common/enums/role.enum';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from './dto/review-leave-request.dto';
 import { UpdatePayrollSettingsDto } from './dto/update-payroll-settings.dto';
@@ -29,23 +35,26 @@ import {
 } from './dto/payroll-employee.dto';
 
 @Controller('payroll')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PayrollController {
   constructor(
     private readonly payrollLeave: PayrollLeaveService,
     private readonly payrollData: PayrollDataService,
   ) {}
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('settings')
   getSettings(@CurrentUser() user: any) {
     return this.payrollLeave.getSettings(user.companyId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('settings')
   updateSettings(@CurrentUser() user: any, @Body() dto: UpdatePayrollSettingsDto) {
     return this.payrollLeave.updateSettings(user.companyId, dto.workedDaysMode);
   }
 
+  @PermissionsAny(Permission.PAYROLL_VIEW, Permission.PAYROLL_MANAGE)
   @Get('leave-requests')
   listLeave(
     @CurrentUser() user: any,
@@ -58,16 +67,19 @@ export class PayrollController {
     });
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('leave-requests/pending-count')
   pendingCount(@CurrentUser() user: any) {
     return this.payrollLeave.countPendingLeave(user.companyId, user.sub);
   }
 
+  @PermissionsAny(Permission.PAYROLL_VIEW, Permission.PAYROLL_MANAGE)
   @Post('leave-requests')
   createLeave(@CurrentUser() user: any, @Body() dto: CreateLeaveRequestDto) {
     return this.payrollLeave.createLeaveRequest(user.companyId, user.sub, dto);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('leave-requests/:id/approve')
   approve(
     @CurrentUser() user: any,
@@ -83,6 +95,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('leave-requests/:id/reject')
   reject(
     @CurrentUser() user: any,
@@ -98,6 +111,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('work-months/:companyUserId')
   getWorkMonth(
     @CurrentUser() user: any,
@@ -110,6 +124,7 @@ export class PayrollController {
     return this.payrollLeave.getWorkMonth(user.companyId, companyUserId, y, m);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('work-months/:companyUserId')
   updateWorkMonth(
     @CurrentUser() user: any,
@@ -130,11 +145,13 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('members')
   listMembers(@CurrentUser() user: any) {
     return this.payrollLeave.listCompanyMembers(user.companyId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('members/:companyUserId/leave-requests')
   listMemberLeave(
     @CurrentUser() user: any,
@@ -153,6 +170,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('members/:companyUserId/profile')
   getMemberProfile(
     @CurrentUser() user: any,
@@ -161,6 +179,7 @@ export class PayrollController {
     return this.payrollLeave.getPayrollProfile(user.companyId, companyUserId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('members/:companyUserId/profile')
   upsertMemberProfile(
     @CurrentUser() user: any,
@@ -175,6 +194,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('members/:companyUserId/leave-requests')
   recordMemberLeave(
     @CurrentUser() user: any,
@@ -189,6 +209,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('work-months/:companyUserId/approved-leaves')
   approvedLeaves(
     @CurrentUser() user: any,
@@ -206,21 +227,25 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('compensations')
   listCompensations(@CurrentUser() user: any) {
     return this.payrollData.listCompensations(user.companyId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('compensations')
   upsertCompensation(@CurrentUser() user: any, @Body() dto: UpsertCompensationDto) {
     return this.payrollData.upsertCompensation(user.companyId, user.sub, dto);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('employee-extras')
   listEmployeeExtras(@CurrentUser() user: any) {
     return this.payrollData.listEmployeeExtras(user.companyId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('members/:companyUserId/employee')
   getEmployeeExtra(
     @CurrentUser() user: any,
@@ -229,6 +254,7 @@ export class PayrollController {
     return this.payrollData.getEmployeeExtra(user.companyId, companyUserId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('members/:companyUserId/employee')
   upsertEmployeeExtra(
     @CurrentUser() user: any,
@@ -243,11 +269,13 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('roster-candidates')
   listRosterCandidates(@CurrentUser() user: any) {
     return this.payrollData.listRosterCandidates(user.companyId);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('members/:companyUserId/roster')
   addMemberToRoster(
     @CurrentUser() user: any,
@@ -260,6 +288,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('members')
   createPayrollOnlyMember(
     @CurrentUser() user: any,
@@ -268,6 +297,7 @@ export class PayrollController {
     return this.payrollData.createPayrollOnlyMember(user.companyId, user.sub, dto);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('members/:companyUserId/mark-left')
   markEmployeeLeft(
     @CurrentUser() user: any,
@@ -282,6 +312,7 @@ export class PayrollController {
     );
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('advances')
   listAdvances(
     @CurrentUser() user: any,
@@ -294,16 +325,19 @@ export class PayrollController {
     return this.payrollData.listAdvances(user.companyId, companyUserId, y, m);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('advances')
   addAdvance(@CurrentUser() user: any, @Body() dto: AddPayrollAdvanceDto) {
     return this.payrollData.addAdvance(user.companyId, user.sub, dto);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Post('bonus')
   addBonus(@CurrentUser() user: any, @Body() dto: AddPayrollBonusDto) {
     return this.payrollData.addBonus(user.companyId, user.sub, dto);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('month-stats')
   getMonthStats(
     @CurrentUser() user: any,
@@ -320,6 +354,7 @@ export class PayrollController {
     return this.payrollData.getMonthStats(user.companyId, y, m, ids);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Get('members/:companyUserId/settlement')
   getSettlement(
     @CurrentUser() user: any,
@@ -334,6 +369,7 @@ export class PayrollController {
     return this.payrollData.getSettlement(user.companyId, companyUserId, y, m, base);
   }
 
+  @Permissions(Permission.PAYROLL_MANAGE)
   @Patch('members/:companyUserId/settlement')
   upsertSettlement(
     @CurrentUser() user: any,

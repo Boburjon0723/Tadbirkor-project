@@ -604,6 +604,10 @@ export class TelegramService implements OnModuleInit, OnModuleDestroy {
   async handleWebhookUpdate(update: unknown, secretFromHeader?: string) {
     if (!this.bot) return;
 
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && !this.webhookSecret) {
+      throw new Error('Invalid Telegram webhook secret');
+    }
     if (this.webhookSecret && secretFromHeader !== this.webhookSecret) {
       throw new Error('Invalid Telegram webhook secret');
     }

@@ -416,7 +416,10 @@ export class VariantsService {
     if (!company) {
       throw new NotFoundException('Kompaniya topilmadi');
     }
-    if (company.storefrontToken && company.storefrontToken !== storefrontToken) {
+    if (!company.storefrontToken) {
+      throw new UnauthorizedException('Storefront ochilmagan');
+    }
+    if (company.storefrontToken !== storefrontToken) {
       throw new UnauthorizedException('Storefront token noto‘g‘ri');
     }
 

@@ -1,6 +1,8 @@
 import { Controller, Get, Headers, Param, Query } from '@nestjs/common';
+import { Public } from '../../common/decorators/public.decorator';
 import { VariantsService } from './variants.service';
 
+@Public()
 @Controller('storefront')
 export class StorefrontController {
   constructor(private readonly variantsService: VariantsService) {}

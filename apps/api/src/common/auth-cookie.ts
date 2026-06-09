@@ -32,9 +32,6 @@ export function extractTokenFromRequest(request: {
   cookies?: Record<string, string>;
   query?: Record<string, any>;
 }): string | undefined {
-  const fromQuery = request.query?.token || (request as any).query?.access_token;
-  if (fromQuery) return fromQuery;
-
   const fromCookie = request.cookies?.[AUTH_COOKIE_NAME];
   if (fromCookie) return fromCookie;
 

@@ -92,4 +92,9 @@ export enum Permission {
   FIELD_TASK_APPROVE = 'field.task.approve',
   FIELD_TASK_VIEW_ALL = 'field.task.view_all',
   FIELD_STOCK_VIEW_ALL = 'field.stock.view_all',
+
+  /** O‘z dam olish so‘rovlari va cheklangan ko‘rinish */
+  PAYROLL_VIEW = 'payroll.view',
+  /** Oylik sozlamalari, kompensatsiya, hisob-kitob */
+  PAYROLL_MANAGE = 'payroll.manage',
 }

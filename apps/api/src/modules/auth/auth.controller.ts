@@ -21,11 +21,15 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { setAuthCookie, clearAuthCookie } from '../../common/auth-cookie';
+import { Public } from '../../common/decorators/public.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -38,12 +42,16 @@ export class AuthController {
     return result;
   }
 
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @Post('password-reset/telegram-link')
   createPasswordResetTelegramLink(@Body() dto: PasswordResetTelegramLinkDto) {
     return this.authService.createPasswordResetTelegramLink(dto);
   }
 
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(
@@ -57,6 +65,7 @@ export class AuthController {
     return result;
   }
 
+  @Public()
   @HttpCode(HttpStatus.OK)
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {

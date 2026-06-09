@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { isPublicRegistrationEnabled } from '../../common/registration.util';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
@@ -81,6 +87,12 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
+    if (!isPublicRegistrationEnabled()) {
+      throw new ForbiddenException(
+        'Ro‘yxatdan o‘tish vaqtincha yopiq. Mavjud hisob bilan kiring yoki administrator bilan bog‘laning.',
+      );
+    }
+
     // 1. Login tekshiruvi
     const existingUser = await this.usersService.findByLogin(dto.login);
     if (existingUser) {

@@ -123,6 +123,8 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.POS_OVERRIDE_PRICE,
     Permission.POS_CREDIT,
     Permission.USERS_MANAGE,
+    Permission.PAYROLL_VIEW,
+    Permission.PAYROLL_MANAGE,
     ...FIELD_MANAGER_PERMS,
   ],
   WAREHOUSE: [
@@ -138,6 +140,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.FIELD_TASK_ASSIGN,
     Permission.FIELD_TASK_VIEW_ALL,
     Permission.FIELD_STOCK_VIEW_ALL,
+    Permission.PAYROLL_VIEW,
   ],
   ACCOUNTANT: [
     Permission.PRODUCTS_VIEW,
@@ -156,6 +159,8 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.REPORTS_EXPORT,
     Permission.TASKS_VIEW,
     Permission.POS_VIEW,
+    Permission.PAYROLL_VIEW,
+    Permission.PAYROLL_MANAGE,
   ],
   SALES: [
     Permission.PRODUCTS_VIEW,
@@ -165,6 +170,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.TASKS_VIEW,
     Permission.POS_VIEW,
     Permission.POS_CREATE,
+    Permission.PAYROLL_VIEW,
   ],
   FIELD_WORKER: [
     Permission.FIELD_TASK_VIEW_OWN,
@@ -173,8 +179,9 @@ export const ROLE_PERMISSIONS: Record<SystemRole, Permission[]> = {
     Permission.FIELD_STOCK_VIEW_OWN,
     Permission.PRODUCTS_VIEW,
     Permission.WAREHOUSE_VIEW,
+    Permission.PAYROLL_VIEW,
   ],
-  WORKER: [Permission.PRODUCTS_VIEW, Permission.TASKS_VIEW],
+  WORKER: [Permission.PRODUCTS_VIEW, Permission.TASKS_VIEW, Permission.PAYROLL_VIEW],
 };
 
 export function permissionsForRole(role: string): Permission[] {

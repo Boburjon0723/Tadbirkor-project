@@ -14,6 +14,9 @@ import { memoryStorage } from 'multer';
 import { extname } from 'path';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Permission } from '../../common/enums/role.enum';
 import { SupabaseStorageService } from './supabase-storage.service';
 
 @Controller('uploads')
@@ -22,13 +25,12 @@ export class UploadsController {
 
   constructor(private readonly storage: SupabaseStorageService) {}
 
-  // Diagnostika: Supabase Storage hozir backendda yoqilganmi yoki yo'qmi.
-  // Public — auth talab qilinmaydi (sezgir ma'lumot qaytarmaydi).
   @Get('status')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions(Permission.SETTINGS_MANAGE)
   getStatus() {
     return {
       supabaseEnabled: this.storage.isEnabled(),
-      bucket: this.storage.isEnabled() ? this.storage.getBucket() : null,
     };
   }
 

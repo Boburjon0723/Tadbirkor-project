@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
@@ -40,10 +41,18 @@ import { PartnerLedgerModule } from './modules/partner-ledger/partner-ledger.mod
 import { PlatformModule } from './modules/platform/platform.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { SubscriptionGuard } from './common/guards/subscription.guard';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: Number(process.env.THROTTLE_LIMIT || 120),
+      },
+    ]),
     AppCacheModule,
     PrismaModule,
     AuthModule,
@@ -83,7 +92,10 @@ import { SubscriptionGuard } from './common/guards/subscription.guard';
   controllers: [AppController],
   providers: [
     AppService,
+    JwtAuthGuard,
     { provide: APP_FILTER, useClass: PrismaExceptionFilter },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SubscriptionGuard },
   ],
 })

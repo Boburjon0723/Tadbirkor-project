@@ -1,6 +1,9 @@
 import { Controller, Post, Get, Body, UseGuards, Patch } from '@nestjs/common';
 import { OnboardingService } from './onboarding.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Permission } from '../../common/enums/role.enum';
 import {
   CreateOnboardingCompanyDto,
   SubmitBusinessAnswersDto,
@@ -12,7 +15,8 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 type AuthUser = { sub: string; companyId?: string };
 
 @Controller('onboarding')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions(Permission.SETTINGS_MANAGE)
 export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService) {}
 

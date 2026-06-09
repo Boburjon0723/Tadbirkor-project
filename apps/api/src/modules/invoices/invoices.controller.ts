@@ -1,11 +1,15 @@
 import { Controller, Get, Param, UseGuards, Request, Res, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { Permission } from '../../common/enums/role.enum';
 import { B2BOrdersService } from '../b2b-orders/b2b-orders.service';
 import { generateInvoicePdfBuffer } from '../pdf/invoice-pdf.util';
 
 @Controller('invoices')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@Permissions(Permission.ORDERS_VIEW)
 export class InvoicesController {
   constructor(private readonly ordersService: B2BOrdersService) {}
 

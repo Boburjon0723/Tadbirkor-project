@@ -10,6 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { extractTokenFromCookieHeader } from '../../common/auth-cookie';
+import { createSocketCorsOrigin } from '../../common/cors.util';
 
 export type InventoryRealtimePayload = {
   warehouseId?: string;
@@ -27,7 +28,7 @@ export type DebtsChangedPayload = {
 @WebSocketGateway({
   namespace: '/inventory',
   cors: {
-    origin: true,
+    origin: createSocketCorsOrigin(),
     credentials: true,
   },
 })
@@ -50,7 +51,6 @@ export class InventoryGateway implements OnGatewayConnection, OnGatewayDisconnec
       const token =
         rawAuth ||
         (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined) ||
-        (client.handshake.query?.token as string | undefined) ||
         extractTokenFromCookieHeader(cookieHeader);
 
       if (!token) {

@@ -10,11 +10,12 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { extractTokenFromCookieHeader } from '../../common/auth-cookie';
+import { createSocketCorsOrigin } from '../../common/cors.util';
 
 @WebSocketGateway({
   namespace: '/notifications',
   cors: {
-    origin: true,
+    origin: createSocketCorsOrigin(),
     credentials: true,
   },
 })
@@ -37,7 +38,6 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
       const token =
         rawAuth ||
         (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined) ||
-        (client.handshake.query?.token as string | undefined) ||
         extractTokenFromCookieHeader(cookieHeader);
 
       if (!token) {
