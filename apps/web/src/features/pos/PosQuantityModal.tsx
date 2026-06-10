@@ -11,11 +11,16 @@ import {
   normalizeStockInput,
   parseStockFieldValue,
   PRODUCT_UNIT_LABELS,
-  quantityStep,
   sanitizeStockDraftInput,
   type ProductUnitCode,
 } from '@/lib/product-units';
 import { normalizeSaleCurrency, type SaleCurrency } from '@/lib/currency';
+import { parseAmountInput, sanitizeAmountInput } from '@/lib/amount-input';
+import {
+  calcLineAmount,
+  calcQuantityFromLineAmount,
+  formatQuantityDraft,
+} from './pos-quantity-amount.util';
 
 export type PosQuantityModalVariant = {
   id: string;
@@ -52,11 +57,15 @@ export function PosQuantityModal({
   onConfirm,
 }: Props) {
   const unit = normalizeProductUnit(variant?.unit);
-  const [input, setInput] = useState('1');
+  const [qtyInput, setQtyInput] = useState('1');
+  const [amountInput, setAmountInput] = useState<string | null>(null);
+  const decimalUnit = allowsDecimalStock(unit);
 
   useEffect(() => {
     if (open && variant) {
-      setInput(String(minSaleQuantity(unit)));
+      const minQty = minSaleQuantity(unit);
+      setQtyInput(formatQuantityDraft(minQty, unit));
+      setAmountInput(null);
     }
   }, [open, variant, unit]);
 
@@ -65,8 +74,36 @@ export function PosQuantityModal({
   const price = Number(variant.salePrice || 0);
   const currency = normalizeSaleCurrency(variant.currency);
   const unitLabel = PRODUCT_UNIT_LABELS[unit];
-  const parsed = parseStockFieldValue(input, unit);
-  const lineTotal = price * (parsed || 0);
+
+  const parsedFromQty = parseStockFieldValue(qtyInput, unit);
+  const parsedFromAmount =
+    amountInput !== null && amountInput !== ''
+      ? calcQuantityFromLineAmount(parseAmountInput(amountInput), price, unit)
+      : 0;
+  const parsed =
+    amountInput !== null && amountInput !== ''
+      ? parsedFromAmount
+      : parsedFromQty;
+  const lineTotal =
+    amountInput !== null && amountInput !== ''
+      ? parseAmountInput(amountInput) || 0
+      : calcLineAmount(parsedFromQty, price);
+
+  const syncQtyFromAmount = (rawAmount: string) => {
+    setAmountInput(rawAmount);
+    if (!rawAmount.trim()) return;
+    const amount = parseAmountInput(rawAmount);
+    if (!Number.isFinite(amount) || amount <= 0 || price <= 0) return;
+    const qty = calcQuantityFromLineAmount(amount, price, unit);
+    if (qty > 0) setQtyInput(formatQuantityDraft(qty, unit));
+  };
+
+  const syncAmountFromQty = (rawQty: string) => {
+    setAmountInput(null);
+    const next = sanitizeStockDraftInput(rawQty, unit);
+    if (next === null) return;
+    setQtyInput(next);
+  };
   const maxStock = variant.stockQuantity;
   const tooMuch = maxStock !== undefined && parsed > maxStock;
   const tooSmall = parsed < minSaleQuantity(unit);
@@ -134,16 +171,13 @@ export function PosQuantityModal({
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
               Miqdor ({unitLabel})
             </label>
-            <div className="relative mt-2 mb-4">
+            <div className="relative mt-2 mb-3">
               <input
                 autoFocus
                 type="text"
-                inputMode={allowsDecimalStock(unit) ? 'decimal' : 'numeric'}
-                value={input}
-                onChange={(e) => {
-                  const next = sanitizeStockDraftInput(e.target.value, unit);
-                  if (next !== null) setInput(next);
-                }}
+                inputMode={decimalUnit ? 'decimal' : 'numeric'}
+                value={qtyInput}
+                onChange={(e) => syncAmountFromQty(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleConfirm();
                 }}
@@ -154,24 +188,28 @@ export function PosQuantityModal({
               </span>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap gap-2 mb-4">
               {presets.map((preset) => (
                 <button
                   key={preset}
                   type="button"
-                  onClick={() => setInput(String(preset))}
+                  onClick={() => {
+                    setAmountInput(null);
+                    setQtyInput(formatQuantityDraft(preset, unit));
+                  }}
                   className="px-3 py-1.5 rounded-xl bg-slate-800/70 border border-slate-600/30 text-slate-300 text-xs font-black hover:bg-cyan-600/20 hover:border-cyan-500/40 hover:text-cyan-300 transition-all"
                 >
-                  {allowsDecimalStock(unit)
-                    ? preset.toString().replace(/\.0$/, '')
-                    : preset}{' '}
+                  {decimalUnit ? preset.toString().replace(/\.0$/, '') : preset}{' '}
                   {unitLabel}
                 </button>
               ))}
               {maxStock !== undefined && (
                 <button
                   type="button"
-                  onClick={() => setInput(String(maxStock))}
+                  onClick={() => {
+                    setAmountInput(null);
+                    setQtyInput(formatQuantityDraft(maxStock, unit));
+                  }}
                   className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-black hover:bg-amber-500/20 transition-all"
                 >
                   Hammasi ({formatStockQuantity(maxStock, unit)})
@@ -179,14 +217,42 @@ export function PosQuantityModal({
               )}
             </div>
 
-            <div className="flex justify-between items-center p-4 rounded-2xl bg-slate-800/40 border border-slate-600/25 mb-5">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                Summa
-              </span>
-              <span className="text-xl font-black text-amber-400">
-                {formatMoney(lineTotal, currency)}
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Summa ({currency})
+            </label>
+            <div className="relative mt-2 mb-5">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={
+                  amountInput !== null
+                    ? amountInput
+                    : lineTotal > 0
+                      ? String(Math.round(lineTotal))
+                      : ''
+                }
+                onFocus={() => {
+                  if (amountInput === null && lineTotal > 0) {
+                    setAmountInput(String(Math.round(lineTotal)));
+                  }
+                }}
+                onChange={(e) => syncQtyFromAmount(sanitizeAmountInput(e.target.value))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleConfirm();
+                }}
+                disabled={price <= 0}
+                className="w-full bg-slate-800/40 border border-slate-600/25 rounded-2xl py-4 px-5 text-2xl font-black text-amber-400 outline-none focus:border-amber-500/50 disabled:opacity-40"
+              />
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">
+                {currency}
               </span>
             </div>
+            {decimalUnit && price > 0 && (
+              <p className="text-[10px] text-slate-500 font-bold -mt-3 mb-4">
+                Summani kiritsangiz, {unitLabel} avtomatik hisoblanadi (
+                {formatMoney(price, currency)} / {unitLabel})
+              </p>
+            )}
 
             {(tooSmall || tooMuch) && (
               <p className="text-xs text-red-400 font-bold mb-3">
