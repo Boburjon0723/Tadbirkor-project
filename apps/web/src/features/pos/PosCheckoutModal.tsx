@@ -7,7 +7,6 @@ import {
   Banknote,
   CheckCircle2,
   CreditCard,
-  Loader2,
   User,
   X,
 } from 'lucide-react';
@@ -26,7 +25,6 @@ type Props = {
   paymentMethod: PosPaymentMethod;
   posCreditEnabled: boolean;
   cashReceivedInput: string;
-  isProcessing: boolean;
   creditCustomerOk: boolean;
   customer: PosCustomerSelection;
   formatMoney: (value: number, currency?: SaleCurrency) => string;
@@ -35,6 +33,7 @@ type Props = {
   onCashInputChange: (v: string) => void;
   onCustomerChange: (v: PosCustomerSelection) => void;
   onConfirm: () => void;
+  onOpenCustomerPicker?: () => void;
 };
 
 export function PosCheckoutModal({
@@ -44,7 +43,6 @@ export function PosCheckoutModal({
   paymentMethod,
   posCreditEnabled,
   cashReceivedInput,
-  isProcessing,
   creditCustomerOk,
   customer,
   formatMoney,
@@ -53,6 +51,7 @@ export function PosCheckoutModal({
   onCashInputChange,
   onCustomerChange,
   onConfirm,
+  onOpenCustomerPicker,
 }: Props) {
   const received = Number(cashReceivedInput) || 0;
   const change =
@@ -62,7 +61,7 @@ export function PosCheckoutModal({
   const cashOk =
     paymentMethod !== 'cash' || received >= totalAmount;
   const creditBlocked = paymentMethod === 'credit' && !creditCustomerOk;
-  const disabled = isProcessing || !cashOk || creditBlocked;
+  const disabled = !cashOk || creditBlocked;
 
   const customerLabel =
     customer.customerName ||
@@ -76,7 +75,6 @@ export function PosCheckoutModal({
   };
 
   const disabledReason = (() => {
-    if (isProcessing) return null;
     if (paymentMethod === 'cash' && received > 0 && received < totalAmount) {
       return `Yetarli emas — yana ${formatMoney(totalAmount - received)} kerak`;
     }
@@ -304,10 +302,32 @@ export function PosCheckoutModal({
                         </span>
                       </div>
                     ) : null}
-                    <PosCustomerStrip
-                      value={customer}
-                      onChange={onCustomerChange}
-                    />
+                    {onOpenCustomerPicker ? (
+                      <button
+                        type="button"
+                        onClick={onOpenCustomerPicker}
+                        className="md:hidden w-full flex items-center gap-3 p-4 rounded-2xl bg-slate-800/80 border border-[var(--pos-border)] text-left"
+                      >
+                        <User size={18} className="text-amber-400 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">
+                            Mijoz
+                          </p>
+                          <p className="text-sm font-bold text-white truncate">
+                            {customerLabel || 'Tanlash uchun bosing'}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-black text-amber-400 uppercase">
+                          Tanlash
+                        </span>
+                      </button>
+                    ) : null}
+                    <div className={onOpenCustomerPicker ? 'hidden md:block' : ''}>
+                      <PosCustomerStrip
+                        value={customer}
+                        onChange={onCustomerChange}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -323,16 +343,10 @@ export function PosCheckoutModal({
                 type="button"
                 disabled={disabled}
                 onClick={onConfirm}
-                className="w-full py-4 md:py-5 bg-[var(--pos-accent)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl md:rounded-2xl shadow-xl shadow-cyan-900/20 transition-all flex items-center justify-center gap-3"
+                className="w-full py-4 md:py-5 bg-[var(--pos-accent)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl md:rounded-2xl shadow-xl shadow-cyan-900/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
               >
-                {isProcessing ? (
-                  <Loader2 className="animate-spin md:w-6 md:h-6" size={20} />
-                ) : (
-                  <CheckCircle2 className="md:w-6 md:h-6" size={20} />
-                )}
-                <span className="text-sm md:text-base">
-                  {isProcessing ? 'YUBORILMOQDA...' : 'TASDIQLASH'}
-                </span>
+                <CheckCircle2 className="md:w-6 md:h-6" size={20} />
+                <span className="text-sm md:text-base">TASDIQLASH</span>
               </button>
             </div>
           </motion.div>

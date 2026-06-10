@@ -70,6 +70,8 @@ model Company {
 
   posCreditEnabled       Boolean  @default(false) // nasiya (CREDIT) sotuv
   posMaxDiscountPercent  Decimal? @db.Decimal(5, 2) // kassir chegirma limiti (%), null = 15
+  /// POS chek: autoPrint, receiptFormat (thermal|a4|none)
+  posReceiptSettings     Json?
   /// Ombor kirimi: scanMode, allowBulkQty, allowQuickProduct, maxQtyPerScan
   warehouseIntakeSettings Json?
   fieldTasks        FieldTask[]

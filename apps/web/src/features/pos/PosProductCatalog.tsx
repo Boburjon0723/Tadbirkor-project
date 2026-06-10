@@ -111,9 +111,108 @@ export function PosProductCatalog({
   ];
 
   return (
-    <div className="flex-1 flex flex-col gap-4 md:gap-8 min-w-0 min-h-0">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4 md:gap-6">
+    <div className="flex-1 flex flex-col gap-3 md:gap-8 min-w-0 min-h-0">
+      <div className="flex flex-col gap-2 md:gap-3">
+        <div className="md:hidden space-y-2">
+          <div className="flex items-center gap-2">
+            {showDashboardBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="w-10 h-10 rounded-xl bg-[var(--pos-input-bg)] flex items-center justify-center text-[var(--pos-muted)] border border-[var(--pos-border)] active:scale-95 shrink-0"
+              >
+                <ArrowLeft size={18} />
+              </button>
+            )}
+            {showWarehousePicker ? (
+              <div className="relative flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={onWarehouseOpenToggle}
+                  className="w-full bg-[var(--pos-input-bg)] border border-[var(--pos-border)] rounded-xl py-2.5 px-3 text-sm font-bold flex items-center justify-between gap-2"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <Building2 size={16} className="text-[var(--pos-accent)] shrink-0" />
+                    <span className="truncate">{warehouseName || 'Ombor'}</span>
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-[var(--pos-muted)] shrink-0 transition-transform ${isWarehouseOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {isWarehouseOpen && (
+                    <>
+                      <div className="fixed inset-0 z-30" onClick={onWarehouseClose} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                        className="absolute top-full left-0 right-0 mt-2 bg-[var(--pos-panel)] border border-[var(--pos-border)] rounded-2xl shadow-2xl overflow-hidden z-40 p-1 max-h-56 overflow-y-auto custom-scrollbar"
+                      >
+                        {!warehouses?.length ? (
+                          <p className="px-4 py-3 text-xs text-[var(--pos-muted)]">Faol ombor yo&apos;q</p>
+                        ) : (
+                          warehouses.map((w) => (
+                            <button
+                              key={w.id}
+                              type="button"
+                              onClick={() => onSelectWarehouse?.(w.id)}
+                              className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                                selectedWarehouseId === w.id
+                                  ? 'bg-[var(--pos-accent)] text-white'
+                                  : 'text-[var(--pos-muted)] hover:bg-[var(--pos-input-bg)]'
+                              }`}
+                            >
+                              <span className="block truncate">{w.name}</span>
+                            </button>
+                          ))
+                        )}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0 px-1">
+                <p className="text-sm font-bold truncate">{warehouseName || 'POS'}</p>
+                {cashierName ? (
+                  <p className="text-[10px] text-[var(--pos-muted)] truncate">{cashierName}</p>
+                ) : null}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={onThemeToggle}
+              className="w-10 h-10 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] text-[var(--pos-muted)] active:scale-95 shrink-0"
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            {isSalesRole && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="w-10 h-10 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] text-red-400 active:scale-95 shrink-0"
+              >
+                <LogOut size={18} />
+              </button>
+            )}
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--pos-muted)] w-4 h-4" />
+            <input
+              ref={searchInputRef as RefObject<HTMLInputElement>}
+              type="search"
+              placeholder="Mahsulot qidirish..."
+              className="w-full bg-[var(--pos-input-bg)] border border-[var(--pos-border)] rounded-xl py-2.5 pl-10 pr-4 text-sm text-[var(--pos-text)] focus:outline-none focus:border-[var(--pos-accent)] font-bold"
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center justify-between gap-4 md:gap-6">
           <div className="flex items-center gap-3 shrink-0">
             {showDashboardBack && (
               <button
@@ -215,7 +314,7 @@ export function PosProductCatalog({
             />
           </div>
 
-          <div className="flex items-center bg-[var(--pos-input-bg)] p-1 rounded-xl border border-[var(--pos-border)] shrink-0">
+          <div className="hidden md:flex items-center bg-[var(--pos-input-bg)] p-1 rounded-xl border border-[var(--pos-border)] shrink-0">
             {(['grid', 'list', 'compact'] as const).map((mode) => {
               const Icon = mode === 'grid' ? Grid : mode === 'list' ? List : Square;
               return (
@@ -281,7 +380,7 @@ export function PosProductCatalog({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain custom-scrollbar pr-2 pb-24 md:pb-0">
+      <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain custom-scrollbar pr-2 pb-36 md:pb-0">
         {productsLoading ? (
           <div className="h-full flex flex-col items-center justify-center gap-4">
             <Loader2 className="animate-spin text-[var(--pos-accent)]" size={40} />
@@ -329,7 +428,7 @@ export function PosProductCatalog({
                       exit={{ opacity: 0, x: 10 }}
                       transition={{ delay: Math.min(idx * 0.01, 0.2) }}
                       onClick={() => onAddToCart(variant)}
-                      className="group flex items-center gap-4 p-3 rounded-2xl bg-[var(--pos-card)]/50 border border-[var(--pos-border)] hover:bg-[var(--pos-card)] hover:border-cyan-500/30 transition-all cursor-pointer active:scale-[0.99]"
+                      className="group flex items-center gap-3 p-3 rounded-2xl bg-[var(--pos-card)]/50 border border-[var(--pos-border)] hover:bg-[var(--pos-card)] hover:border-cyan-500/30 transition-all cursor-pointer active:scale-[0.99]"
                     >
                       <div
                         className={`w-12 h-12 rounded-xl ${bgColor}/10 flex items-center justify-center shrink-0 border border-[var(--pos-border)] overflow-hidden`}
@@ -353,15 +452,15 @@ export function PosProductCatalog({
                           {stockText ? ` · ${stockText}` : ''}
                         </p>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <p className="font-black text-[var(--pos-money)] text-sm">
+                      <div className="flex flex-col items-end gap-1.5 shrink-0">
+                        <p className="font-black text-[var(--pos-money)] text-xs md:text-sm whitespace-nowrap">
                           {formatMoney(price, cur)}
-                          <span className="text-[var(--pos-muted)] text-[10px] font-bold">
+                          <span className="text-[var(--pos-muted)] text-[9px] md:text-[10px] font-bold">
                             /{unitLabel}
                           </span>
                         </p>
-                        <div className="w-9 h-9 rounded-xl bg-[var(--pos-accent)] flex items-center justify-center">
-                          <Plus size={18} className="text-white" />
+                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-[var(--pos-accent)] flex items-center justify-center">
+                          <Plus size={16} className="text-white md:w-[18px] md:h-[18px]" />
                         </div>
                       </div>
                     </motion.div>

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { loadPosCart, savePosCart } from './pos-cart-persist';
 import {
   formatSaleAmount,
   normalizeSaleCurrency,
@@ -18,6 +19,20 @@ import type { PosCartItem } from './types';
 import type { PosCustomerSelection } from './PosCustomerStrip';
 
 let nextCartId = 1;
+
+function bumpNextCartIdFromSessions(sessions: CartSession[]) {
+  for (const s of sessions) {
+    const match = s.id.match(/cart-(\d+)/);
+    if (match) {
+      nextCartId = Math.max(nextCartId, Number(match[1]) + 1);
+    }
+  }
+}
+
+function createDefaultSession(): CartSession {
+  const session = newSession('Mijoz 1');
+  return session;
+}
 
 export interface CartSession {
   id: string;
@@ -39,11 +54,66 @@ function newSession(label: string): CartSession {
   };
 }
 
-export function usePosMultiCart() {
+/** Band bo'lmagan eng kichik Mijoz raqamini topadi (o'chirilgandan keyin takrorlanmaslik uchun) */
+function nextSessionLabel(sessions: CartSession[]): string {
+  const used = new Set<number>();
+  for (const s of sessions) {
+    const match = s.label.match(/Mijoz\s*(\d+)/i);
+    if (match) used.add(Number(match[1]));
+  }
+  let n = 1;
+  while (used.has(n)) n += 1;
+  return `Mijoz ${n}`;
+}
+
+type UsePosMultiCartOptions = {
+  /** Ombor + foydalanuvchi bo'yicha savatni brauzerda saqlash */
+  storageKey?: string | null;
+};
+
+export function usePosMultiCart(options?: UsePosMultiCartOptions) {
+  const storageKey = options?.storageKey ?? null;
+
   const [sessions, setSessions] = useState<CartSession[]>(() => [
-    newSession('Mijoz 1'),
+    createDefaultSession(),
   ]);
-  const [activeId, setActiveId] = useState<string>(sessions[0].id);
+  const [activeId, setActiveId] = useState<string>(() => sessions[0]?.id ?? '');
+  const skipNextPersistRef = useRef(true);
+
+  useEffect(() => {
+    skipNextPersistRef.current = true;
+
+    if (!storageKey) {
+      const fresh = createDefaultSession();
+      setSessions([fresh]);
+      setActiveId(fresh.id);
+      return;
+    }
+
+    const loaded = loadPosCart(storageKey);
+    if (loaded?.sessions?.length) {
+      bumpNextCartIdFromSessions(loaded.sessions);
+      const nextActive = loaded.sessions.some((s) => s.id === loaded.activeId)
+        ? loaded.activeId
+        : loaded.sessions[0].id;
+      setSessions(loaded.sessions);
+      setActiveId(nextActive);
+      return;
+    }
+
+    const fresh = createDefaultSession();
+    setSessions([fresh]);
+    setActiveId(fresh.id);
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageKey || !activeId) return;
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
+    savePosCart(storageKey, { sessions, activeId });
+  }, [storageKey, sessions, activeId]);
 
   /* ─── helpers ─────────────────────────────────────────────────── */
 
@@ -60,9 +130,10 @@ export function usePosMultiCart() {
 
   const addCart = useCallback(() => {
     setSessions((prev) => {
-      const label = `Mijoz ${prev.length + 1}`;
+      const label = nextSessionLabel(prev);
       const session = newSession(label);
       setActiveId(session.id);
+      toast.success(`${label} savati ochildi`);
       return [...prev, session];
     });
   }, []);
@@ -224,6 +295,10 @@ export function usePosMultiCart() {
     updateActive((s) => ({ ...s, cart: [], customer: emptyCustomer() }));
   }, [updateActive]);
 
+  const clearCartPersisted = useCallback(() => {
+    updateActive((s) => ({ ...s, cart: [], customer: emptyCustomer() }));
+  }, [updateActive]);
+
   const setCustomer = useCallback(
     (customer: PosCustomerSelection) => {
       updateActive((s) => ({ ...s, customer }));
@@ -252,6 +327,7 @@ export function usePosMultiCart() {
     setItemQuantity,
     updateItemPrice,
     clearCart,
+    clearCartPersisted,
     setCustomer,
     itemCount,
   };

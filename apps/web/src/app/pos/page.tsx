@@ -24,11 +24,15 @@ import {
   PosMobileCartBar,
 } from '@/features/pos/PosCartSidebar';
 import { PosCheckoutModal } from '@/features/pos/PosCheckoutModal';
+import { PosCustomerMobileSheet } from '@/features/pos/PosCustomerMobileSheet';
 import { PosPriceEditModal } from '@/features/pos/PosPriceEditModal';
 import { PosBarcodeScanner } from '@/features/pos/PosBarcodeScanner';
 import { usePosMultiCart } from '@/features/pos/usePosMultiCart';
+import { posCartStorageKey } from '@/features/pos/pos-cart-persist';
 import type { PosCartItem } from '@/features/pos/types';
 import { PosReceiptPrintModal, type ReceiptData } from '@/features/pos/PosReceiptPrintModal';
+import { printPosReceipt } from '@/features/pos/pos-receipt-print.util';
+import type { PosReceiptSettings } from '@/components/settings/SettingsPosReceiptSection';
 import {
   PosQuantityModal,
   type PosQuantityModalVariant,
@@ -44,6 +48,7 @@ export default function POSPage() {
   const [posGate, setPosGate] = useState<'loading' | 'ok' | 'blocked'>('loading');
   const [sessionRole, setSessionRole] = useState<string | null>(null);
   const [cashierName, setCashierName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -56,14 +61,27 @@ export default function POSPage() {
   >('cash');
   const [posCreditEnabled, setPosCreditEnabled] = useState(false);
   const [posMaxDiscountPercent, setPosMaxDiscountPercent] = useState(15);
+  const [posReceiptSettings, setPosReceiptSettings] = useState<PosReceiptSettings>({
+    autoPrint: true,
+    receiptFormat: 'thermal',
+  });
   // customer state is now managed inside usePosMultiCart per session
   const [cashReceivedInput, setCashReceivedInput] = useState('');
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isCartOpenMobile, setIsCartOpenMobile] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list' | 'compact'>('list');
   const [priceEditItem, setPriceEditItem] = useState<PosCartItem | null>(null);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
+  const [customerSheetOpen, setCustomerSheetOpen] = useState(false);
+  const [paymentInFlight, setPaymentInFlight] = useState(false);
+  const checkoutInFlightRef = useRef(false);
+
+  const cartStorageKey = useMemo(() => {
+    const companyId = session?.me?.company?.id;
+    const userId = session?.me?.user?.id;
+    if (!companyId || !userId || !selectedWarehouseId) return null;
+    return posCartStorageKey(companyId, userId, selectedWarehouseId);
+  }, [session?.me?.company?.id, session?.me?.user?.id, selectedWarehouseId]);
 
   const {
     sessions,
@@ -81,9 +99,10 @@ export default function POSPage() {
     setItemQuantity,
     updateItemPrice,
     clearCart,
+    clearCartPersisted,
     setCustomer,
     itemCount,
-  } = usePosMultiCart();
+  } = usePosMultiCart({ storageKey: cartStorageKey });
 
   const { data: warehouses } = useWarehouses();
   const { quickCheckout } = usePosActions();
@@ -122,6 +141,7 @@ export default function POSPage() {
     if (!session) return;
     setSessionRole((session.role || '').toUpperCase());
     setCashierName(session.me?.user?.fullName || '');
+    setCompanyName(session.me?.company?.name || '');
     const posEnabled = isModuleKeyEnabled(session.features, 'POS');
     setPosGate(posEnabled ? 'ok' : 'blocked');
 
@@ -134,6 +154,12 @@ export default function POSPage() {
           setPosCreditEnabled(!!data?.posCreditEnabled);
           if (typeof data?.posMaxDiscountPercent === 'number') {
             setPosMaxDiscountPercent(data.posMaxDiscountPercent);
+          }
+          if (data?.receiptSettings) {
+            setPosReceiptSettings({
+              autoPrint: !!data.receiptSettings.autoPrint,
+              receiptFormat: data.receiptSettings.receiptFormat || 'thermal',
+            });
           }
         } catch {
           if (alive) {
@@ -193,7 +219,9 @@ export default function POSPage() {
     );
   }, [allVariants, selectedCategory]);
 
-  const handleConfirmPayment = async () => {
+  const handleConfirmPayment = () => {
+    if (checkoutInFlightRef.current) return;
+
     if (!selectedWarehouseId) {
       if (!warehouses || warehouses.length === 0) {
         toast.error(
@@ -215,62 +243,116 @@ export default function POSPage() {
       return;
     }
 
-    setIsProcessing(true);
-    try {
-      const methodApi =
-        paymentMethod === 'cash'
-          ? 'CASH'
-          : paymentMethod === 'card'
-            ? 'CARD'
-            : 'CREDIT';
-      const cashVal =
-        paymentMethod === 'cash' ? Number(cashReceivedInput) : undefined;
+    if (paymentMethod === 'cash') {
+      const received = Number(cashReceivedInput) || 0;
+      if (received < totalAmount) {
+        toast.error('Qabul qilingan summa yetarli emas');
+        return;
+      }
+    }
 
-      const saleResult = await quickCheckout.mutateAsync({
+    const methodApi =
+      paymentMethod === 'cash'
+        ? 'CASH'
+        : paymentMethod === 'card'
+          ? 'CARD'
+          : 'CREDIT';
+    const cashVal =
+      paymentMethod === 'cash' ? Number(cashReceivedInput) : undefined;
+
+    const snapshot = {
+      items: cart.map((item) => ({
+        productVariantId: item.variantId,
+        quantity: item.quantity,
+        unitPrice: item.price,
+      })),
+      receiptItems: cart.map((i) => ({
+        name: i.name,
+        quantity: i.quantity,
+        unit: i.unit,
+        price: i.price,
+        amount: i.quantity * i.price,
+      })),
+      total: totalAmount,
+      currency: cartCurrency,
+      customerName: customer.customerName || customer.retailCustomerId || undefined,
+      retailCustomerId: customer.retailCustomerId || undefined,
+      customerPhone: customer.customerPhone || undefined,
+      warehouseName: activeWarehouse?.name || '',
+    };
+
+    checkoutInFlightRef.current = true;
+    setPaymentInFlight(true);
+    setIsCheckoutModalOpen(false);
+
+    void quickCheckout
+      .mutateAsync({
         warehouseId: selectedWarehouseId,
-        items: cart.map((item) => ({
-          productVariantId: item.variantId,
-          quantity: item.quantity,
-          unitPrice: item.price,
-        })),
-        retailCustomerId: customer.retailCustomerId || undefined,
+        items: snapshot.items,
+        retailCustomerId: snapshot.retailCustomerId,
         customerName: customer.customerName || undefined,
-        customerPhone: customer.customerPhone || undefined,
+        customerPhone: snapshot.customerPhone,
         method: methodApi,
         ...(cashVal !== undefined ? { cashReceived: cashVal } : {}),
+      })
+      .then((saleResult) => {
+        checkoutInFlightRef.current = false;
+        setPaymentInFlight(false);
+        clearCartPersisted();
+        setCashReceivedInput('');
+        setPaymentMethod('cash');
+
+        const receipt: ReceiptData = {
+          receiptNumber:
+            saleResult?.receiptNumber ||
+            saleResult?.id?.substring(0, 8) ||
+            undefined,
+          date: new Date(),
+          companyName: companyName || undefined,
+          cashierName,
+          warehouseName: snapshot.warehouseName,
+          items: snapshot.receiptItems,
+          total: snapshot.total,
+          currency: snapshot.currency,
+          paymentMethod: methodApi,
+          customerName: snapshot.customerName,
+          cashReceived: cashVal,
+          change:
+            methodApi === 'CASH' && cashVal
+              ? Math.max(0, cashVal - snapshot.total)
+              : 0,
+        };
+
+        const { autoPrint, receiptFormat } = posReceiptSettings;
+
+        if (receiptFormat === 'none') {
+          toast.success("To'lov muvaffaqiyatli yakunlandi");
+          return;
+        }
+
+        if (autoPrint) {
+          void printPosReceipt(receipt, receiptFormat, formatMoney).then(() => {
+            toast.success("To'lov muvaffaqiyatli — chek chop etildi");
+          });
+          return;
+        }
+
+        setReceiptData(receipt);
+        toast.success("To'lov muvaffaqiyatli yakunlandi");
+      })
+      .catch((err: unknown) => {
+        console.error(err);
+        checkoutInFlightRef.current = false;
+        setPaymentInFlight(false);
+        setIsCheckoutModalOpen(true);
+        toast.error(
+          formatApiError(
+            err,
+            "To'lov yuborilmadi — savat saqlab qolindi, qayta urinib ko'ring",
+          ),
+          { duration: 5000 },
+        );
       });
-
-      const newReceipt: ReceiptData = {
-        receiptNumber: saleResult?.receiptNumber || saleResult?.id?.substring(0, 8) || undefined,
-        date: new Date(),
-        cashierName,
-        warehouseName: activeWarehouse?.name || '',
-        items: cart.map(i => ({
-          name: i.name,
-          quantity: i.quantity,
-          unit: i.unit,
-          price: i.price,
-          amount: i.quantity * i.price,
-        })),
-        total: totalAmount,
-        currency: cartCurrency,
-        paymentMethod: methodApi,
-        customerName: customer.customerName || customer.retailCustomerId || undefined,
-        cashReceived: cashVal,
-        change: methodApi === 'CASH' && cashVal ? Math.max(0, cashVal - totalAmount) : 0,
-      };
-
-      setReceiptData(newReceipt);
-      setIsCheckoutModalOpen(false);
-      clearCart();
-      setCashReceivedInput('');
-      setPaymentMethod('cash');
-    } catch (err: unknown) {
-      console.error(err);
-      toast.error(formatApiError(err));
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   if (posGate === 'loading') return <PosLoadingScreen />;
@@ -287,13 +369,21 @@ export default function POSPage() {
     }
     setSelectedWarehouseId(warehouseId);
     setSelectedCategory(null);
-    clearCart();
     setIsWarehouseOpen(false);
   };
   const creditCustomerOk =
     !!customer.retailCustomerId || !!customer.customerName?.trim();
 
+  const hasCustomer =
+    !!customer.retailCustomerId || !!customer.customerName?.trim();
+  const customerLabel =
+    customer.customerName ||
+    (customer.retailCustomerId ? 'Tanlangan' : '');
+
+  const openCustomerSheet = () => setCustomerSheetOpen(true);
+
   const openCheckout = () => {
+    if (paymentInFlight) return;
     setIsCartOpenMobile(false);
     setPaymentMethod('cash');
     setCashReceivedInput(String(totalAmount));
@@ -339,9 +429,9 @@ export default function POSPage() {
 
   return (
     <div
-      className={`pos-shell h-screen flex flex-col md:flex-row overflow-hidden p-4 md:p-8 gap-4 md:gap-8 bg-[var(--pos-bg)] ${theme === 'light' ? 'pos-theme-light' : ''}`}
+      className={`pos-shell h-screen flex flex-col md:flex-row overflow-hidden p-2 md:p-8 gap-2 md:gap-8 bg-[var(--pos-bg)] ${theme === 'light' ? 'pos-theme-light' : ''}`}
     >
-      <div className="flex-1 flex flex-col gap-2 min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col gap-1 md:gap-2 min-w-0 min-h-0">
         <PosBarcodeScanner
           warehouseId={selectedWarehouseId}
           onAddItem={handleAddVariantToCart}
@@ -378,10 +468,19 @@ export default function POSPage() {
       </div>
 
       <PosMobileCartBar
+        sessions={sessions}
+        activeId={activeId}
         itemCount={itemCount}
         totalAmount={totalAmount}
         formatMoney={(v) => formatMoney(v, cartCurrency)}
+        customerLabel={customerLabel}
+        hasCustomer={hasCustomer}
         onOpen={() => setIsCartOpenMobile(true)}
+        onCustomerClick={openCustomerSheet}
+        onSwitchCart={switchCart}
+        onAddCart={addCart}
+        onRemoveCart={removeCart}
+        paymentInFlight={paymentInFlight}
       />
 
       <PosCartSidebar
@@ -403,6 +502,7 @@ export default function POSPage() {
         onAddCart={addCart}
         onSwitchCart={switchCart}
         onRemoveCart={removeCart}
+        paymentInFlight={paymentInFlight}
       />
 
       <PosCheckoutModal
@@ -412,7 +512,6 @@ export default function POSPage() {
         paymentMethod={paymentMethod}
         posCreditEnabled={posCreditEnabled && canUseCredit}
         cashReceivedInput={cashReceivedInput}
-        isProcessing={isProcessing}
         creditCustomerOk={creditCustomerOk}
         customer={customer}
         formatMoney={formatMoney}
@@ -421,6 +520,7 @@ export default function POSPage() {
         onCashInputChange={setCashReceivedInput}
         onCustomerChange={setCustomer}
         onConfirm={handleConfirmPayment}
+        onOpenCustomerPicker={openCustomerSheet}
       />
 
       <PosPriceEditModal
@@ -440,6 +540,13 @@ export default function POSPage() {
         formatMoney={formatMoney}
         onClose={() => setQuantityModalVariant(null)}
         onConfirm={handleQuantityConfirm}
+      />
+
+      <PosCustomerMobileSheet
+        open={customerSheetOpen}
+        value={customer}
+        onChange={setCustomer}
+        onClose={() => setCustomerSheetOpen(false)}
       />
 
       <PosReceiptPrintModal

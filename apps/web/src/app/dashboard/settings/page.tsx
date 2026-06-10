@@ -20,6 +20,8 @@ import { ModuleSettingsGrouped } from '@/components/settings/ModuleSettingsGroup
 import { SettingsProfileTab } from '@/components/settings/SettingsProfileTab';
 import { SettingsCompanyForm } from '@/components/settings/SettingsCompanyForm';
 import { SettingsIntakeSection } from '@/components/settings/SettingsIntakeSection';
+import { SettingsPosReceiptSection } from '@/components/settings/SettingsPosReceiptSection';
+import { isModuleKeyEnabled } from '@/lib/feature-modules';
 import { SettingsEmployeesRolesTab } from '@/components/settings/SettingsEmployeesRolesTab';
 import { SettingsArchitectureTab } from '@/components/settings/SettingsArchitectureTab';
 import { SettingsSecurityTab } from '@/components/settings/SettingsSecurityTab';
@@ -59,6 +61,7 @@ export default function SettingsPage() {
   const isExpiringSoon =
     isTrialActive && remainingTrialDays <= Math.min(2, trialDaysConfigured);
   const canWrite = me?.company?.canWrite !== false;
+  const posEnabled = isModuleKeyEnabled(session?.features, 'POS');
   const subscriptionPlanLabel =
     me?.company?.subscriptionLabel ||
     (isTrialActive ? `${trialDaysConfigured} kunlik bepul sinov` : 'Sinov tugagan');
@@ -156,7 +159,8 @@ export default function SettingsPage() {
               }}
               canWrite={canWrite}
             />
-            <div className="mt-8">
+            <div className="mt-8 space-y-8">
+              {posEnabled && <SettingsPosReceiptSection canWrite={canWrite} />}
               <SettingsIntakeSection canWrite={canWrite} />
             </div>
           </div>

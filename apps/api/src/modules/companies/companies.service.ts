@@ -19,6 +19,11 @@ import {
   WAREHOUSE_SECTION_FEATURE_KEYS,
 } from '../../common/warehouse-section-features';
 import { UpdateIntakeSettingsDto } from './dto/update-intake-settings.dto';
+import { UpdatePosReceiptSettingsDto } from './dto/update-pos-receipt-settings.dto';
+import {
+  mergePosReceiptSettingsPatch,
+  normalizePosReceiptSettings,
+} from '../../common/pos-receipt-settings.util';
 import {
   mergeIntakeSettingsPatch,
   normalizeIntakeSettings,
@@ -264,7 +269,11 @@ export class CompaniesService {
     await this.assertModuleEnabled(companyId, 'POS');
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
-      select: { posCreditEnabled: true, posMaxDiscountPercent: true },
+      select: {
+        posCreditEnabled: true,
+        posMaxDiscountPercent: true,
+        posReceiptSettings: true,
+      },
     });
     const maxPct =
       company?.posMaxDiscountPercent != null
@@ -273,7 +282,48 @@ export class CompaniesService {
     return {
       posCreditEnabled: !!company?.posCreditEnabled,
       posMaxDiscountPercent: maxPct,
+      receiptSettings: normalizePosReceiptSettings(
+        company?.posReceiptSettings as Record<string, unknown> | null,
+      ),
     };
+  }
+
+  async getPosReceiptSettings(companyId: string) {
+    await this.assertModuleEnabled(companyId, 'POS');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { posReceiptSettings: true },
+    });
+    if (!company) throw new NotFoundException('Kompaniya topilmadi');
+    return {
+      settings: normalizePosReceiptSettings(
+        company.posReceiptSettings as Record<string, unknown> | null,
+      ),
+    };
+  }
+
+  async updatePosReceiptSettings(
+    companyId: string,
+    dto: UpdatePosReceiptSettingsDto,
+  ) {
+    await this.assertModuleEnabled(companyId, 'POS');
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { posReceiptSettings: true },
+    });
+    if (!company) throw new NotFoundException('Kompaniya topilmadi');
+
+    const current = normalizePosReceiptSettings(
+      company.posReceiptSettings as Record<string, unknown> | null,
+    );
+    const settings = mergePosReceiptSettingsPatch(current, dto);
+
+    await this.prisma.company.update({
+      where: { id: companyId },
+      data: { posReceiptSettings: settings as object },
+    });
+
+    return { settings };
   }
 
   async getIntakeSettings(

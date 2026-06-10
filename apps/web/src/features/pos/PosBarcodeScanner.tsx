@@ -1,22 +1,24 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { ScanLine, Loader2, AlertCircle } from 'lucide-react';
+import { Camera, ScanLine, Loader2, AlertCircle } from 'lucide-react';
 import { posService } from '@/services/pos.service';
 import { toast, formatApiError } from '@/lib/toast';
 import { useBarcodeScanner } from './hooks/use-barcode-scan';
+import { MobileCameraBarcodeScanner } from '@/components/mobile/MobileCameraBarcodeScanner';
 
 const playBeep = (type: 'success' | 'error') => {
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContextClass =
+      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    
+
     osc.connect(gain);
     gain.connect(ctx.destination);
-    
+
     if (type === 'success') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(800, ctx.currentTime);
@@ -31,7 +33,7 @@ const playBeep = (type: 'success' | 'error') => {
       osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.3);
       osc.stop(ctx.currentTime + 0.3);
     }
-  } catch (e) {
+  } catch {
     // Ignore audio errors
   }
 };
@@ -66,8 +68,13 @@ type Props = {
   disabled?: boolean;
 };
 
-export function PosBarcodeScanner({ warehouseId, onAddItem, disabled }: Props) {
+export function PosBarcodeScanner({
+  warehouseId,
+  onAddItem,
+  disabled,
+}: Props) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'notfound'>('idle');
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const handleScan = useCallback(
     async (barcode: string) => {
@@ -112,7 +119,7 @@ export function PosBarcodeScanner({ warehouseId, onAddItem, disabled }: Props) {
       } catch (err: unknown) {
         playBeep('error');
         setStatus('idle');
-        toast.error(formatApiError(err, "Aloqa xatosi, qayta skanlang"));
+        toast.error(formatApiError(err, 'Aloqa xatosi, qayta skanlang'));
       }
     },
     [warehouseId, onAddItem],
@@ -122,26 +129,57 @@ export function PosBarcodeScanner({ warehouseId, onAddItem, disabled }: Props) {
 
   if (disabled) return null;
 
-  return (
-    <div className="flex items-center gap-2 text-xs font-bold shrink-0 px-1">
+  const statusContent = (
+    <>
       {status === 'idle' && (
         <>
-          <ScanLine size={14} className="text-[var(--pos-money)]" />
-          <span className="text-[var(--pos-muted)]">Skaner tayyor</span>
+          <ScanLine size={14} className="text-[var(--pos-money)] shrink-0" />
+          <span className="text-[var(--pos-muted)] truncate">Skaner tayyor</span>
         </>
       )}
       {status === 'loading' && (
         <>
-          <Loader2 size={14} className="text-[var(--pos-accent)] animate-spin" />
-          <span className="text-[var(--pos-muted)]">Qidirilmoqda...</span>
+          <Loader2 size={14} className="text-[var(--pos-accent)] animate-spin shrink-0" />
+          <span className="text-[var(--pos-muted)] truncate">Qidirilmoqda...</span>
         </>
       )}
       {status === 'notfound' && (
         <>
-          <AlertCircle size={14} className="text-red-500" />
-          <span className="text-red-400">Mahsulot topilmadi</span>
+          <AlertCircle size={14} className="text-red-500 shrink-0" />
+          <span className="text-red-400 truncate">Topilmadi</span>
         </>
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      <div className="hidden md:flex items-center gap-2 text-xs font-bold shrink-0 px-1 mb-1">
+        {statusContent}
+      </div>
+
+      <div className="md:hidden flex items-center gap-2 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] px-3 py-2">
+        <div className="flex flex-1 items-center gap-2 text-xs font-bold min-w-0">
+          {statusContent}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCameraOpen(true)}
+          disabled={!warehouseId || status === 'loading'}
+          className="shrink-0 h-10 px-3 rounded-lg bg-[var(--pos-accent)] text-white font-bold text-xs flex items-center gap-1.5 active:scale-95 disabled:opacity-40"
+        >
+          <Camera size={16} />
+          Kamera
+        </button>
+      </div>
+
+      <MobileCameraBarcodeScanner
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onScan={(code) => void handleScan(code)}
+        busy={status === 'loading'}
+        title="POS kamera skaner"
+      />
+    </>
   );
 }

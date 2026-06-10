@@ -19,9 +19,21 @@ type Props = {
   value: PosCustomerSelection;
   onChange: (v: PosCustomerSelection) => void;
   tone?: 'catalog' | 'cart';
+  /** sheet — mobil bottom sheet uchun katta touch maydon */
+  variant?: 'inline' | 'sheet';
+  autoFocus?: boolean;
+  onPicked?: () => void;
 };
 
-export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
+export function PosCustomerStrip({
+  value,
+  onChange,
+  tone = 'catalog',
+  variant = 'inline',
+  autoFocus = false,
+  onPicked,
+}: Props) {
+  const isSheet = variant === 'sheet';
   const isCart = tone === 'cart';
   const wrap = isCart
     ? 'bg-[var(--pos-cart-card)] border-[var(--pos-cart-border)]'
@@ -61,6 +73,7 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
     setQuery('');
     setPickerOpen(false);
     setShowQuick(false);
+    onPicked?.();
   };
 
   const quickAdd = async () => {
@@ -81,8 +94,13 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
   const showList = pickerOpen && results.length > 0;
   const showRecentLabel = pickerOpen && !query.trim() && results.length > 0;
 
+  const listMaxH = isSheet ? 'max-h-[45dvh]' : 'max-h-32';
+  const itemPy = isSheet ? 'py-3.5' : 'py-2';
+  const inputPy = isSheet ? 'py-3.5 text-base' : 'py-2 text-sm';
+
   return (
-    <div className={`${wrap} rounded-2xl p-3 space-y-2`}>
+    <div className={`${wrap} rounded-2xl ${isSheet ? 'p-4 space-y-3' : 'p-3 space-y-2'}`}>
+      {!isSheet && (
       <div className="flex items-center gap-2">
         <User size={16} className={`${iconColor} shrink-0`} />
         <span className={`text-[10px] font-black uppercase tracking-widest ${labelColor}`}>
@@ -100,13 +118,36 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
           </button>
         )}
       </div>
+      )}
+      {isSheet && (value.retailCustomerId || value.customerName) && (
+        <div className={`flex items-center gap-3 p-3 rounded-xl border ${isCart ? 'border-[var(--pos-cart-border)] bg-[var(--pos-cart-bg)]' : 'border-[var(--pos-border)] bg-[var(--pos-input-bg)]'}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isCart ? 'bg-[var(--pos-cart-accent-soft)]' : 'bg-[var(--pos-accent-soft)]'}`}>
+            <User size={18} className={iconColor} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-black ${textColor} truncate`}>{label}</p>
+            {value.customerPhone ? (
+              <p className={`text-xs ${labelColor} truncate`}>{value.customerPhone}</p>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            onClick={clear}
+            className={`px-3 py-2 rounded-xl text-xs font-black ${labelColor} hover:opacity-80`}
+          >
+            Tozalash
+          </button>
+        </div>
+      )}
       <input
         value={query}
+        autoFocus={autoFocus}
         onFocus={() => {
           setPickerOpen(true);
           prefetchRecent();
         }}
         onBlur={() => {
+          if (isSheet) return;
           window.setTimeout(() => setPickerOpen(false), 150);
         }}
         onChange={(e) => {
@@ -120,8 +161,8 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
             });
           }
         }}
-        placeholder="Ism yoki telefon qidirish..."
-        className={`w-full ${inputBg} rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[var(--pos-accent)]`}
+        placeholder={isSheet ? 'Ism yoki telefon kiriting...' : 'Ism yoki telefon qidirish...'}
+        className={`w-full ${inputBg} rounded-xl px-3 ${inputPy} font-bold outline-none focus:border-[var(--pos-accent)]`}
       />
       {pickerOpen && isFetching && (
         <div className="flex justify-center py-1">
@@ -134,14 +175,14 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
         </p>
       )}
       {showList && (
-        <ul className="max-h-32 overflow-y-auto space-y-1">
+        <ul className={`${listMaxH} overflow-y-auto space-y-1 custom-scrollbar`}>
           {results.map((c) => (
             <li key={c.id}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(c)}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-[var(--pos-accent)]/20 text-sm font-bold"
+                className={`w-full text-left px-4 ${itemPy} rounded-xl hover:bg-[var(--pos-accent)]/20 text-sm font-bold active:bg-[var(--pos-accent)]/30`}
               >
                 {c.name}
                 {c.phone ? <span className={`${labelColor} ml-2`}>{c.phone}</span> : null}
@@ -155,23 +196,23 @@ export function PosCustomerStrip({ value, onChange, tone = 'catalog' }: Props) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setShowQuick(true)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--pos-accent-soft)] text-[var(--pos-accent)] text-sm font-black"
+          className={`w-full flex items-center gap-2 px-4 ${itemPy} rounded-xl bg-[var(--pos-accent-soft)] text-[var(--pos-accent)] text-sm font-black`}
         >
           <UserPlus size={16} /> &quot;{query.trim()}&quot; ni yangi mijoz qilish
         </button>
       )}
       {showQuick && (
-        <div className="flex gap-2">
+        <div className={`flex gap-2 ${isSheet ? 'flex-col' : ''}`}>
           <input
             value={quickPhone}
             onChange={(e) => setQuickPhone(e.target.value)}
             placeholder="Telefon (ixtiyoriy)"
-            className={`flex-1 ${inputBg} rounded-xl px-3 py-2 text-xs font-bold`}
+            className={`flex-1 ${inputBg} rounded-xl px-3 ${isSheet ? 'py-3.5 text-base' : 'py-2 text-xs'} font-bold`}
           />
           <button
             type="button"
             onClick={() => void quickAdd()}
-            className="px-4 py-2 rounded-xl bg-[var(--pos-accent)] text-white text-xs font-black"
+            className={`px-4 ${isSheet ? 'py-3.5 w-full' : 'py-2'} rounded-xl bg-[var(--pos-accent)] text-white text-sm font-black`}
           >
             Saqlash
           </button>

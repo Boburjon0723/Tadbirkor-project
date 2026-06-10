@@ -21,6 +21,7 @@ type Props = {
   unit?: string | null;
   maxStock?: number;
   tone?: 'catalog' | 'cart';
+  disabled?: boolean;
   onChange: (quantity: number) => void;
 };
 
@@ -29,6 +30,7 @@ export function PosQuantityInput({
   unit,
   maxStock,
   tone = 'catalog',
+  disabled = false,
   onChange,
 }: Props) {
   const isCart = tone === 'cart';
@@ -59,6 +61,7 @@ export function PosQuantityInput({
   };
 
   const handleDelta = (delta: number) => {
+    if (disabled) return;
     applyQuantity(quantity + delta * step);
   };
 
@@ -70,7 +73,7 @@ export function PosQuantityInput({
         <button
           type="button"
           onClick={() => handleDelta(-1)}
-          disabled={quantity <= minQty + 1e-9}
+          disabled={disabled || quantity <= minQty + 1e-9}
           className={`w-5 h-5 md:w-6 md:h-6 rounded-lg hover:opacity-80 flex items-center justify-center ${mutedColor} disabled:opacity-30`}
         >
           <Minus size={12} />
@@ -78,9 +81,11 @@ export function PosQuantityInput({
         <input
           type="text"
           inputMode={allowsDecimalStock(normalizedUnit) ? 'decimal' : 'numeric'}
-          className={`font-black text-[10px] md:text-xs w-12 md:w-14 text-center bg-transparent outline-none ${textColor}`}
+          disabled={disabled}
+          className={`font-black text-[10px] md:text-xs w-12 md:w-14 text-center bg-transparent outline-none ${textColor} disabled:opacity-40`}
           value={displayValue}
           onChange={(e) => {
+            if (disabled) return;
             const next = sanitizeStockDraftInput(e.target.value, normalizedUnit);
             if (next === null) return;
             setDraft(next);
@@ -100,7 +105,9 @@ export function PosQuantityInput({
         <button
           type="button"
           onClick={() => handleDelta(1)}
-          disabled={maxStock !== undefined && quantity >= maxStock - 1e-9}
+          disabled={
+            disabled || (maxStock !== undefined && quantity >= maxStock - 1e-9)
+          }
           className={`w-5 h-5 md:w-6 md:h-6 rounded-lg hover:opacity-80 flex items-center justify-center ${mutedColor} disabled:opacity-30`}
         >
           <Plus size={12} />

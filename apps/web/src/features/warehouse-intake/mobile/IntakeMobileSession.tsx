@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   Barcode,
+  Camera,
   CheckCircle2,
   Loader2,
   Minus,
@@ -15,6 +16,7 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
+import { MobileCameraBarcodeScanner } from '@/components/mobile/MobileCameraBarcodeScanner';
 import type { WarehouseIntake } from '@/services/warehouse-intake.service';
 import { useWarehouseIntakeMutations } from '@/hooks/warehouse-intake/use-warehouse-intake';
 import { toast, formatApiError } from '@/lib/toast';
@@ -53,6 +55,7 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
     units: number;
   } | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const settings = intake.intakeSettings;
   const isDraft = intake.status === 'DRAFT';
@@ -254,19 +257,30 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
                 />
               </div>
 
-              <button
-                type="button"
-                onClick={() => void handleScan()}
-                disabled={scan.isPending || !barcode.trim()}
-                className="w-full h-14 rounded-xl bg-emerald-500 text-[#00422b] font-bold text-base flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40 shadow-lg shadow-emerald-500/20"
-              >
-                {scan.isPending ? (
-                  <Loader2 size={20} className="animate-spin" />
-                ) : (
-                  <ScanLine size={20} />
-                )}
-                Qo&apos;shish
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCameraOpen(true)}
+                  disabled={scan.isPending}
+                  className="h-14 rounded-xl bg-white/10 border border-emerald-500/30 text-emerald-300 font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40"
+                >
+                  <Camera size={20} />
+                  Kamera
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleScan()}
+                  disabled={scan.isPending || !barcode.trim()}
+                  className="h-14 rounded-xl bg-emerald-500 text-[#00422b] font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-40 shadow-lg shadow-emerald-500/20"
+                >
+                  {scan.isPending ? (
+                    <Loader2 size={20} className="animate-spin" />
+                  ) : (
+                    <ScanLine size={20} />
+                  )}
+                  Qo&apos;shish
+                </button>
+              </div>
 
               <p className="text-[11px] text-center text-[#86948a] leading-relaxed px-2">
                 Qidiruv mahsulot <span className="text-[#bbcabf]">katalogi</span> bo‘yicha.
@@ -386,6 +400,16 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
           </button>
         </footer>
       )}
+
+      <MobileCameraBarcodeScanner
+        open={cameraOpen && isDraft}
+        onClose={() => {
+          setCameraOpen(false);
+          focusInput();
+        }}
+        onScan={(code) => void handleScan(code)}
+        busy={scan.isPending || quickProduct.isPending}
+      />
 
       <QuickProductMobileSheet
         open={quickOpen}

@@ -12,6 +12,7 @@ import { UpdateWarehouseBundleDto } from './dto/update-warehouse-bundle.dto';
 import { UpsertTelegramBindingDto } from './dto/upsert-telegram-binding.dto';
 import { RemoveTelegramBindingDto } from './dto/remove-telegram-binding.dto';
 import { UpdateIntakeSettingsDto } from './dto/update-intake-settings.dto';
+import { UpdatePosReceiptSettingsDto } from './dto/update-pos-receipt-settings.dto';
 
 @Controller('companies')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -37,6 +38,25 @@ export class CompaniesController {
   @Permissions(Permission.POS_VIEW)
   getPosSettings(@Request() req: any) {
     return this.companiesService.getPosSettings(req.user.companyId);
+  }
+
+  @Get('pos-receipt-settings')
+  @Permissions(Permission.POS_VIEW)
+  getPosReceiptSettings(@Request() req: any) {
+    return this.companiesService.getPosReceiptSettings(req.user.companyId);
+  }
+
+  @Patch('pos-receipt-settings')
+  @UseGuards(IntakeSettingsWriteGuard)
+  @Permissions(Permission.POS_VIEW)
+  updatePosReceiptSettings(
+    @Request() req: any,
+    @Body() dto: UpdatePosReceiptSettingsDto,
+  ) {
+    return this.companiesService.updatePosReceiptSettings(
+      req.user.companyId,
+      dto,
+    );
   }
 
   /** Ombor kirimi qoidalari (omborchi ham o'qishi kerak) */
