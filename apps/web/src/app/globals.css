@@ -235,6 +235,10 @@ body {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
   @media (min-width: 768px) {
     .mobile-safe-top,
     .mobile-header-bar {

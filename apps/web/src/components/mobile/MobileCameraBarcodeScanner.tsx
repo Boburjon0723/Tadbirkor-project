@@ -125,15 +125,15 @@ export function MobileCameraBarcodeScanner({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <header className="shrink-0 h-14 px-4 flex items-center justify-between bg-black/80 backdrop-blur-md z-10">
-            <div className="flex items-center gap-2 text-white">
-              <Camera size={20} className="text-cyan-400" />
-              <span className="text-sm font-bold">{title}</span>
+          <header className="mobile-header-bar-compact shrink-0 px-4 flex items-center justify-between bg-black/80 backdrop-blur-md z-10">
+            <div className="flex items-center gap-2 text-white min-w-0">
+              <Camera size={20} className="text-cyan-400 shrink-0" />
+              <span className="text-sm font-bold truncate">{title}</span>
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-xl bg-white/10 text-white active:scale-95"
+              className="shrink-0 p-2.5 min-w-[44px] min-h-[44px] rounded-xl bg-white/10 text-white active:scale-95 touch-manipulation flex items-center justify-center"
               aria-label="Yopish"
             >
               <X size={22} />
@@ -166,7 +166,7 @@ export function MobileCameraBarcodeScanner({
             )}
           </div>
 
-          <footer className="shrink-0 px-5 py-4 pb-safe bg-black/90 border-t border-white/10">
+          <footer className="shrink-0 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-black/90 border-t border-white/10">
             <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
               <Zap size={14} className="text-cyan-400" />
               Barcodeni ramka ichiga tuting — avtomatik qo‘shiladi

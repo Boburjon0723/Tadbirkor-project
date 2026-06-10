@@ -375,13 +375,13 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
       </main>
 
       {!isDraft && intake.status === 'COMPLETED' && (
-        <footer className="flex-shrink-0 px-5 py-4 border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl pb-safe">
+        <footer className="flex-shrink-0 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl">
           <IntakeNakladnoyButton intakeId={intake.id} reference={intake.reference} />
         </footer>
       )}
 
       {isDraft && (
-        <footer className="flex-shrink-0 h-[72px] px-5 flex items-center justify-between border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl pb-safe">
+        <footer className="flex-shrink-0 min-h-[72px] px-5 flex items-center justify-between border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-[#bbcabf]">
               Jami
