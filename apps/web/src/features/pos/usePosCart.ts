@@ -7,6 +7,12 @@ import {
   type SaleCurrency,
 } from '@/lib/currency';
 import { toast } from '@/lib/toast';
+import {
+  minSaleQuantity,
+  normalizeProductUnit,
+  quantityStep,
+  type ProductUnitCode,
+} from '@/lib/product-units';
 import type { PosCartItem } from './types';
 
 export function usePosCart() {
@@ -31,10 +37,13 @@ export function usePosCart() {
     name: string;
     salePrice?: number | string;
     currency?: string;
+    unit?: string;
     image?: string;
   }) => {
     const currency = normalizeSaleCurrency(variant.currency);
     const listPrice = Number(variant.salePrice || 0);
+    const unit = normalizeProductUnit(variant.unit) as ProductUnitCode;
+    const step = quantityStep(unit);
     setCart((prev) => {
       if (prev.length > 0 && prev[0].currency !== currency) {
         toast.error(
@@ -46,7 +55,7 @@ export function usePosCart() {
       if (existing) {
         return prev.map((item) =>
           item.variantId === variant.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + step }
             : item,
         );
       }
@@ -60,7 +69,8 @@ export function usePosCart() {
           listPrice,
           price: listPrice,
           currency,
-          quantity: 1,
+          unit,
+          quantity: minSaleQuantity(unit),
           image: variant.image,
         },
       ];

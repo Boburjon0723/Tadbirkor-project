@@ -250,7 +250,17 @@ export default function DashboardLayout({
 
   const filteredMenu = menuGroupsForNav.flatMap((g) => g.items);
 
-  const mobileNavItems = filteredMenu.filter((item) => item.mobileNav);
+  const isIntakeMobileShell =
+    pathname === '/dashboard/warehouse-intake' ||
+    pathname.startsWith('/dashboard/warehouse-intake/');
+
+  const mobileNavItems = filteredMenu
+    .filter((item) => item.mobileNav)
+    .sort(
+      (a, b) =>
+        (a.mobileNavPriority ?? 50) - (b.mobileNavPriority ?? 50),
+    )
+    .slice(0, 4);
 
   if (layoutHold) {
     return (
@@ -360,7 +370,11 @@ export default function DashboardLayout({
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-20 md:pb-0">
         {/* Topbar */}
-        <header className="h-20 px-6 md:px-12 flex items-center justify-between border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-40">
+        <header
+          className={`h-20 px-6 md:px-12 flex items-center justify-between border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-40 ${
+            isIntakeMobileShell ? 'max-lg:hidden' : ''
+          }`}
+        >
           <div className="flex items-center gap-4">
              <button 
                onClick={() => setIsMobileMenuOpen(true)}
@@ -438,7 +452,11 @@ export default function DashboardLayout({
         </header>
 
 
-        <div className="p-6 md:p-12 flex-1">
+        <div
+          className={`flex-1 ${
+            isIntakeMobileShell ? 'max-lg:p-0 max-lg:pb-0' : 'p-6 md:p-12'
+          }`}
+        >
           <SubscriptionExpiredBanner
             canWrite={session?.me?.company?.canWrite !== false}
             subscriptionLabel={session?.me?.company?.subscriptionLabel}
@@ -447,7 +465,11 @@ export default function DashboardLayout({
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-[#080808]/90 backdrop-blur-2xl border-t border-white/5 px-6 flex items-center justify-between z-50">
+        <nav
+          className={`md:hidden fixed bottom-0 left-0 right-0 h-20 bg-[#080808]/90 backdrop-blur-2xl border-t border-white/5 px-6 flex items-center justify-between z-50 ${
+            isIntakeMobileShell ? 'max-lg:hidden' : ''
+          }`}
+        >
           {(mobileNavItems.length > 0 ? mobileNavItems : filteredMenu.slice(0, 4)).map(
             (item) => {
               const isActive = isMenuItemActive(pathname, item.href);

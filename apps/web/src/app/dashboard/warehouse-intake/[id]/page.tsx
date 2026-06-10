@@ -41,12 +41,33 @@ export default function WarehouseIntakeSessionPage() {
         )}
       </div>
 
-      {intake && (
-        <IntakeMobileSession
-          intake={intake}
-          onUpdated={() => void refetch()}
-        />
-      )}
+      <div className="lg:hidden">
+        {isLoading && (
+          <div className="fixed inset-0 z-[60] bg-[#050505] flex items-center justify-center">
+            <Loader2 className="animate-spin text-blue-500" size={36} />
+          </div>
+        )}
+        {isError && !isLoading && (
+          <div className="fixed inset-0 z-[60] bg-[#050505] flex flex-col items-center justify-center gap-4 px-6 text-center">
+            <p className="text-gray-500 text-sm">
+              Hujjat topilmadi yoki ruxsat yo&apos;q.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard/warehouse-intake')}
+              className="px-5 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm"
+            >
+              Ro&apos;yxatga qaytish
+            </button>
+          </div>
+        )}
+        {intake && (
+          <IntakeMobileSession
+            intake={intake}
+            onUpdated={() => void refetch()}
+          />
+        )}
+      </div>
     </ModuleGate>
   );
 }

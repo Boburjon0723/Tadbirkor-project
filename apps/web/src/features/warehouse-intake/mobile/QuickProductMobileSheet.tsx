@@ -3,6 +3,12 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  allowsDecimalStock,
+  PRODUCT_UNIT_LABELS,
+  PRODUCT_UNIT_OPTIONS,
+  type ProductUnitCode,
+} from '@/lib/product-units';
 
 type Props = {
   open: boolean;
@@ -30,12 +36,14 @@ export function QuickProductMobileSheet({
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState(defaultQty);
   const [salePrice, setSalePrice] = useState('');
+  const [unit, setUnit] = useState<ProductUnitCode>('dona');
 
   useEffect(() => {
     if (!open) return;
     setName('');
     setQuantity(defaultQty);
     setSalePrice('');
+    setUnit('dona');
   }, [open, barcode, defaultQty]);
 
   return (
@@ -58,7 +66,7 @@ export function QuickProductMobileSheet({
                 name: name.trim(),
                 quantity,
                 salePrice: salePrice ? Number(salePrice) : undefined,
-                unit: 'dona',
+                unit,
               });
             }}
             className="relative w-full intake-glass rounded-t-[24px] p-6 pb-10 max-h-[90dvh] overflow-y-auto"
@@ -98,14 +106,36 @@ export function QuickProductMobileSheet({
                   placeholder="Mahsulot nomi"
                 />
               </div>
+              <div>
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#bbcabf]">
+                  Birlik
+                </label>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {PRODUCT_UNIT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setUnit(opt.value)}
+                      className={`h-11 rounded-xl text-xs font-bold border transition-colors ${
+                        unit === opt.value
+                          ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                          : 'bg-[#1a211d] border-white/10 text-[#bbcabf]'
+                      }`}
+                    >
+                      {PRODUCT_UNIT_LABELS[opt.value]}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-[#bbcabf]">
-                    Miqdor
+                    Miqdor ({PRODUCT_UNIT_LABELS[unit]})
                   </label>
                   <input
                     type="number"
-                    min={0.0001}
+                    min={allowsDecimalStock(unit) ? 0.0001 : 1}
+                    step={allowsDecimalStock(unit) ? 'any' : 1}
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
                     className="mt-1 w-full h-12 bg-[#1a211d] border border-white/10 rounded-xl px-3 text-center font-bold"

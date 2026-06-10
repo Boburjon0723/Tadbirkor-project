@@ -51,3 +51,57 @@ export function canManageWarehouses(role: SessionRole | string | undefined): boo
   const r = String(role || '').toLowerCase();
   return r === 'owner' || r === 'manager';
 }
+
+/** Mobil kirim: boshqaruv (egasi/menejer) yoki operatsion (omborchi) */
+export type IntakeMobileView = 'management' | 'operator';
+
+export type IntakeMobileCapabilities = {
+  view: IntakeMobileView;
+  showStats: boolean;
+  showWarehouseFilter: boolean;
+  showSettingsLink: boolean;
+  showHistoryLink: boolean;
+  showSearch: boolean;
+  showPartnerOnCreate: boolean;
+  showNakladnoyOnList: boolean;
+  roleLabel: string;
+};
+
+export function getIntakeMobileCapabilities(
+  role: SessionRole | string | undefined,
+): IntakeMobileCapabilities {
+  const r = String(role || '').toLowerCase();
+  if (r === 'owner' || r === 'manager') {
+    return {
+      view: 'management',
+      showStats: true,
+      showWarehouseFilter: true,
+      showSettingsLink: true,
+      showHistoryLink: true,
+      showSearch: true,
+      showPartnerOnCreate: true,
+      showNakladnoyOnList: true,
+      roleLabel: r === 'owner' ? 'Egasi' : 'Menejer',
+    };
+  }
+  return {
+    view: 'operator',
+    showStats: false,
+    showWarehouseFilter: false,
+    showSettingsLink: false,
+    showHistoryLink: false,
+    showSearch: true,
+    showPartnerOnCreate: false,
+    showNakladnoyOnList: false,
+    roleLabel: 'Omborchi',
+  };
+}
+
+/** Omborchi yaratishda ombor tanlovini qulflash */
+export function shouldLockIntakeWarehouseOnCreate(
+  role: SessionRole | string | undefined,
+  warehouseCount: number,
+): boolean {
+  if (warehouseCount <= 1) return true;
+  return String(role || '').toLowerCase() === 'warehouse';
+}

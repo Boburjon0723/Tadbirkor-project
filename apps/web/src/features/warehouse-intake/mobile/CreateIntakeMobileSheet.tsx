@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, Loader2, Lock, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { WarehouseIntake } from '@/services/warehouse-intake.service';
+import { partnerLedgerService } from '@/services/partner-ledger.service';
 
 type Props = {
   open: boolean;
@@ -11,6 +12,7 @@ type Props = {
   warehouses: { id: string; name: string }[];
   defaultWarehouseId?: string;
   lockWarehouse?: boolean;
+  showPartnerPicker?: boolean;
   onSubmit: (dto: {
     warehouseId: string;
     note?: string;
@@ -25,22 +27,50 @@ export function CreateIntakeMobileSheet({
   warehouses,
   defaultWarehouseId,
   lockWarehouse = false,
+  showPartnerPicker = false,
   onSubmit,
   loading,
 }: Props) {
   const [warehouseId, setWarehouseId] = useState('');
   const [note, setNote] = useState('');
+  const [partnerId, setPartnerId] = useState('');
+  const [contacts, setContacts] = useState<{ id: string; name: string }[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setWarehouseId(defaultWarehouseId || warehouses[0]?.id || '');
     setNote('');
+    setPartnerId('');
   }, [open, defaultWarehouseId, warehouses]);
+
+  useEffect(() => {
+    if (!open || !showPartnerPicker) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        setContactsLoading(true);
+        const rows = await partnerLedgerService.listContactsForSelect();
+        if (!cancelled) setContacts(rows || []);
+      } catch {
+        if (!cancelled) setContacts([]);
+      } finally {
+        if (!cancelled) setContactsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, showPartnerPicker]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!warehouseId) return;
-    await onSubmit({ warehouseId, note: note.trim() || undefined });
+    await onSubmit({
+      warehouseId,
+      note: note.trim() || undefined,
+      partnerLedgerContactId: partnerId || undefined,
+    });
   };
 
   return (
@@ -105,6 +135,29 @@ export function CreateIntakeMobileSheet({
                   )}
                 </div>
               </div>
+
+              {showPartnerPicker && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#bbcabf] px-1">
+                    Hamkor (ixtiyoriy)
+                  </label>
+                  <select
+                    value={partnerId}
+                    onChange={(e) => setPartnerId(e.target.value)}
+                    disabled={contactsLoading}
+                    className="w-full h-14 bg-[#2f3632]/50 border border-white/10 rounded-xl px-4 text-base font-semibold text-[#dde4dd] appearance-none disabled:opacity-60"
+                  >
+                    <option value="" className="bg-[#1a211d]">
+                      Tanlanmagan
+                    </option>
+                    {contacts.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-[#1a211d]">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#bbcabf] px-1">

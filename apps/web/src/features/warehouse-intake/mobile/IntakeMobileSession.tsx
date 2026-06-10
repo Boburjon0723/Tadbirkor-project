@@ -29,6 +29,7 @@ import {
 import { QuickProductMobileSheet } from '@/features/warehouse-intake/mobile/QuickProductMobileSheet';
 import { IntakeConfirmMobileSheet } from '@/features/warehouse-intake/mobile/IntakeConfirmMobileSheet';
 import { IntakeSuccessMobile } from '@/features/warehouse-intake/mobile/IntakeSuccessMobile';
+import { IntakeNakladnoyButton } from '@/features/warehouse-intake/IntakeNakladnoyButton';
 
 type ScanChip = { ok: boolean; text: string };
 
@@ -297,9 +298,14 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
           <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#bbcabf] mb-1">
             Qabul qilingan tovarlar
           </div>
-          {!intake.lines.length && (
+          {!intake.lines.length && isDraft && (
             <p className="text-center text-[#86948a] py-10 text-sm">
-              Skanerlang yoki kompyuterda qo&apos;shing
+              Barcode skaner qiling yoki qo&apos;lda kiriting
+            </p>
+          )}
+          {!intake.lines.length && !isDraft && (
+            <p className="text-center text-[#86948a] py-10 text-sm">
+              Ushbu hujjatda mahsulot qatori yo&apos;q
             </p>
           )}
           {intake.lines.map((line) => {
@@ -353,6 +359,12 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
           })}
         </section>
       </main>
+
+      {!isDraft && intake.status === 'COMPLETED' && (
+        <footer className="flex-shrink-0 px-5 py-4 border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl pb-safe">
+          <IntakeNakladnoyButton intakeId={intake.id} reference={intake.reference} />
+        </footer>
+      )}
 
       {isDraft && (
         <footer className="flex-shrink-0 h-[72px] px-5 flex items-center justify-between border-t border-white/15 bg-[#0e1511]/95 backdrop-blur-xl pb-safe">

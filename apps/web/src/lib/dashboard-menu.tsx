@@ -34,6 +34,8 @@ export type DashboardMenuItem = {
   moduleMatch?: ModuleMatchMode;
   /** Mobil pastki navigatsiyada ko‘rsatish */
   mobileNav?: boolean;
+  /** Pastki nav tartibi (kichik = chapda); maks. 4 ta */
+  mobileNavPriority?: number;
 };
 
 export type DashboardMenuGroup = {
@@ -60,6 +62,7 @@ export function buildDashboardMenuGroups(
           href: '/dashboard',
           roles: ['owner', 'manager', 'accountant', 'warehouse', 'sales'],
           mobileNav: true,
+          mobileNavPriority: 1,
         },
       ],
     },
@@ -94,6 +97,7 @@ export function buildDashboardMenuGroups(
           roles: ['owner', 'manager', 'warehouse', 'accountant', 'sales'],
           moduleKeys: ['WAREHOUSE_BASIC'],
           mobileNav: true,
+          mobileNavPriority: 3,
         },
         {
           icon: <I.PackagePlus size={s} />,
@@ -102,6 +106,7 @@ export function buildDashboardMenuGroups(
           roles: ['owner', 'manager', 'warehouse'],
           moduleKeys: ['WAREHOUSE_INTAKE'],
           mobileNav: true,
+          mobileNavPriority: 2,
         },
         {
           icon: <I.Settings size={s} />,
@@ -173,6 +178,7 @@ export function buildDashboardMenuGroups(
           roles: ['owner', 'manager', 'sales'],
           moduleKeys: ['B2B'],
           mobileNav: true,
+          mobileNavPriority: 5,
         },
         {
           icon: <I.Truck size={s} />,
@@ -301,6 +307,7 @@ export function buildDashboardMenuGroups(
           href: '#support',
           roles: ['owner', 'manager', 'accountant', 'warehouse', 'sales'],
           mobileNav: true,
+          mobileNavPriority: 4,
         },
       ],
     },
