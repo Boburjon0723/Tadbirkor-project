@@ -49,10 +49,13 @@ export function usePosActions() {
   const queryClient = useQueryClient();
 
   const refreshPosAfterSale = () => {
-    void queryClient.invalidateQueries({ queryKey: ['pos-summary'] });
-    void queryClient.invalidateQueries({ queryKey: posCustomerPickerKey });
-    void queryClient.invalidateQueries({ queryKey: ['pos-catalog'] });
-    void queryClient.invalidateQueries({ queryKey: ['pos-sales'] });
+    // Optimistic catalog update is enough for instant UI; refetch in background.
+    window.setTimeout(() => {
+      void queryClient.invalidateQueries({ queryKey: ['pos-summary'] });
+      void queryClient.invalidateQueries({ queryKey: posCustomerPickerKey });
+      void queryClient.invalidateQueries({ queryKey: ['pos-catalog'] });
+      void queryClient.invalidateQueries({ queryKey: ['pos-sales'] });
+    }, 0);
   };
 
   const createSaleMutation = useMutation({

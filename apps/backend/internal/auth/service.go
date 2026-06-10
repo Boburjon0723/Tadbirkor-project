@@ -312,7 +312,7 @@ func (s *Service) signToken(userID, companyID, role string) (string, error) {
 		"sub":       userID,
 		"companyId": companyID,
 		"role":      role,
-		"exp":       time.Now().Add(24 * time.Hour).Unix(),
+		"exp":       time.Now().Add(7 * 24 * time.Hour).Unix(),
 		"iat":       time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

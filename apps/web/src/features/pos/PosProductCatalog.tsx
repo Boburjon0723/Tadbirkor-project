@@ -71,6 +71,7 @@ type Props = {
   onBack: () => void;
   onLogout?: () => void;
   onAddToCart: (variant: PosCatalogVariant) => void;
+  salesFrozen?: boolean;
   theme: 'dark' | 'light';
   onThemeToggle: () => void;
   onScanClick?: () => void;
@@ -106,6 +107,7 @@ export function PosProductCatalog({
   onBack,
   onLogout,
   onAddToCart,
+  salesFrozen = false,
   theme,
   onThemeToggle,
   onScanClick,
@@ -212,8 +214,9 @@ export function PosProductCatalog({
 
             <button
               type="button"
-              onClick={onScanClick}
-              className={`${mobileIconBtn} text-[var(--pos-accent)]`}
+              disabled={salesFrozen}
+              onClick={salesFrozen ? undefined : onScanClick}
+              className={`${mobileIconBtn} text-[var(--pos-accent)] disabled:opacity-40`}
               aria-label="Skaner"
             >
               <ScanLine size={18} className="block shrink-0" />
@@ -506,7 +509,7 @@ export function PosProductCatalog({
                   ? 'Tugagan'
                   : stockText || null;
                 const tryAdd = () => {
-                  if (outOfStock) return;
+                  if (salesFrozen || outOfStock) return;
                   onAddToCart(variant);
                 };
 

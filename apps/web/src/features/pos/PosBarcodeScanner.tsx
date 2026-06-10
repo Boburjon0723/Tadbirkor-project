@@ -121,6 +121,7 @@ function PosBarcodeScannerView({
         onScan={(code) => void scan.handleScan(code)}
         busy={scan.isLoading}
         title="POS kamera skaner"
+        scanLog={scan.scanLog}
       />
     </>
   );

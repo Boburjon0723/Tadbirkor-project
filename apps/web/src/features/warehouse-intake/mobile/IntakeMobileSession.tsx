@@ -80,6 +80,13 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
     setChips((prev) => [chip, ...prev].slice(0, 3));
   };
 
+  const openQuickProductSheet = useCallback((code: string) => {
+    setCameraOpen(false);
+    setQuickBarcode(code);
+    setQuickOpen(true);
+    setBarcode('');
+  }, []);
+
   const handleScan = async (code?: string) => {
     const value = (code ?? barcode).trim();
     if (!value || !isDraft) return;
@@ -107,17 +114,18 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
       const msg = formatApiError(err, 'Skaner xatosi');
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 404 && settings?.allowQuickProduct) {
-        setQuickBarcode(value);
-        setQuickOpen(true);
-        setBarcode('');
+        openQuickProductSheet(value);
         pushChip({ ok: false, text: "Katalogda yo'q" });
         toast.info('Mahsulot katalogda yo‘q — tez qo‘shish oynasi ochildi');
+        return;
       } else if (status === 404) {
+        setCameraOpen(false);
         pushChip({ ok: false, text: "Katalogda yo'q" });
         toast.error(
           `«${value}» katalogda topilmadi. Mahsulot «Ombor» bo‘limida barcode bilan ro‘yxatdan o‘tgan bo‘lishi kerak (ombor qoldig‘i 0 bo‘lsa ham kirim qilish mumkin).`,
         );
       } else {
+        setCameraOpen(false);
         pushChip({ ok: false, text: msg.slice(0, 28) });
         toast.error(msg);
       }
@@ -423,7 +431,10 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
         onSubmit={async (dto) => {
           await quickProduct.mutateAsync(dto);
           setQuickOpen(false);
+          setCameraOpen(false);
+          onUpdated();
           pushChip({ ok: true, text: `${dto.name} qo‘shildi` });
+          toast.success(`${dto.name} qo‘shildi`);
           focusInput();
         }}
       />

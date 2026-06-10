@@ -1,8 +1,36 @@
 import { SaleCurrency, saleCurrencySuffix } from '@/lib/currency';
 import { formatStockQuantity } from '@/lib/product-units';
 import type { ReceiptData } from './PosReceiptPrintModal';
+import type { PosReceiptSettings } from '@/components/settings/SettingsPosReceiptSection';
 
 export type PosReceiptFormat = 'thermal' | 'a4';
+
+const PRINTER_READY_KEY = 'axis_pos_printer_ready';
+
+/** Sozlamalarda termal/A4 tanlangan — printer ulangan deb hisoblanadi */
+export function markPosPrinterReady(): void {
+  try {
+    localStorage.setItem(PRINTER_READY_KEY, '1');
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isPosPrinterReady(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(PRINTER_READY_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Chek avtomatik chop etilishi kerakmi (printer yo'q / cheksiz rejimda — yo'q) */
+export function shouldAutoPrintReceipt(settings: PosReceiptSettings): boolean {
+  if (settings.receiptFormat === 'none') return false;
+  if (!settings.autoPrint) return false;
+  return isPosPrinterReady();
+}
 
 export function buildPosReceiptHtml(
   data: ReceiptData,
@@ -191,7 +219,11 @@ export function buildPosReceiptHtml(
   `;
 }
 
-/** Brauzer print dialogi — OS dagi standart/termal printerni ishlatadi */
+/**
+ * Yashirin iframe orqali chop etish.
+ * Kiosk / Android termal ilovalarida dialog chiqmasdan ishlaydi;
+ * oddiy brauzerda OS printeri bo'lsa ham dialog chiqishi mumkin.
+ */
 export function printPosReceipt(
   data: ReceiptData,
   format: PosReceiptFormat,
@@ -199,17 +231,15 @@ export function printPosReceipt(
 ): Promise<void> {
   return new Promise((resolve) => {
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.cssText =
+      'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none';
     document.body.appendChild(iframe);
 
     const html = buildPosReceiptHtml(data, format, formatMoney);
-    const doc = iframe.contentWindow?.document;
-    if (!doc) {
+    const win = iframe.contentWindow;
+    const doc = win?.document;
+    if (!doc || !win) {
       document.body.removeChild(iframe);
       resolve();
       return;
@@ -219,13 +249,26 @@ export function printPosReceipt(
     doc.write(html);
     doc.close();
 
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        resolve();
-      }, 800);
-    }, 400);
+    const cleanup = () => {
+      if (iframe.parentNode) document.body.removeChild(iframe);
+      resolve();
+    };
+
+    const doPrint = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch {
+        /* printer yo'q */
+      }
+      setTimeout(cleanup, 600);
+    };
+
+    if (doc.readyState === 'complete') {
+      setTimeout(doPrint, 150);
+    } else {
+      iframe.onload = () => setTimeout(doPrint, 150);
+      setTimeout(doPrint, 800);
+    }
   });
 }

@@ -187,6 +187,13 @@ func (s *Service) generateSaleNumber(ctx context.Context, tx pgx.Tx, companyID s
 	if err := tx.QueryRow(ctx, `SELECT to_char(NOW() AT TIME ZONE 'UTC', 'YYYYMMDD')`).Scan(&dateStr); err != nil {
 		return "", err
 	}
+	var lockKey int64
+	if err := tx.QueryRow(ctx, `SELECT hashtextextended($1, 0)`, companyID+"|pos|"+dateStr).Scan(&lockKey); err != nil {
+		return "", err
+	}
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, lockKey); err != nil {
+		return "", err
+	}
 	var count int
 	err := tx.QueryRow(ctx, `
 		SELECT COUNT(*)::int FROM "PosSale"

@@ -2,7 +2,14 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, Loader2, X, Zap } from 'lucide-react';
+import { Camera, CheckCircle2, Loader2, X, XCircle, Zap } from 'lucide-react';
+
+export type ScannerLogEntry = {
+  id: string;
+  ok: boolean;
+  title: string;
+  detail?: string;
+};
 import type { IScannerControls } from '@zxing/browser';
 
 type Props = {
@@ -11,6 +18,8 @@ type Props = {
   onScan: (code: string) => void;
   busy?: boolean;
   title?: string;
+  /** POS: oxirgi skaner natijalari (pastda ko‘rsatiladi) */
+  scanLog?: ScannerLogEntry[];
 };
 
 async function pickBackCameraId(): Promise<string | undefined> {
@@ -29,6 +38,7 @@ export function MobileCameraBarcodeScanner({
   onScan,
   busy = false,
   title = 'Kamera skaner',
+  scanLog = [],
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
@@ -166,11 +176,43 @@ export function MobileCameraBarcodeScanner({
             )}
           </div>
 
-          <footer className="shrink-0 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-black/90 border-t border-white/10">
-            <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5">
-              <Zap size={14} className="text-cyan-400" />
-              Barcodeni ramka ichiga tuting — avtomatik qo‘shiladi
-            </p>
+          <footer className="shrink-0 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-black/90 border-t border-white/10 space-y-2 max-h-[40vh]">
+            {scanLog.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 px-1">
+                  Skaner qilingan
+                </p>
+                <ul className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                  {scanLog.map((entry) => (
+                    <li
+                      key={entry.id}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs ${
+                        entry.ok
+                          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-100'
+                          : 'bg-red-500/10 border-red-500/25 text-red-100'
+                      }`}
+                    >
+                      {entry.ok ? (
+                        <CheckCircle2 size={14} className="shrink-0 text-emerald-400" />
+                      ) : (
+                        <XCircle size={14} className="shrink-0 text-red-400" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold truncate">{entry.title}</p>
+                        {entry.detail ? (
+                          <p className="text-[10px] opacity-80 truncate">{entry.detail}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-center text-xs text-gray-400 flex items-center justify-center gap-1.5 py-1">
+                <Zap size={14} className="text-cyan-400 shrink-0" />
+                Barcodeni ramka ichiga tuting — avtomatik qo‘shiladi
+              </p>
+            )}
           </footer>
         </motion.div>
       )}

@@ -312,7 +312,7 @@ export function PosCartSidebar({
                 {paymentInFlight && (
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
                     <Loader2 size={14} className="animate-spin shrink-0" />
-                    To&apos;lov yuborilmoqda — savat saqlanmoqda...
+                    Savdo yakunlanmoqda — kuting...
                   </div>
                 )}
                 <div className="space-y-2 md:space-y-3">

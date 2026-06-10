@@ -30,11 +30,8 @@ import { PosBarcodeScanner } from '@/features/pos/PosBarcodeScanner';
 import { usePosMultiCart } from '@/features/pos/usePosMultiCart';
 import { posCartStorageKey } from '@/features/pos/pos-cart-persist';
 import type { PosCartItem } from '@/features/pos/types';
-import {
-  PosReceiptPrintModal,
-  type ReceiptData,
-} from '@/features/pos/PosReceiptPrintModal';
 import type { PosReceiptSettings } from '@/components/settings/SettingsPosReceiptSection';
+import { markPosPrinterReady } from '@/features/pos/pos-receipt-print.util';
 import { getPosCustomerLabel, hasPosCustomer } from '@/features/pos/pos-customer.util';
 import { usePosCheckout } from '@/features/pos/usePosCheckout';
 import {
@@ -66,7 +63,6 @@ export default function POSPage() {
   const [quantityModalVariant, setQuantityModalVariant] =
     useState<PosQuantityModalVariant | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
-  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<
     'cash' | 'card' | 'credit'
   >('cash');
@@ -164,10 +160,12 @@ export default function POSPage() {
             setPosMaxDiscountPercent(data.posMaxDiscountPercent);
           }
           if (data?.receiptSettings) {
-            setPosReceiptSettings({
+            const receiptSettings: PosReceiptSettings = {
               autoPrint: !!data.receiptSettings.autoPrint,
               receiptFormat: data.receiptSettings.receiptFormat || 'thermal',
-            });
+            };
+            setPosReceiptSettings(receiptSettings);
+            if (receiptSettings.receiptFormat !== 'none') markPosPrinterReady();
           }
         } catch {
           if (alive) {
@@ -242,13 +240,12 @@ export default function POSPage() {
     formatMoney,
     quickCheckout: (dto) => quickCheckout.mutateAsync(dto),
     onClearActiveCart: clearCart,
-    onPaymentStart: () => setIsCheckoutModalOpen(false),
     onPaymentSuccess: () => {
+      setIsCheckoutModalOpen(false);
       setCashReceivedInput('');
       setPaymentMethod('cash');
     },
     onPaymentFailed: () => setIsCheckoutModalOpen(true),
-    onReceiptModal: setReceiptData,
   });
 
   const handleConfirmPayment = () => {
@@ -267,6 +264,7 @@ export default function POSPage() {
 
   const handleAddVariantToCart = useCallback(
     (v: PosQuantityModalVariant, opts?: { silent?: boolean }) => {
+      if (paymentInFlight) return;
       if (v.stockQuantity !== undefined && v.stockQuantity <= 0) {
         if (!opts?.silent) {
           playPosScanSound('error');
@@ -467,6 +465,7 @@ export default function POSPage() {
         onCustomerChange={setCustomer}
         onConfirm={handleConfirmPayment}
         onOpenCustomerPicker={openCustomerSheet}
+        processing={paymentInFlight}
       />
 
       <PosPriceEditModal
@@ -495,12 +494,6 @@ export default function POSPage() {
         onClose={() => setCustomerSheetOpen(false)}
       />
 
-      <PosReceiptPrintModal
-        open={!!receiptData}
-        data={receiptData}
-        onClose={() => setReceiptData(null)}
-        formatMoney={formatMoney}
-      />
     </div>
   );
 }

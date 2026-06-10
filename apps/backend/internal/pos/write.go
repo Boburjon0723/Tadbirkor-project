@@ -387,7 +387,41 @@ func (s *Service) QuickCheckout(ctx context.Context, companyID, userID string, i
 		return nil, err
 	}
 	s.invalidateCatalog(ctx, companyID, in.WarehouseID)
-	return s.fetchSaleDetail(ctx, saleID, companyID)
+	return quickCheckoutResponse(
+		saleID, saleNumber, in.WarehouseID, currency, method,
+		subtotal, discount, total, cashReceived, change,
+		customer.RetailCustomerID, customer.CustomerNameSnapshot, customer.CustomerPhoneSnapshot,
+	), nil
+}
+
+func quickCheckoutResponse(
+	saleID, saleNumber, warehouseID, currency, method string,
+	subtotal, discount, total, cashReceived, change float64,
+	retailID *string, custName, custPhone *string,
+) map[string]any {
+	now := time.Now()
+	out := map[string]any{
+		"id":                      saleID,
+		"saleNumber":              saleNumber,
+		"receiptNumber":           saleNumber,
+		"status":                  "COMPLETED",
+		"subtotal":                subtotal,
+		"discountAmount":          discount,
+		"totalAmount":             total,
+		"currency":                currency,
+		"warehouseId":             warehouseID,
+		"completedAt":             now,
+		"createdAt":               now,
+		"retailCustomerId":          retailID,
+		"customerNameSnapshot":    custName,
+		"customerPhoneSnapshot":   custPhone,
+		"payments":                []map[string]any{{"method": method, "amount": total}},
+	}
+	if method == "CASH" {
+		out["cashReceived"] = cashReceived
+		out["cashChange"] = change
+	}
+	return out
 }
 
 func stockLines(warehouseID, saleID, saleNumber string, resolved []resolvedItem) []stock.Line {

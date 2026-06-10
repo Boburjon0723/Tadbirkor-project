@@ -21,6 +21,13 @@ export type PosScanVariantInput = {
 
 type ScannerStatus = 'idle' | 'loading' | 'notfound' | 'added';
 
+export type PosScanLogEntry = {
+  id: string;
+  ok: boolean;
+  title: string;
+  detail?: string;
+};
+
 type Options = {
   warehouseId: string | null;
   onAddItem: (variant: PosScanVariantInput) => void;
@@ -35,8 +42,17 @@ export function usePosBarcodeScan({
   const [status, setStatus] = useState<ScannerStatus>('idle');
   const [statusHint, setStatusHint] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [scanLog, setScanLog] = useState<PosScanLogEntry[]>([]);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastReadyWarehouseRef = useRef<string | null>(null);
+  const scanLogIdRef = useRef(0);
+
+  const pushScanLog = useCallback((entry: Omit<PosScanLogEntry, 'id'>) => {
+    scanLogIdRef.current += 1;
+    setScanLog((prev) =>
+      [{ ...entry, id: String(scanLogIdRef.current) }, ...prev].slice(0, 8),
+    );
+  }, []);
 
   const clearHintTimer = useCallback(() => {
     if (hintTimerRef.current) {
@@ -88,6 +104,7 @@ export function usePosBarcodeScan({
         const item = results[0];
         if (!item) {
           playPosScanSound('error');
+          pushScanLog({ ok: false, title: 'Topilmadi', detail: barcode });
           flashStatus('notfound', 'Topilmadi', 2000);
           toast.warning(`Barkod topilmadi: ${barcode}`);
           return;
@@ -100,6 +117,7 @@ export function usePosBarcodeScan({
 
         if (item.stock === 0) {
           playPosScanSound('error');
+          pushScanLog({ ok: false, title: displayName, detail: "Qoldiq yo'q" });
           flashStatus('notfound', "Qoldiq yo'q", 2000);
           toast.warning(`${displayName} — omborda qoldiq yo'q`);
           return;
@@ -118,6 +136,8 @@ export function usePosBarcodeScan({
 
         if (needsQuantityModal) {
           playPosScanSound('ready');
+          pushScanLog({ ok: true, title: displayName, detail: 'Miqdor kiritish' });
+          setCameraOpen(false);
           flashStatus('added', `${displayName} — miqdor`, 2500);
           toast.info(`${displayName} — miqdorni kiriting`, { duration: 2800 });
           return;
@@ -125,6 +145,7 @@ export function usePosBarcodeScan({
 
         playPosScanSound('success');
         const hint = `+${qtyLabel}`;
+        pushScanLog({ ok: true, title: displayName, detail: hint });
         flashStatus('added', hint, 2200);
         toast.success(`${hint} · ${displayName}`, { duration: 2200 });
       } catch (err: unknown) {
@@ -134,13 +155,14 @@ export function usePosBarcodeScan({
         toast.error(formatApiError(err, 'Aloqa xatosi, qayta skanlang'));
       }
     },
-    [warehouseId, onAddItem, clearHintTimer, flashStatus],
+    [warehouseId, onAddItem, clearHintTimer, flashStatus, pushScanLog],
   );
 
   useBarcodeScanner(handleScan, !disabled && !!warehouseId);
 
   const openCamera = useCallback(() => {
     playPosScanSound('ready');
+    setScanLog([]);
     setCameraOpen(true);
   }, []);
 
@@ -154,5 +176,6 @@ export function usePosBarcodeScan({
     closeCamera,
     handleScan,
     isLoading: status === 'loading',
+    scanLog,
   };
 }

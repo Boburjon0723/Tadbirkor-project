@@ -7,7 +7,7 @@ import type { PosReceiptSettings } from '@/components/settings/SettingsPosReceip
 import type { PosCartItem } from './types';
 import type { PosCustomerSelection } from './PosCustomerStrip';
 import type { ReceiptData } from './PosReceiptPrintModal';
-import { printPosReceipt } from './pos-receipt-print.util';
+import { printPosReceipt, shouldAutoPrintReceipt } from './pos-receipt-print.util';
 import { hasPosCustomer } from './pos-customer.util';
 import type { PosPaymentMethod } from './PosCheckoutModal';
 
@@ -47,10 +47,8 @@ type Args = {
   formatMoney: (v: number, currency?: SaleCurrency) => string;
   quickCheckout: (input: QuickCheckoutInput) => Promise<QuickCheckoutResult>;
   onClearActiveCart: () => void;
-  onPaymentStart: () => void;
   onPaymentSuccess: () => void;
   onPaymentFailed: () => void;
-  onReceiptModal: (receipt: ReceiptData) => void;
 };
 
 export function usePosCheckout({
@@ -68,10 +66,8 @@ export function usePosCheckout({
   formatMoney,
   quickCheckout,
   onClearActiveCart,
-  onPaymentStart,
   onPaymentSuccess,
   onPaymentFailed,
-  onReceiptModal,
 }: Args) {
   const [paymentInFlight, setPaymentInFlight] = useState(false);
   const inFlightRef = useRef(false);
@@ -133,7 +129,6 @@ export function usePosCheckout({
 
     inFlightRef.current = true;
     setPaymentInFlight(true);
-    onPaymentStart();
 
     void quickCheckout({
       warehouseId: selectedWarehouseId,
@@ -145,10 +140,10 @@ export function usePosCheckout({
       ...(cashVal !== undefined ? { cashReceived: cashVal } : {}),
     })
       .then((saleResult) => {
-        inFlightRef.current = false;
-        setPaymentInFlight(false);
         onClearActiveCart();
         onPaymentSuccess();
+        inFlightRef.current = false;
+        setPaymentInFlight(false);
 
         const receipt: ReceiptData = {
           receiptNumber:
@@ -171,22 +166,17 @@ export function usePosCheckout({
               : 0,
         };
 
-        const { autoPrint, receiptFormat } = receiptSettingsRef.current;
+        const settings = receiptSettingsRef.current;
 
-        if (receiptFormat === 'none') {
+        if (!shouldAutoPrintReceipt(settings)) {
           toast.success("To'lov muvaffaqiyatli yakunlandi");
           return;
         }
 
-        if (autoPrint) {
-          void printPosReceipt(receipt, receiptFormat, formatMoney).then(() => {
-            toast.success("To'lov muvaffaqiyatli — chek chop etildi");
-          });
-          return;
-        }
-
-        onReceiptModal(receipt);
-        toast.success("To'lov muvaffaqiyatli yakunlandi");
+        const format = settings.receiptFormat === 'a4' ? 'a4' : 'thermal';
+        void printPosReceipt(receipt, format, formatMoney).then(() => {
+          toast.success("To'lov muvaffaqiyatli yakunlandi");
+        });
       })
       .catch((err: unknown) => {
         console.error(err);
@@ -213,9 +203,7 @@ export function usePosCheckout({
     formatMoney,
     onClearActiveCart,
     onPaymentFailed,
-    onPaymentStart,
     onPaymentSuccess,
-    onReceiptModal,
     paymentMethod,
     quickCheckout,
     selectedWarehouseId,

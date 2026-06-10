@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthToken } from './auth-token';
+import { clearAuthToken, getAuthToken } from './auth-token';
 
 const DEFAULT_PROD_API_URL = 'https://tadbirkor-backend-production.up.railway.app/api';
 const DEFAULT_PROD_SOCKET_ORIGIN = DEFAULT_PROD_API_URL.replace(/\/api\/?$/, '');
@@ -87,13 +87,9 @@ api.interceptors.response.use(
         error.config?.url?.includes('/support/context');
 
       if (!isAuthRequest && typeof window !== 'undefined') {
+        clearAuthToken();
         localStorage.removeItem('user');
         localStorage.removeItem('company');
-        try {
-          sessionStorage.removeItem('axis_access_token');
-        } catch {
-          /* ignore */
-        }
         window.location.href = '/';
       }
     }

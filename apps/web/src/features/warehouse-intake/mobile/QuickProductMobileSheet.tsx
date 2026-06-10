@@ -49,7 +49,7 @@ export function QuickProductMobileSheet({
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center">
+        <div className="fixed inset-0 z-[210] flex items-end justify-center">
           <motion.div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}

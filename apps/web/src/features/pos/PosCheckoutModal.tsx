@@ -7,6 +7,7 @@ import {
   Banknote,
   CheckCircle2,
   CreditCard,
+  Loader2,
   User,
   X,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ type Props = {
   onCustomerChange: (v: PosCustomerSelection) => void;
   onConfirm: () => void;
   onOpenCustomerPicker?: () => void;
+  processing?: boolean;
 };
 
 export function PosCheckoutModal({
@@ -53,6 +55,7 @@ export function PosCheckoutModal({
   onCustomerChange,
   onConfirm,
   onOpenCustomerPicker,
+  processing = false,
 }: Props) {
   const received = Number(cashReceivedInput) || 0;
   const change =
@@ -62,7 +65,7 @@ export function PosCheckoutModal({
   const cashOk =
     paymentMethod !== 'cash' || received >= totalAmount;
   const creditBlocked = paymentMethod === 'credit' && !creditCustomerOk;
-  const disabled = !cashOk || creditBlocked;
+  const disabled = !cashOk || creditBlocked || processing;
 
   const customerLabel = getPosCustomerLabel(customer) || null;
 
@@ -140,7 +143,7 @@ export function PosCheckoutModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
+            onClick={processing ? undefined : onClose}
             className="absolute inset-0 bg-black/80 backdrop-blur-xl"
           />
           <motion.div
@@ -162,8 +165,9 @@ export function PosCheckoutModal({
                 </div>
                 <button
                   type="button"
+                  disabled={processing}
                   onClick={onClose}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-slate-800/50 flex items-center justify-center text-gray-500 hover:text-white transition-all shrink-0"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-slate-800/50 flex items-center justify-center text-gray-500 hover:text-white transition-all shrink-0 disabled:opacity-40"
                 >
                   <X size={20} className="md:w-6 md:h-6" />
                 </button>
@@ -344,8 +348,17 @@ export function PosCheckoutModal({
                 onClick={onConfirm}
                 className="w-full py-4 md:py-5 bg-[var(--pos-accent)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black rounded-xl md:rounded-2xl shadow-xl shadow-cyan-900/20 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
               >
-                <CheckCircle2 className="md:w-6 md:h-6" size={20} />
-                <span className="text-sm md:text-base">TASDIQLASH</span>
+                {processing ? (
+                  <>
+                    <Loader2 className="md:w-6 md:h-6 animate-spin" size={20} />
+                    <span className="text-sm md:text-base">SAVDO YAKUNLANMOQDA...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="md:w-6 md:h-6" size={20} />
+                    <span className="text-sm md:text-base">TASDIQLASH</span>
+                  </>
+                )}
               </button>
             </div>
           </motion.div>

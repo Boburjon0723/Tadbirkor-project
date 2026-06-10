@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Loader2, Printer, Save } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast, formatApiError } from '@/lib/toast';
+import { markPosPrinterReady } from '@/features/pos/pos-receipt-print.util';
 
 export type PosReceiptSettings = {
   autoPrint: boolean;
@@ -30,7 +31,9 @@ export function SettingsPosReceiptSection({ canWrite = true }: Props) {
       try {
         const { data } = await api.get('/companies/pos-receipt-settings');
         if (!cancelled) {
-          setSettings({ ...DEFAULTS, ...data?.settings });
+          const merged = { ...DEFAULTS, ...data?.settings };
+          setSettings(merged);
+          if (merged.receiptFormat !== 'none') markPosPrinterReady();
         }
       } catch {
         if (!cancelled) setSettings(DEFAULTS);
@@ -47,7 +50,9 @@ export function SettingsPosReceiptSection({ canWrite = true }: Props) {
     setSaving(true);
     try {
       const { data } = await api.patch('/companies/pos-receipt-settings', settings);
-      setSettings({ ...DEFAULTS, ...data?.settings });
+      const merged = { ...DEFAULTS, ...data?.settings };
+      setSettings(merged);
+      if (merged.receiptFormat !== 'none') markPosPrinterReady();
       toast.success('Kassa chek sozlamalari saqlandi');
     } catch (err) {
       toast.error(formatApiError(err));
@@ -128,7 +133,7 @@ export function SettingsPosReceiptSection({ canWrite = true }: Props) {
               Avtomatik chop etish
             </span>
             <span className="text-xs text-gray-500">
-              Yoqilgan — modal ochilmaydi, darhol printerga yuboriladi
+              Printer ulangan bo&apos;lsa — chek avtomatik chiqadi (tanlash oynasisiz)
             </span>
           </div>
           <input
@@ -145,7 +150,7 @@ export function SettingsPosReceiptSection({ canWrite = true }: Props) {
 
       {!settings.autoPrint && settings.receiptFormat !== 'none' && (
         <p className="text-xs text-amber-400/90">
-          O‘chirilgan — har savdodan keyin format tanlash oynasi chiqadi.
+          O‘chirilgan — savdodan keyin chek chiqarilmaydi.
         </p>
       )}
 

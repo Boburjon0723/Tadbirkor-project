@@ -76,6 +76,7 @@ func recordOne(
 	err := tx.QueryRow(ctx, `
 		SELECT id, quantity FROM "StockBalance"
 		WHERE "warehouseId" = $1 AND "productVariantId" = $2
+		FOR UPDATE
 	`, line.WarehouseID, line.ProductVariantID).Scan(&balanceID, &currentQty)
 	if movementType == "OUT" {
 		if errors.Is(err, pgx.ErrNoRows) || currentQty < line.Quantity {
