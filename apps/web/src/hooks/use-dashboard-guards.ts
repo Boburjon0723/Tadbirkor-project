@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { isPathModuleAccessAllowed } from '@/lib/feature-modules';
+import { isModuleKeyEnabled, isPathModuleAccessAllowed } from '@/lib/feature-modules';
 import { computeOnboardingProgress } from '@/lib/onboarding';
 import { prefetchDashboardRoutes } from '@/lib/dashboard-prefetch';
 import {
