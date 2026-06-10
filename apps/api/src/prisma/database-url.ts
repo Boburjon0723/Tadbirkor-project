@@ -23,9 +23,10 @@ export function resolveDatabaseUrl(raw?: string): string | undefined {
       url.searchParams.set('pgbouncer', 'true');
     }
 
-    // Supabase transaction pooler odatda 25–30; 10+ foydalanuvchi uchun 15 (Railway Variables da ham qo‘yish mumkin)
+    // Bir instansiya uchun limit (Supabase free ~15–20). DATABASE_CONNECTION_LIMIT bilan o‘zgartirish mumkin.
     if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', '15');
+      const limit = process.env.DATABASE_CONNECTION_LIMIT?.trim() || '10';
+      url.searchParams.set('connection_limit', limit);
     }
 
     if (!url.searchParams.has('pool_timeout')) {

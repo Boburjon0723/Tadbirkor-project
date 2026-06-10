@@ -7,9 +7,25 @@ import { usePosCreditAccess } from '../../hooks/usePosCreditAccess';
 export default function POSCartScreen({ route, navigation }: any) {
   const posCredit = usePosCreditAccess();
   // We receive the cart and warehouse ID from POSScreen
-  const { cart: initialCart, warehouseId } = route.params || { cart: [] };
+  const { cart: initialCart, warehouseId, customer: initialCustomer } = route.params || { cart: [] };
   
   const [cart, setCart] = useState<any[]>(initialCart);
+
+  useEffect(() => {
+    if (!initialCustomer) return;
+    if (initialCustomer.retailCustomerId) {
+      setSelectedCreditCustomer({
+        id: initialCustomer.retailCustomerId,
+        name: initialCustomer.customerName,
+        phone: initialCustomer.customerPhone,
+      });
+    } else if (initialCustomer.customerName?.trim()) {
+      setCreditCustomerName(initialCustomer.customerName.trim());
+      if (initialCustomer.customerPhone?.trim()) {
+        setCreditCustomerPhone(initialCustomer.customerPhone.trim());
+      }
+    }
+  }, [initialCustomer]);
 
   // Sync back to POSScreen whenever cart changes
   useEffect(() => {

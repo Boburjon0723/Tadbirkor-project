@@ -13,8 +13,11 @@ import {
   Vibration,
   DeviceEventEmitter,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Package, Plus, LayoutGrid, List, Search, ChevronDown, ShoppingCart, LogOut, ScanLine, ArrowLeft, Users } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Package, Plus, LayoutGrid, List, Search, ChevronDown, ShoppingCart, LogOut, ScanLine, ArrowLeft, User, X } from 'lucide-react-native';
+import { PosCustomerPickerSheet } from '../../components/pos/PosCustomerPickerSheet';
+import { getPosCustomerLabel, hasPosCustomer, type PosCustomerSelection } from '../../lib/pos-customer.util';
+import { nextSessionLabel } from '../../lib/pos-session.util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { api, fixImageUrl } from '../../api/client';
@@ -30,6 +33,7 @@ import {
 import { cacheGet, cacheSet, DEFAULT_CACHE_TTL_MS } from '../../lib/data-cache';
 
 export default function POSScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [catalogRows, setCatalogRows] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -47,11 +51,18 @@ export default function POSScreen({ route, navigation }: any) {
   const [userRole, setUserRole] = useState('');
 
   // Multi-cart state
-  type CartSession = { id: string; label: string; cart: any[] };
+  type CartSession = {
+    id: string;
+    label: string;
+    cart: any[];
+    customer?: PosCustomerSelection | null;
+  };
   const [cartSessions, setCartSessions] = useState<CartSession[]>([
-    { id: '1', label: 'Mijoz 1', cart: [] }
+    { id: '1', label: 'Mijoz 1', cart: [], customer: null },
   ]);
   const [activeCartId, setActiveCartId] = useState('1');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [customerSheetOpen, setCustomerSheetOpen] = useState(false);
 
   // Compute active cart for UI
   const activeSession = cartSessions.find(s => s.id === activeCartId) || cartSessions[0];
@@ -198,6 +209,12 @@ export default function POSScreen({ route, navigation }: any) {
   };
 
   const addToCart = (product: any) => {
+    const stockQty = Number(product.quantity);
+    if (Number.isFinite(stockQty) && stockQty <= 0) {
+      Alert.alert('Qoldiq yo‘q', 'Ushbu mahsulot omborda tugagan');
+      return;
+    }
+
     // Joriy aktiv savatchani topamiz
     const activeSession = cartSessions.find(s => s.id === activeCartId);
     
@@ -238,11 +255,17 @@ export default function POSScreen({ route, navigation }: any) {
 
   const handleAddCart = () => {
     const newId = Date.now().toString();
-    setCartSessions(prev => {
-      const newLabel = `Mijoz ${prev.length + 1}`;
-      return [...prev, { id: newId, label: newLabel, cart: [] }];
+    setCartSessions((prev) => {
+      const newLabel = nextSessionLabel(prev);
+      return [...prev, { id: newId, label: newLabel, cart: [], customer: null }];
     });
     setActiveCartId(newId);
+  };
+
+  const setActiveSessionCustomer = (customer: PosCustomerSelection | null) => {
+    setCartSessions((prev) =>
+      prev.map((s) => (s.id === activeCartId ? { ...s, customer } : s)),
+    );
   };
 
   const handleRemoveCart = (id: string) => {
@@ -279,11 +302,20 @@ export default function POSScreen({ route, navigation }: any) {
   const selectedWarehouse = warehouses.find(w => w.id === selectedWarehouseId);
 
   const navigateToCart = () => {
-    navigation.navigate('POSCart', { 
-      cart, 
-      warehouseId: selectedWarehouseId
+    navigation.navigate('POSCart', {
+      cart,
+      warehouseId: selectedWarehouseId,
+      customer: activeSession.customer || null,
     });
   };
+
+  const showSessionsBar = cartSessions.length > 1;
+  const showBottomDock = showSessionsBar || cart.length > 0;
+  const listBottomPad = showBottomDock
+    ? (showSessionsBar ? 158 : 108) + insets.bottom
+    : 16 + insets.bottom;
+  const customerLabel = getPosCustomerLabel(activeSession.customer);
+  const hasCustomer = hasPosCustomer(activeSession.customer);
 
   const handleLogout = async () => {
     confirmLogout(navigation);
@@ -353,14 +385,30 @@ export default function POSScreen({ route, navigation }: any) {
     const currency = variant.currency || 'UZS';
     const imageUrl = fixImageUrl(product.imageUrl || variant.imageUrl);
     const displayName = `${product.name} ${variant.name}`;
+    const stockQty = Number(item.quantity);
+    const outOfStock = Number.isFinite(stockQty) && stockQty <= 0;
+    const lowStock = Number.isFinite(stockQty) && stockQty > 0 && stockQty <= 5;
 
     return (
-      <View style={[styles.card, !isGrid && styles.cardList]}>
+      <View style={[styles.card, !isGrid && styles.cardList, outOfStock && styles.cardDisabled]}>
         <View style={[styles.imageContainer, !isGrid && styles.imageContainerList]}>
           {imageUrl ? (
             <Image source={{ uri: imageUrl }} style={styles.image} />
           ) : (
             <Package size={isGrid ? 40 : 24} color="#94a3b8" />
+          )}
+          {Number.isFinite(stockQty) && (
+            <View
+              style={[
+                styles.stockBadge,
+                outOfStock && styles.stockBadgeOut,
+                lowStock && !outOfStock && styles.stockBadgeLow,
+              ]}
+            >
+              <Text style={styles.stockBadgeText}>
+                {outOfStock ? 'Tugagan' : `${stockQty} dona`}
+              </Text>
+            </View>
           )}
         </View>
         <View style={[styles.infoContainer, !isGrid && styles.infoContainerList]}>
@@ -372,7 +420,11 @@ export default function POSScreen({ route, navigation }: any) {
               <Text style={styles.priceLabel}>Narxi:</Text>
               <Text style={styles.priceValue}>{formatPrice(price, currency)}</Text>
             </View>
-            <TouchableOpacity style={styles.selectButton} onPress={() => addToCart({ ...item, product, variants: [variant] })}>
+            <TouchableOpacity
+              style={[styles.selectButton, outOfStock && styles.selectButtonDisabled]}
+              disabled={outOfStock}
+              onPress={() => addToCart({ ...item, product, variants: [variant] })}
+            >
               <Plus size={20} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -394,7 +446,7 @@ export default function POSScreen({ route, navigation }: any) {
         )}
 
         {/* Warehouse Dropdown Trigger */}
-        {userRole === 'OWNER' && (
+        {userRole === 'OWNER' && !searchOpen && (
           <TouchableOpacity 
             style={styles.whSelector} 
             onPress={() => setShowWarehouseModal(true)}
@@ -406,16 +458,14 @@ export default function POSScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
 
-        <View style={styles.searchContainer}>
-          <Search size={16} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Qidiruv..."
-            placeholderTextColor="#666"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        {!searchOpen ? (
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={() => setSearchOpen(true)}
+          >
+            <Search color="#3b82f6" size={20} />
+          </TouchableOpacity>
+        ) : null}
 
         <TouchableOpacity 
           style={styles.toggleButton} 
@@ -431,12 +481,11 @@ export default function POSScreen({ route, navigation }: any) {
           {viewMode === 'grid' ? <List color="#1e293b" size={20} /> : <LayoutGrid color="#1e293b" size={20} />}
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.toggleButton} 
-          onPress={() => navigation.navigate('PosCustomers')}
-        >
-          <Users color="#3b82f6" size={20} />
-        </TouchableOpacity>
+        {cartSessions.length === 1 && (
+          <TouchableOpacity style={styles.toggleButton} onPress={handleAddCart}>
+            <Plus color="#3b82f6" size={20} />
+          </TouchableOpacity>
+        )}
 
         {userRole === 'SALES' && (
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -444,6 +493,29 @@ export default function POSScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
       </View>
+
+      {searchOpen && (
+        <View style={styles.searchExpandedRow}>
+          <Search size={16} color="#64748b" />
+          <TextInput
+            style={styles.searchExpandedInput}
+            placeholder="Mahsulot qidirish..."
+            placeholderTextColor="#94a3b8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          <TouchableOpacity
+            onPress={() => {
+              setSearchOpen(false);
+              setSearchQuery('');
+            }}
+            style={styles.searchCloseBtn}
+          >
+            <X size={18} color="#64748b" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.filtersWrapper}>
         <FlatList
@@ -454,31 +526,6 @@ export default function POSScreen({ route, navigation }: any) {
           renderItem={renderCategoryTab}
           contentContainerStyle={styles.tabsContainer}
         />
-      </View>
-
-      {/* Multi-Cart Tabs */}
-      <View style={styles.multiCartContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={cartSessions}
-          keyExtractor={s => s.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={[styles.cartTab, activeCartId === item.id && styles.cartTabActive]}
-              onPress={() => setActiveCartId(item.id)}
-              onLongPress={() => handleRemoveCart(item.id)}
-            >
-              <Text style={[styles.cartTabText, activeCartId === item.id && styles.cartTabTextActive]}>
-                {item.label} ({item.cart.reduce((sum: number, i: any) => sum + i.qty, 0)})
-              </Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-        />
-        <TouchableOpacity style={styles.addCartBtn} onPress={handleAddCart}>
-          <Plus size={16} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {catalogLoading && products.length === 0 ? (
@@ -497,37 +544,102 @@ export default function POSScreen({ route, navigation }: any) {
           keyExtractor={(item) => item.id}
           renderItem={renderProductItem}
           numColumns={viewMode === 'grid' ? 2 : 1}
-          contentContainerStyle={[styles.listContainer, cart.length > 0 && { paddingBottom: 100 }]}
+          contentContainerStyle={[styles.listContainer, { paddingBottom: listBottomPad }]}
           columnWrapperStyle={viewMode === 'grid' ? styles.row : undefined}
         />
       )}
 
-      {/* Cart Bottom Bar */}
-      {cart.length > 0 && (
-        <View style={styles.cartBar}>
-          <View style={styles.cartInfo}>
-            <View style={styles.cartIconWrapper}>
-              <ShoppingCart size={20} color="#fff" />
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>
-                  {cart.reduce((sum, item) => sum + item.qty, 0)}
-                </Text>
-              </View>
+      {showBottomDock && (
+        <View style={[styles.bottomDock, { paddingBottom: 12 + insets.bottom }]}>
+          {showSessionsBar && (
+            <View style={styles.sessionsRow}>
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                data={cartSessions}
+                keyExtractor={(s) => s.id}
+                renderItem={({ item }) => {
+                  const count = item.cart.reduce((sum: number, i: any) => sum + Number(i.qty || 0), 0);
+                  const subtitle = getPosCustomerLabel(item.customer);
+                  return (
+                    <TouchableOpacity
+                      style={[styles.sessionTab, activeCartId === item.id && styles.sessionTabActive]}
+                      onPress={() => setActiveCartId(item.id)}
+                      onLongPress={() => handleRemoveCart(item.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.sessionTabText,
+                          activeCartId === item.id && styles.sessionTabTextActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                        {count > 0 ? ` (${count})` : ''}
+                      </Text>
+                      {subtitle ? (
+                        <Text style={styles.sessionSubtitle} numberOfLines={1}>
+                          {subtitle}
+                        </Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                }}
+                contentContainerStyle={styles.sessionsList}
+              />
+              <TouchableOpacity style={styles.addSessionBtn} onPress={handleAddCart}>
+                <Plus size={16} color="#3b82f6" />
+              </TouchableOpacity>
             </View>
-            <View>
-              <Text style={styles.cartTotalLabel}>Jami summa</Text>
-              {Object.entries(totalsByCurrency).map(([currency, total]) => (
-                <Text key={currency} style={styles.cartTotalValue}>
-                  {formatPrice(Number(total), currency)}
-                </Text>
-              ))}
+          )}
+
+          {cart.length > 0 && (
+            <View style={styles.cartBar}>
+              <TouchableOpacity
+                style={styles.customerBtn}
+                onPress={() => setCustomerSheetOpen(true)}
+              >
+                <User size={18} color={hasCustomer ? '#38bdf8' : '#fff'} />
+                {hasCustomer ? (
+                  <Text style={styles.customerBtnLabel} numberOfLines={1}>
+                    {customerLabel}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.cartInfoTap} onPress={navigateToCart}>
+                <View style={styles.cartIconWrapper}>
+                  <ShoppingCart size={20} color="#fff" />
+                  <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>
+                      {cart.reduce((sum, item) => sum + Number(item.qty || 0), 0)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.cartTotalLabel}>Jami summa</Text>
+                  {Object.entries(totalsByCurrency).map(([currency, total]) => (
+                    <Text key={currency} style={styles.cartTotalValue} numberOfLines={1}>
+                      {formatPrice(Number(total), currency)}
+                    </Text>
+                  ))}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.checkoutBtn} onPress={navigateToCart}>
+                <Text style={styles.checkoutText}>Sotish</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-          <TouchableOpacity style={styles.checkoutBtn} onPress={navigateToCart}>
-            <Text style={styles.checkoutText}>Sotish</Text>
-          </TouchableOpacity>
+          )}
         </View>
       )}
+
+      <PosCustomerPickerSheet
+        visible={customerSheetOpen}
+        value={activeSession.customer}
+        onSelect={setActiveSessionCustomer}
+        onClose={() => setCustomerSheetOpen(false)}
+      />
 
       {/* Warehouse Selection Modal */}
       <Modal visible={showWarehouseModal} transparent animationType="fade">
@@ -600,6 +712,7 @@ const styles = StyleSheet.create({
     gap: 8
   },
   whSelector: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
@@ -608,8 +721,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     height: 40,
-    width: 120, // max width to keep it small
+    minWidth: 0,
+    maxWidth: 200,
     justifyContent: 'space-between',
+  },
+  searchExpandedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  searchExpandedInput: {
+    flex: 1,
+    height: 40,
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  searchCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   whSelectorText: {
     color: '#1e293b',
@@ -699,44 +837,71 @@ const styles = StyleSheet.create({
     color: '#3b82f6',
     fontWeight: 'bold',
   },
-  multiCartContainer: {
+  bottomDock: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  sessionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
     backgroundColor: '#ffffff',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    paddingVertical: 8,
+    paddingLeft: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  cartTab: {
+  sessionsList: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  sessionTab: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    justifyContent: 'center',
+    maxWidth: 120,
   },
-  cartTabActive: {
+  sessionTabActive: {
     backgroundColor: '#eff6ff',
     borderColor: '#3b82f6',
   },
-  cartTabText: {
+  sessionTabText: {
     color: '#64748b',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
-  cartTabTextActive: {
-    color: '#3b82f6',
+  sessionTabTextActive: {
+    color: '#2563eb',
   },
-  addCartBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#3b82f6',
-    justifyContent: 'center',
+  sessionSubtitle: {
+    fontSize: 9,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  addSessionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#cbd5e1',
     alignItems: 'center',
-    marginRight: 16,
-    marginLeft: 8,
+    justifyContent: 'center',
+    marginHorizontal: 8,
   },
   center: {
     flex: 1,
@@ -774,6 +939,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  stockBadge: {
+    position: 'absolute',
+    bottom: 6,
+    left: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  stockBadgeLow: {
+    backgroundColor: 'rgba(234, 88, 12, 0.9)',
+  },
+  stockBadgeOut: {
+    backgroundColor: 'rgba(239, 68, 68, 0.92)',
+  },
+  stockBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  cardDisabled: {
+    opacity: 0.72,
   },
   image: {
     width: '100%',
@@ -837,30 +1026,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
-  // Cart Styles
+  selectButtonDisabled: {
+    backgroundColor: '#94a3b8',
+  },
+
   cartBar: {
-    position: 'absolute',
-    bottom: 16,
-    left: 16,
-    right: 16,
     backgroundColor: '#3b82f6',
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
-    paddingHorizontal: 20,
+    padding: 10,
+    gap: 8,
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
-  cartInfo: {
+  customerBtn: {
+    width: 48,
+    minHeight: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  customerBtnLabel: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '800',
+    marginTop: 2,
+    maxWidth: 44,
+    textAlign: 'center',
+  },
+  cartInfoTap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+    minWidth: 0,
   },
   cartIconWrapper: {
     position: 'relative',

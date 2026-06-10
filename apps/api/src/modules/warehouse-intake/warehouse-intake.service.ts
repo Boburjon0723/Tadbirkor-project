@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  DEFAULT_TX_OPTIONS,
+  INTAKE_SCAN_TX_OPTIONS,
+  intakeCompleteTxOptions,
+} from '../../prisma/transaction-options';
 import { StockService } from '../warehouses/stock.service';
 import { VariantsService } from '../products/variants.service';
 import { CompaniesService } from '../companies/companies.service';
@@ -47,6 +52,8 @@ const INTAKE_INCLUDE = {
     orderBy: { createdAt: 'asc' as const },
   },
 } satisfies Prisma.WarehouseIntakeInclude;
+
+type IntakeDetail = Prisma.WarehouseIntakeGetPayload<{ include: typeof INTAKE_INCLUDE }>;
 
 @Injectable()
 export class WarehouseIntakeService {
@@ -169,8 +176,10 @@ export class WarehouseIntakeService {
     id: string,
     companyId: string,
     intakeSettings: WarehouseIntakeSettings,
+    tx?: PrismaTx,
   ) {
-    const intake = await this.prisma.warehouseIntake.findFirst({
+    const client = tx ?? this.prisma;
+    const intake = await client.warehouseIntake.findFirst({
       where: { id, companyId },
       include: INTAKE_INCLUDE,
     });
@@ -360,7 +369,7 @@ export class WarehouseIntakeService {
 
     for (let attempt = 0; attempt < 5; attempt++) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        return await this.prisma.runTransaction(async (tx) => {
           const reference = await this.generateReference(companyId, tx);
           return tx.warehouseIntake.create({
             data: {
@@ -374,7 +383,7 @@ export class WarehouseIntakeService {
             },
             include: INTAKE_INCLUDE,
           });
-        });
+        }, DEFAULT_TX_OPTIONS);
       } catch (error) {
         if (this.isDuplicateReferenceError(error) && attempt < 4) continue;
         throw error;
@@ -528,7 +537,7 @@ export class WarehouseIntakeService {
     });
     if (!variant) throw new NotFoundException('Mahsulot varianti topilmadi');
 
-    await this.prisma.$transaction(async (tx) => {
+    return this.prisma.runTransaction(async (tx) => {
       await this.assertDraftInTx(tx, intakeId, companyId);
       await this.upsertLine(
         tx,
@@ -538,9 +547,8 @@ export class WarehouseIntakeService {
         'MANUAL',
         settings,
       );
-    });
-
-    return this.fetchIntakeDetail(intakeId, companyId, settings);
+      return this.fetchIntakeDetail(intakeId, companyId, settings, tx);
+    }, INTAKE_SCAN_TX_OPTIONS);
   }
 
   async scanLine(
@@ -572,7 +580,7 @@ export class WarehouseIntakeService {
       throw new NotFoundException(`Mahsulot topilmadi: ${barcode}`);
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    return this.prisma.runTransaction(async (tx) => {
       await this.assertDraftInTx(tx, intakeId, companyId);
       await this.upsertLine(
         tx,
@@ -584,9 +592,8 @@ export class WarehouseIntakeService {
         barcode,
         1,
       );
-    });
-
-    return this.fetchIntakeDetail(intakeId, companyId, settings);
+      return this.fetchIntakeDetail(intakeId, companyId, settings, tx);
+    }, INTAKE_SCAN_TX_OPTIONS);
   }
 
   async quickProduct(
@@ -626,7 +633,7 @@ export class WarehouseIntakeService {
     const purchasePrice =
       dto.purchasePrice != null ? Number(dto.purchasePrice) : null;
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.runTransaction(async (tx) => {
       await this.getDraftIntakeForUser(intakeId, companyId, userId, tx);
 
       const duplicateBarcode = await tx.productVariant.findFirst({
@@ -694,7 +701,7 @@ export class WarehouseIntakeService {
         barcode,
         1,
       );
-    });
+    }, INTAKE_SCAN_TX_OPTIONS);
 
     return this.findOne(intakeId, companyId, userId);
   }
@@ -750,8 +757,11 @@ export class WarehouseIntakeService {
   async complete(intakeId: string, companyId: string, userId: string) {
     await this.assertWarehouseIntakeFeature(companyId);
 
-    const completed = await this.prisma.$transaction(async (tx) => {
-      const intake = await this.getDraftIntakeForUser(intakeId, companyId, userId, tx);
+    const draftPreview = await this.getDraftIntakeForUser(intakeId, companyId, userId);
+    const lineCount = draftPreview.lines.length;
+
+    const completed = await this.prisma.runTransaction<IntakeDetail>(async (tx) => {
+      const intake = await this.getDraftIntake(intakeId, companyId, tx);
       if (!intake.lines.length) {
         throw new BadRequestException('Kamida bitta mahsulot qatori kerak');
       }
@@ -804,7 +814,7 @@ export class WarehouseIntakeService {
       });
 
       return updated;
-    });
+    }, intakeCompleteTxOptions(lineCount));
 
     for (const line of completed.lines) {
       this.stockService.emitInventoryChanged(
@@ -825,8 +835,10 @@ export class WarehouseIntakeService {
   async cancel(intakeId: string, companyId: string, userId: string) {
     await this.assertWarehouseIntakeFeature(companyId);
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const intake = await this.getDraftIntakeForUser(intakeId, companyId, userId, tx);
+    await this.getDraftIntakeForUser(intakeId, companyId, userId);
+
+    const updated = await this.prisma.runTransaction<IntakeDetail>(async (tx) => {
+      const intake = await this.getDraftIntake(intakeId, companyId, tx);
 
       const cancelled = await tx.warehouseIntake.update({
         where: { id: intakeId },
@@ -850,7 +862,7 @@ export class WarehouseIntakeService {
       });
 
       return cancelled;
-    });
+    }, DEFAULT_TX_OPTIONS);
 
     const intakeSettings = await this.loadIntakeSettings(
       companyId,

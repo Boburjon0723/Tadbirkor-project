@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { unlockNotificationAudio } from '@/lib/browser-notification';
 
 /**
  * USB/Bluetooth HID skaner: tez klaviatura inputini ushlab oladi.
@@ -18,6 +19,8 @@ export function useBarcodeScanner(onScan: (barcode: string) => void, enabled = t
     if (!enabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      unlockNotificationAudio();
+
       const isInput =
         (e.target as HTMLElement).tagName === 'INPUT' ||
         (e.target as HTMLElement).tagName === 'TEXTAREA' ||

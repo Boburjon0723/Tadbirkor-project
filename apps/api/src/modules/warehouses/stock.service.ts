@@ -584,6 +584,53 @@ export class StockService {
       );
       return;
     }
+    if (
+      type === 'IN' &&
+      sourceType === 'WAREHOUSE_INTAKE' &&
+      movements.length > 0 &&
+      movements.every((m) => m.warehouseId === movements[0].warehouseId)
+    ) {
+      await this.recordWarehouseIntakeInBatch(
+        companyId,
+        movements[0].warehouseId,
+        movements,
+        userId,
+        externalTx,
+      );
+      const contactId = movements.find((m) => m.partnerLedgerContactId)?.partnerLedgerContactId;
+      const sourceId = movements[0].sourceId;
+      if (userId && contactId?.trim() && sourceId) {
+        const createdMovements = await externalTx.stockMovement.findMany({
+          where: {
+            companyId,
+            sourceType: 'WAREHOUSE_INTAKE',
+            sourceId,
+          },
+        });
+        const dtoByVariant = new Map(movements.map((m) => [m.productVariantId, m]));
+        for (const movement of createdMovements) {
+          const dto = dtoByVariant.get(movement.productVariantId);
+          if (!dto) continue;
+          try {
+            await this.linkMovementToPartnerLedger(
+              companyId,
+              userId,
+              contactId,
+              movement,
+              movement.productVariantId,
+              'IN',
+              dto.note,
+            );
+          } catch (err) {
+            this.logger.warn(
+              `Partner ledger link failed for movement ${movement.id}: ${(err as Error).message}`,
+            );
+            throw err;
+          }
+        }
+      }
+      return;
+    }
     for (const dto of movements) {
       await this.recordMovement(
         companyId,
@@ -753,6 +800,82 @@ export class StockService {
         },
       });
     }
+  }
+
+  /**
+   * Ombor kirim yakunlash — balance yangilash va harakatlar bir tranzaksiyada (createMany).
+   */
+  async recordWarehouseIntakeInBatch(
+    companyId: string,
+    warehouseId: string,
+    movements: CreateStockMovementDto[],
+    userId: string | undefined,
+    tx: Prisma.TransactionClient,
+  ) {
+    if (!movements.length) return;
+
+    const warehouse = await tx.warehouse.findFirst({ where: { id: warehouseId, companyId } });
+    if (!warehouse) throw new NotFoundException('Ombor topilmadi');
+
+    const variantIds = [...new Set(movements.map((m) => m.productVariantId))];
+    const unitByVariant = await this.loadVariantUnits(tx, companyId, variantIds);
+    const normalizedMovements = movements.map((m) =>
+      this.normalizeMovementDto(m, unitByVariant),
+    );
+    const variants = await tx.productVariant.findMany({
+      where: { id: { in: variantIds }, companyId },
+      select: { id: true },
+    });
+    if (variants.length !== variantIds.length) {
+      throw new NotFoundException('Mahsulot varianti topilmadi');
+    }
+
+    const balances = await tx.stockBalance.findMany({
+      where: { warehouseId, productVariantId: { in: variantIds } },
+    });
+    const balanceByVariant = new Map(balances.map((b) => [b.productVariantId, b]));
+
+    const incrementByVariant = new Map<string, number>();
+    for (const dto of normalizedMovements) {
+      incrementByVariant.set(
+        dto.productVariantId,
+        (incrementByVariant.get(dto.productVariantId) || 0) + dto.quantity,
+      );
+    }
+
+    for (const [variantId, inc] of incrementByVariant) {
+      const balance = balanceByVariant.get(variantId);
+      if (balance) {
+        await tx.stockBalance.update({
+          where: { id: balance.id },
+          data: { quantity: { increment: inc } },
+        });
+      } else {
+        await tx.stockBalance.create({
+          data: {
+            companyId,
+            warehouseId,
+            productVariantId: variantId,
+            quantity: inc,
+            reservedQuantity: 0,
+          },
+        });
+      }
+    }
+
+    await tx.stockMovement.createMany({
+      data: normalizedMovements.map((dto) => ({
+        companyId,
+        warehouseId,
+        productVariantId: dto.productVariantId,
+        type: 'IN' as const,
+        quantity: dto.quantity,
+        sourceType: 'WAREHOUSE_INTAKE',
+        sourceId: dto.sourceId,
+        note: dto.note,
+        createdBy: userId,
+      })),
+    });
   }
 
   /**

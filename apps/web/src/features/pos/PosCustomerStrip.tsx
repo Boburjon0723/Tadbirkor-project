@@ -142,9 +142,14 @@ export function PosCustomerStrip({
       <input
         value={query}
         autoFocus={autoFocus}
-        onFocus={() => {
+        onFocus={(e) => {
           setPickerOpen(true);
           prefetchRecent();
+          if (isSheet) {
+            window.setTimeout(() => {
+              e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }, 280);
+          }
         }}
         onBlur={() => {
           if (isSheet) return;
@@ -162,6 +167,9 @@ export function PosCustomerStrip({
           }
         }}
         placeholder={isSheet ? 'Ism yoki telefon kiriting...' : 'Ism yoki telefon qidirish...'}
+        inputMode="search"
+        enterKeyHint="search"
+        autoComplete="off"
         className={`w-full ${inputBg} rounded-xl px-3 ${inputPy} font-bold outline-none focus:border-[var(--pos-accent)]`}
       />
       {pickerOpen && isFetching && (
@@ -212,7 +220,7 @@ export function PosCustomerStrip({
           <button
             type="button"
             onClick={() => void quickAdd()}
-            className={`px-4 ${isSheet ? 'py-3.5 w-full' : 'py-2'} rounded-xl bg-[var(--pos-accent)] text-white text-sm font-black`}
+            className={`px-4 ${isSheet ? 'py-3.5 w-full' : 'py-2'} rounded-xl bg-[var(--pos-accent)] text-white text-sm font-black inline-flex items-center justify-center`}
           >
             Saqlash
           </button>

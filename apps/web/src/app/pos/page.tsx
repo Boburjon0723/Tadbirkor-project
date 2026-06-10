@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { usePosRealtime } from '@/hooks/pos/use-pos-realtime';
@@ -11,7 +11,7 @@ import { useSession } from '@/hooks/use-session';
 import { isModuleKeyEnabled } from '@/lib/feature-modules';
 import { usePosActions } from '@/hooks/pos/use-pos';
 import { useWarehouses } from '@/hooks/warehouse/use-warehouse';
-import { toast, formatApiError } from '@/lib/toast';
+import { toast } from '@/lib/toast';
 import { api } from '@/lib/api';
 import { usePermissions } from '@/hooks/use-permissions';
 import { PosBlockedScreen, PosLoadingScreen } from '@/features/pos/PosGateScreens';
@@ -30,14 +30,25 @@ import { PosBarcodeScanner } from '@/features/pos/PosBarcodeScanner';
 import { usePosMultiCart } from '@/features/pos/usePosMultiCart';
 import { posCartStorageKey } from '@/features/pos/pos-cart-persist';
 import type { PosCartItem } from '@/features/pos/types';
-import { PosReceiptPrintModal, type ReceiptData } from '@/features/pos/PosReceiptPrintModal';
-import { printPosReceipt } from '@/features/pos/pos-receipt-print.util';
+import {
+  PosReceiptPrintModal,
+  type ReceiptData,
+} from '@/features/pos/PosReceiptPrintModal';
 import type { PosReceiptSettings } from '@/components/settings/SettingsPosReceiptSection';
+import { getPosCustomerLabel, hasPosCustomer } from '@/features/pos/pos-customer.util';
+import { usePosCheckout } from '@/features/pos/usePosCheckout';
 import {
   PosQuantityModal,
   type PosQuantityModalVariant,
 } from '@/features/pos/PosQuantityModal';
-import { allowsDecimalStock, normalizeProductUnit } from '@/lib/product-units';
+import {
+  allowsDecimalStock,
+  formatStockQuantity,
+  normalizeProductUnit,
+} from '@/lib/product-units';
+import { playPosScanSound } from '@/features/pos/pos-scan-feedback.util';
+import { usePosBarcodeScan } from '@/features/pos/hooks/use-pos-barcode-scan';
+import { getScanAddQuantityLabel } from '@/features/pos/pos-scan-quantity.util';
 
 export default function POSPage() {
   const router = useRouter();
@@ -73,8 +84,6 @@ export default function POSPage() {
   const [priceEditItem, setPriceEditItem] = useState<PosCartItem | null>(null);
   const [isWarehouseOpen, setIsWarehouseOpen] = useState(false);
   const [customerSheetOpen, setCustomerSheetOpen] = useState(false);
-  const [paymentInFlight, setPaymentInFlight] = useState(false);
-  const checkoutInFlightRef = useRef(false);
 
   const cartStorageKey = useMemo(() => {
     const companyId = session?.me?.company?.id;
@@ -99,7 +108,6 @@ export default function POSPage() {
     setItemQuantity,
     updateItemPrice,
     clearCart,
-    clearCartPersisted,
     setCustomer,
     itemCount,
   } = usePosMultiCart({ storageKey: cartStorageKey });
@@ -219,9 +227,31 @@ export default function POSPage() {
     );
   }, [allVariants, selectedCategory]);
 
-  const handleConfirmPayment = () => {
-    if (checkoutInFlightRef.current) return;
+  const { paymentInFlight, confirmPayment } = usePosCheckout({
+    cart,
+    customer,
+    totalAmount,
+    cartCurrency,
+    paymentMethod,
+    cashReceivedInput,
+    selectedWarehouseId,
+    warehouseName: activeWarehouse?.name || '',
+    companyName,
+    cashierName,
+    posReceiptSettings,
+    formatMoney,
+    quickCheckout: (dto) => quickCheckout.mutateAsync(dto),
+    onClearActiveCart: clearCart,
+    onPaymentStart: () => setIsCheckoutModalOpen(false),
+    onPaymentSuccess: () => {
+      setCashReceivedInput('');
+      setPaymentMethod('cash');
+    },
+    onPaymentFailed: () => setIsCheckoutModalOpen(true),
+    onReceiptModal: setReceiptData,
+  });
 
+  const handleConfirmPayment = () => {
     if (!selectedWarehouseId) {
       if (!warehouses || warehouses.length === 0) {
         toast.error(
@@ -232,128 +262,51 @@ export default function POSPage() {
       }
       return;
     }
-    if (cart.length === 0) return;
+    confirmPayment();
+  };
 
-    if (
-      paymentMethod === 'credit' &&
-      !customer.retailCustomerId &&
-      !customer.customerName?.trim()
-    ) {
-      toast.error('Nasiya uchun mijoz tanlang yoki ism kiriting');
-      return;
-    }
-
-    if (paymentMethod === 'cash') {
-      const received = Number(cashReceivedInput) || 0;
-      if (received < totalAmount) {
-        toast.error('Qabul qilingan summa yetarli emas');
+  const handleAddVariantToCart = useCallback(
+    (v: PosQuantityModalVariant, opts?: { silent?: boolean }) => {
+      if (v.stockQuantity !== undefined && v.stockQuantity <= 0) {
+        if (!opts?.silent) {
+          playPosScanSound('error');
+          toast.warning(`${v.productName} — omborda qoldiq yo'q`);
+        }
         return;
       }
-    }
 
-    const methodApi =
-      paymentMethod === 'cash'
-        ? 'CASH'
-        : paymentMethod === 'card'
-          ? 'CARD'
-          : 'CREDIT';
-    const cashVal =
-      paymentMethod === 'cash' ? Number(cashReceivedInput) : undefined;
+      const unit = normalizeProductUnit(v.unit);
+      if (allowsDecimalStock(unit)) {
+        setQuantityModalVariant(v);
+        return;
+      }
 
-    const snapshot = {
-      items: cart.map((item) => ({
-        productVariantId: item.variantId,
-        quantity: item.quantity,
-        unitPrice: item.price,
-      })),
-      receiptItems: cart.map((i) => ({
-        name: i.name,
-        quantity: i.quantity,
-        unit: i.unit,
-        price: i.price,
-        amount: i.quantity * i.price,
-      })),
-      total: totalAmount,
-      currency: cartCurrency,
-      customerName: customer.customerName || customer.retailCustomerId || undefined,
-      retailCustomerId: customer.retailCustomerId || undefined,
-      customerPhone: customer.customerPhone || undefined,
-      warehouseName: activeWarehouse?.name || '',
-    };
-
-    checkoutInFlightRef.current = true;
-    setPaymentInFlight(true);
-    setIsCheckoutModalOpen(false);
-
-    void quickCheckout
-      .mutateAsync({
-        warehouseId: selectedWarehouseId,
-        items: snapshot.items,
-        retailCustomerId: snapshot.retailCustomerId,
-        customerName: customer.customerName || undefined,
-        customerPhone: snapshot.customerPhone,
-        method: methodApi,
-        ...(cashVal !== undefined ? { cashReceived: cashVal } : {}),
-      })
-      .then((saleResult) => {
-        checkoutInFlightRef.current = false;
-        setPaymentInFlight(false);
-        clearCartPersisted();
-        setCashReceivedInput('');
-        setPaymentMethod('cash');
-
-        const receipt: ReceiptData = {
-          receiptNumber:
-            saleResult?.receiptNumber ||
-            saleResult?.id?.substring(0, 8) ||
-            undefined,
-          date: new Date(),
-          companyName: companyName || undefined,
-          cashierName,
-          warehouseName: snapshot.warehouseName,
-          items: snapshot.receiptItems,
-          total: snapshot.total,
-          currency: snapshot.currency,
-          paymentMethod: methodApi,
-          customerName: snapshot.customerName,
-          cashReceived: cashVal,
-          change:
-            methodApi === 'CASH' && cashVal
-              ? Math.max(0, cashVal - snapshot.total)
-              : 0,
-        };
-
-        const { autoPrint, receiptFormat } = posReceiptSettings;
-
-        if (receiptFormat === 'none') {
-          toast.success("To'lov muvaffaqiyatli yakunlandi");
-          return;
-        }
-
-        if (autoPrint) {
-          void printPosReceipt(receipt, receiptFormat, formatMoney).then(() => {
-            toast.success("To'lov muvaffaqiyatli — chek chop etildi");
-          });
-          return;
-        }
-
-        setReceiptData(receipt);
-        toast.success("To'lov muvaffaqiyatli yakunlandi");
-      })
-      .catch((err: unknown) => {
-        console.error(err);
-        checkoutInFlightRef.current = false;
-        setPaymentInFlight(false);
-        setIsCheckoutModalOpen(true);
-        toast.error(
-          formatApiError(
-            err,
-            "To'lov yuborilmadi — savat saqlab qolindi, qayta urinib ko'ring",
-          ),
-          { duration: 5000 },
-        );
+      addToCart({
+        id: v.id,
+        productId: v.productId,
+        productName: v.productName,
+        name: v.name,
+        salePrice: v.salePrice,
+        currency: v.currency,
+        unit: v.unit,
+        stockQuantity: v.stockQuantity,
+        image: v.image,
       });
-  };
+
+      if (!opts?.silent) {
+        const { label } = getScanAddQuantityLabel(v.unit);
+        playPosScanSound('success');
+        toast.success(`+${label} · ${v.productName}`, { duration: 2200 });
+      }
+    },
+    [addToCart],
+  );
+
+  const posScan = usePosBarcodeScan({
+    warehouseId: selectedWarehouseId,
+    onAddItem: (v) => handleAddVariantToCart(v, { silent: true }),
+    disabled: posGate !== 'ok',
+  });
 
   if (posGate === 'loading') return <PosLoadingScreen />;
   if (posGate === 'blocked') return <PosBlockedScreen />;
@@ -371,15 +324,9 @@ export default function POSPage() {
     setSelectedCategory(null);
     setIsWarehouseOpen(false);
   };
-  const creditCustomerOk =
-    !!customer.retailCustomerId || !!customer.customerName?.trim();
-
-  const hasCustomer =
-    !!customer.retailCustomerId || !!customer.customerName?.trim();
-  const customerLabel =
-    customer.customerName ||
-    (customer.retailCustomerId ? 'Tanlangan' : '');
-
+  const creditCustomerOk = hasPosCustomer(customer);
+  const hasCustomer = creditCustomerOk;
+  const customerLabel = getPosCustomerLabel(customer);
   const openCustomerSheet = () => setCustomerSheetOpen(true);
 
   const openCheckout = () => {
@@ -390,24 +337,7 @@ export default function POSPage() {
     setIsCheckoutModalOpen(true);
   };
 
-  const handleAddVariantToCart = (v: PosQuantityModalVariant) => {
-    const unit = normalizeProductUnit(v.unit);
-    if (allowsDecimalStock(unit)) {
-      setQuantityModalVariant(v);
-      return;
-    }
-    addToCart({
-      id: v.id,
-      productId: v.productId,
-      productName: v.productName,
-      name: v.name,
-      salePrice: v.salePrice,
-      currency: v.currency,
-      unit: v.unit,
-      stockQuantity: v.stockQuantity,
-      image: v.image,
-    });
-  };
+  const showMobileDock = sessions.length > 1 || itemCount > 0;
 
   const handleQuantityConfirm = (
     v: PosQuantityModalVariant,
@@ -425,6 +355,12 @@ export default function POSPage() {
       image: v.image,
       quantity,
     });
+    const qtyText = formatStockQuantity(
+      quantity,
+      normalizeProductUnit(v.unit),
+    );
+    toast.success(`+${qtyText} · ${v.productName}`, { duration: 2200 });
+    playPosScanSound('success');
   };
 
   return (
@@ -434,7 +370,9 @@ export default function POSPage() {
       <div className="flex-1 flex flex-col gap-1 md:gap-2 min-w-0 min-h-0">
         <PosBarcodeScanner
           warehouseId={selectedWarehouseId}
-          onAddItem={handleAddVariantToCart}
+          onAddItem={(v) => handleAddVariantToCart(v, { silent: true })}
+          scanControl={posScan}
+          hideMobileChrome
         />
         <PosProductCatalog
           searchInputRef={searchInputRef}
@@ -464,6 +402,11 @@ export default function POSPage() {
           onAddToCart={handleAddVariantToCart}
           theme={theme}
           onThemeToggle={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          onScanClick={posScan.openCamera}
+          scanStatus={posScan.status}
+          scanStatusHint={posScan.statusHint}
+          sessionCount={sessions.length}
+          onAddCart={addCart}
         />
       </div>
 
@@ -475,7 +418,9 @@ export default function POSPage() {
         formatMoney={(v) => formatMoney(v, cartCurrency)}
         customerLabel={customerLabel}
         hasCustomer={hasCustomer}
+        visible={showMobileDock}
         onOpen={() => setIsCartOpenMobile(true)}
+        onCheckout={openCheckout}
         onCustomerClick={openCustomerSheet}
         onSwitchCart={switchCart}
         onAddCart={addCart}

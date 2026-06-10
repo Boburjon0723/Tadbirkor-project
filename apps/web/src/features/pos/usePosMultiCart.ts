@@ -17,6 +17,7 @@ import {
 } from '@/lib/product-units';
 import type { PosCartItem } from './types';
 import type { PosCustomerSelection } from './PosCustomerStrip';
+import { nextSessionLabel } from './pos-session.util';
 
 let nextCartId = 1;
 
@@ -52,18 +53,6 @@ function newSession(label: string): CartSession {
     cart: [],
     customer: emptyCustomer(),
   };
-}
-
-/** Band bo'lmagan eng kichik Mijoz raqamini topadi (o'chirilgandan keyin takrorlanmaslik uchun) */
-function nextSessionLabel(sessions: CartSession[]): string {
-  const used = new Set<number>();
-  for (const s of sessions) {
-    const match = s.label.match(/Mijoz\s*(\d+)/i);
-    if (match) used.add(Number(match[1]));
-  }
-  let n = 1;
-  while (used.has(n)) n += 1;
-  return `Mijoz ${n}`;
 }
 
 type UsePosMultiCartOptions = {
@@ -142,15 +131,18 @@ export function usePosMultiCart(options?: UsePosMultiCartOptions) {
     (id: string) => {
       setSessions((prev) => {
         if (prev.length === 1) {
-          // Reset instead of remove
+          toast.info('Savat tozalandi');
           return [{ ...prev[0], cart: [], customer: emptyCustomer() }];
         }
+        const removed = prev.find((s) => s.id === id);
         const idx = prev.findIndex((s) => s.id === id);
         const next = prev.filter((s) => s.id !== id);
-        // If removing active, switch to neighbor
         if (id === activeId) {
           const newActive = next[Math.max(0, idx - 1)];
           setActiveId(newActive.id);
+        }
+        if (removed) {
+          toast.info(`${removed.label} yopildi`);
         }
         return next;
       });
@@ -295,10 +287,6 @@ export function usePosMultiCart(options?: UsePosMultiCartOptions) {
     updateActive((s) => ({ ...s, cart: [], customer: emptyCustomer() }));
   }, [updateActive]);
 
-  const clearCartPersisted = useCallback(() => {
-    updateActive((s) => ({ ...s, cart: [], customer: emptyCustomer() }));
-  }, [updateActive]);
-
   const setCustomer = useCallback(
     (customer: PosCustomerSelection) => {
       updateActive((s) => ({ ...s, customer }));
@@ -327,7 +315,6 @@ export function usePosMultiCart(options?: UsePosMultiCartOptions) {
     setItemQuantity,
     updateItemPrice,
     clearCart,
-    clearCartPersisted,
     setCustomer,
     itemCount,
   };

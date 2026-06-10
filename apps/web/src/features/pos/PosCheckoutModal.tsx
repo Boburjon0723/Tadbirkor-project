@@ -15,6 +15,7 @@ import {
   PosCustomerStrip,
   type PosCustomerSelection,
 } from './PosCustomerStrip';
+import { getPosCustomerLabel } from './pos-customer.util';
 
 export type PosPaymentMethod = 'cash' | 'card' | 'credit';
 
@@ -63,9 +64,7 @@ export function PosCheckoutModal({
   const creditBlocked = paymentMethod === 'credit' && !creditCustomerOk;
   const disabled = !cashOk || creditBlocked;
 
-  const customerLabel =
-    customer.customerName ||
-    (customer.retailCustomerId ? 'Mijoz tanlangan' : null);
+  const customerLabel = getPosCustomerLabel(customer) || null;
 
   const handleMethodChange = (method: PosPaymentMethod) => {
     onPaymentMethodChange(method);

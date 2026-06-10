@@ -32,3 +32,20 @@ export const RECEIPT_ACCEPT_CHUNK_SIZE = 35;
 
 /** Inventarizatsiya boshlash / blok yechish — HTTP timeout (≈10s) dan qisqa bo‘lishi kerak */
 export const INVENTORY_BLOCK_CHUNK_SIZE = 35;
+
+/** Ombor kirim skaneri — tez-tez chaqiriladi, pool kutish vaqti uzaytirilgan */
+export const INTAKE_SCAN_TX_OPTIONS = {
+  maxWait: 20_000,
+  timeout: 15_000,
+  isolationLevel: 'ReadCommitted' as const,
+} as const;
+
+/** Ombor kirim yakunlash — qatorlar soniga qarab uzoqroq tranzaksiya */
+export function intakeCompleteTxOptions(lineCount: number) {
+  const lines = Math.max(0, lineCount);
+  return {
+    maxWait: Math.min(60_000, 20_000 + lines * 40),
+    timeout: Math.min(180_000, 45_000 + lines * 200),
+    isolationLevel: 'ReadCommitted' as const,
+  };
+}

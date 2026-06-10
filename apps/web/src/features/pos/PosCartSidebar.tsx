@@ -88,7 +88,7 @@ export function PosCartSidebar({
           >
             <div className="pos-cart-panel flex-1 md:rounded-[3rem] border-l md:border border-[var(--pos-cart-border)] flex flex-col overflow-hidden bg-[var(--pos-cart-bg)] text-[var(--pos-cart-text)] shadow-2xl shadow-black/25">
 
-              <div className="flex items-center gap-1 px-4 pt-4 pb-0 overflow-x-auto no-scrollbar">
+              <div className="hidden md:flex items-center gap-1 px-4 pt-4 pb-0 overflow-x-auto no-scrollbar">
                 {sessions.map((session) => {
                   const isActive = session.id === activeId;
                   const sessionItemCount = session.cart.length;
@@ -144,7 +144,7 @@ export function PosCartSidebar({
                 })}
               </div>
 
-              <div className="h-px bg-[var(--pos-cart-border)] mx-4 mt-2" />
+              <div className="hidden md:block h-px bg-[var(--pos-cart-border)] mx-4 mt-2" />
 
               <div className="p-6 md:p-8 border-b border-[var(--pos-cart-border)] flex items-center justify-between bg-[var(--pos-cart-header)]">
                 <div className="flex items-center gap-4">
@@ -163,7 +163,7 @@ export function PosCartSidebar({
                     type="button"
                     onClick={onAddCart}
                     disabled={paymentInFlight}
-                    className="p-2.5 bg-[var(--pos-cart-accent-soft)] text-[var(--pos-money)] rounded-xl hover:brightness-110 border border-[var(--pos-cart-border)] transition-all active:scale-95 disabled:opacity-40"
+                    className="hidden md:flex p-2.5 bg-[var(--pos-cart-accent-soft)] text-[var(--pos-money)] rounded-xl hover:brightness-110 border border-[var(--pos-cart-border)] transition-all active:scale-95 disabled:opacity-40"
                     title="Yangi mijoz uchun savatcha ochish"
                   >
                     <Plus size={18} />
@@ -332,11 +332,13 @@ export function PosMobileCartBar({
   customerLabel,
   hasCustomer,
   onOpen,
+  onCheckout,
   onCustomerClick,
   onSwitchCart,
   onAddCart,
   onRemoveCart,
   paymentInFlight = false,
+  visible = true,
 }: {
   sessions: CartSession[];
   activeId: string;
@@ -346,15 +348,21 @@ export function PosMobileCartBar({
   customerLabel: string;
   hasCustomer: boolean;
   onOpen: () => void;
+  onCheckout: () => void;
   onCustomerClick: () => void;
   onSwitchCart: (id: string) => void;
   onAddCart: () => void;
   onRemoveCart: (id: string) => void;
   paymentInFlight?: boolean;
+  visible?: boolean;
 }) {
+  if (!visible) return null;
+
+  const showCartBar = itemCount > 0;
+
   return (
     <div
-      className="md:hidden fixed bottom-4 left-3 right-3 z-50 pb-[env(safe-area-inset-bottom)]"
+      className="md:hidden fixed bottom-3 left-3 right-3 z-50 pb-[env(safe-area-inset-bottom)]"
     >
       <PosMobileSessionsBar
         sessions={sessions}
@@ -365,8 +373,9 @@ export function PosMobileCartBar({
         disabled={paymentInFlight}
       />
 
+      {showCartBar && (
       <div
-        className={`flex items-stretch min-w-0 p-2 bg-[var(--pos-cart-bg)] text-[var(--pos-cart-text)] rounded-2xl shadow-xl shadow-black/25 border border-[var(--pos-cart-border)] ${
+        className={`flex items-stretch min-w-0 p-2 bg-[var(--pos-accent)] text-white rounded-2xl shadow-xl shadow-cyan-900/30 border border-cyan-400/20 ${
           paymentInFlight ? 'opacity-50 pointer-events-none' : ''
         }`}
       >
@@ -374,18 +383,18 @@ export function PosMobileCartBar({
           type="button"
           onClick={onCustomerClick}
           disabled={paymentInFlight}
-          className="shrink-0 w-12 self-stretch rounded-xl border border-[var(--pos-cart-border)] bg-[var(--pos-cart-card)] flex flex-col items-center justify-center gap-0.5 active:scale-[0.97] transition-transform mr-2"
+          className="shrink-0 w-12 self-stretch rounded-xl border border-white/25 bg-white/15 flex flex-col items-center justify-center gap-0.5 active:scale-[0.97] transition-transform mr-2"
           aria-label={hasCustomer ? `Mijoz: ${customerLabel}` : 'Mijoz tanlash'}
         >
           {hasCustomer ? (
             <>
-              <User size={18} className="text-cyan-300 shrink-0" />
-              <span className="text-[8px] font-bold text-[var(--pos-cart-text)] truncate max-w-[2.75rem] leading-tight text-center">
+              <User size={18} className="text-cyan-100 shrink-0" />
+              <span className="text-[8px] font-bold text-white truncate max-w-[2.75rem] leading-tight text-center">
                 {customerLabel}
               </span>
             </>
           ) : (
-            <User size={20} className="text-[var(--pos-cart-muted)]" />
+            <User size={20} className="text-white/80" />
           )}
         </button>
 
@@ -393,31 +402,34 @@ export function PosMobileCartBar({
           type="button"
           onClick={onOpen}
           disabled={paymentInFlight}
-          className="flex-1 min-w-0 flex items-center justify-between group active:scale-[0.99] transition-transform pl-1 pr-1"
+          className="flex-1 min-w-0 flex items-center gap-3 group active:scale-[0.99] transition-transform pl-1 pr-2"
         >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-xl bg-[var(--pos-cart-card)] flex items-center justify-center relative shrink-0">
-              <ShoppingCart size={22} />
-              {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--pos-cart-bg)]">
-                  {itemCount}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 text-left">
-              <p className="text-[10px] font-black text-[var(--pos-cart-muted)] uppercase tracking-widest">
-                Savat
-              </p>
-              <p className="font-black text-lg text-[var(--pos-money)] truncate">
-                {formatMoney(totalAmount)}
-              </p>
-            </div>
+          <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center relative shrink-0">
+            <ShoppingCart size={20} className="text-white" />
+            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-0.5 bg-red-500 text-[10px] font-black rounded-full flex items-center justify-center border-2 border-[var(--pos-accent)]">
+              {itemCount}
+            </span>
           </div>
-          <div className="w-11 h-11 rounded-xl bg-[var(--pos-accent)] text-white flex items-center justify-center shrink-0 group-hover:translate-x-0.5 transition-transform">
-            <ChevronRight size={22} />
+          <div className="min-w-0 text-left">
+            <p className="text-[10px] font-bold text-white/75 uppercase tracking-wide">
+              Jami summa
+            </p>
+            <p className="font-black text-lg text-white truncate">
+              {formatMoney(totalAmount)}
+            </p>
           </div>
         </button>
+
+        <button
+          type="button"
+          onClick={onCheckout}
+          disabled={paymentInFlight}
+          className="shrink-0 self-stretch min-w-[4.5rem] px-4 rounded-xl bg-white text-[var(--pos-accent)] font-black text-sm inline-flex items-center justify-center active:scale-95 transition-transform ml-2"
+        >
+          Sotish
+        </button>
       </div>
+      )}
     </div>
   );
 }
