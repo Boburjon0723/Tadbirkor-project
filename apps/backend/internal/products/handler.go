@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/tadbirkor/axis-erp/backend/internal/stock"
 	"github.com/tadbirkor/axis-erp/backend/pkg/httpx"
 	"github.com/tadbirkor/axis-erp/backend/pkg/middleware"
 )
@@ -142,7 +143,7 @@ func (h *Handler) writeProduct(w http.ResponseWriter, err error, data map[string
 	case errors.Is(err, ErrNotFound), errors.Is(err, ErrCategoryNF):
 		httpx.Error(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, ErrBadInput), errors.Is(err, ErrDuplicateSKU), errors.Is(err, ErrDuplicateBarcode),
-		errors.Is(err, ErrNoWarehouse):
+		errors.Is(err, ErrNoWarehouse), errors.Is(err, ErrBadStockAdjust), errors.Is(err, stock.ErrInsufficientStock):
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 	case strings.Contains(err.Error(), "ombor"):
 		httpx.Error(w, http.StatusBadRequest, err.Error())

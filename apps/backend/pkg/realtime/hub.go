@@ -21,3 +21,15 @@ func (noopHub) EmitToUser(string, string, map[string]any)    {}
 
 // Noop — websocket o‘chirilgan yoki test uchun.
 var Noop Hub = noopHub{}
+
+// NotifyInventory — ombor o‘zgarganda frontend keshini yangilash uchun.
+func NotifyInventory(h Hub, companyID string, payload map[string]any) {
+	if h == nil {
+		return
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	h.EmitInventoryChanged(companyID, payload)
+	h.EmitDashboardRefresh(companyID)
+}

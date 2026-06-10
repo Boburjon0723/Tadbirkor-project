@@ -89,7 +89,7 @@ func main() {
 	warehousesSvc := warehouses.NewService(pool)
 	warehousesHandler := warehouses.NewHandler(warehousesSvc)
 
-	posSvc := pos.NewService(pool, c)
+	posSvc := pos.NewService(pool, c, hub)
 	posHandler := pos.NewHandler(posSvc)
 
 	productsSvc := products.NewService(pool, c, hub)
@@ -119,7 +119,7 @@ func main() {
 	expensesHandler := expenses.NewHandler(expensesSvc)
 
 	goodsReceiptsRepo := goodsreceipts.NewRepository(pool)
-	goodsReceiptsSvc := goodsreceipts.NewService(pool, goodsReceiptsRepo, notificationsSvc)
+	goodsReceiptsSvc := goodsreceipts.NewService(pool, goodsReceiptsRepo, notificationsSvc, hub)
 	goodsReceiptsHandler := goodsreceipts.NewHandler(goodsReceiptsSvc)
 
 	incomeRepo := income.NewRepository(pool)
@@ -163,7 +163,7 @@ func main() {
 	pickTasksHandler := picktasks.NewHandler(pickTasksSvc, companiesSvc)
 
 	dispatchesRepo := dispatches.NewRepository(pool)
-	dispatchesSvc := dispatches.NewService(pool, dispatchesRepo, pickTasksSvc, notificationsSvc)
+	dispatchesSvc := dispatches.NewService(pool, dispatchesRepo, pickTasksSvc, notificationsSvc, hub)
 	dispatchesHandler := dispatches.NewHandler(dispatchesSvc)
 
 	onboardingSvc := onboarding.NewService(pool)
@@ -178,15 +178,15 @@ func main() {
 	reportsHandler := reports.NewHandler(reportsSvc)
 	debtsHandler := debts.NewHandler(debtsSvc, reportsSvc)
 
-	inventoryCountsSvc := inventorycounts.NewService(pool, notificationsSvc)
+	inventoryCountsSvc := inventorycounts.NewService(pool, notificationsSvc, hub)
 	inventoryCountsHandler := inventorycounts.NewHandler(inventoryCountsSvc, companiesSvc)
 
 	warehouseIntakeRepo := warehouseintake.NewRepository(pool)
-	warehouseIntakeSvc := warehouseintake.NewService(pool, warehouseIntakeRepo, companiesSvc)
+	warehouseIntakeSvc := warehouseintake.NewService(pool, warehouseIntakeRepo, companiesSvc, hub)
 	warehouseIntakeHandler := warehouseintake.NewHandler(warehouseIntakeSvc)
 
 	partnerLedgerRepo := partnerledger.NewRepository(pool)
-	partnerLedgerSvc := partnerledger.NewService(pool, partnerLedgerRepo, notificationsSvc)
+	partnerLedgerSvc := partnerledger.NewService(pool, partnerLedgerRepo, notificationsSvc, hub)
 	partnerLedgerHandler := partnerledger.NewHandler(partnerLedgerSvc)
 
 	platformRepo := platform.NewRepository(pool)
@@ -194,7 +194,7 @@ func main() {
 	platformHandler := platform.NewHandler(platformSvc)
 
 	fieldRepo := field.NewRepository(pool)
-	fieldSvc := field.NewService(pool, fieldRepo, companiesSvc, notificationsSvc)
+	fieldSvc := field.NewService(pool, fieldRepo, companiesSvc, notificationsSvc, hub)
 	fieldHandler := field.NewHandler(fieldSvc)
 
 	telegramRepo := telegram.NewRepository(pool)

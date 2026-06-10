@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/tadbirkor/axis-erp/backend/pkg/scope"
 	"github.com/tadbirkor/axis-erp/backend/pkg/tashkent"
 )
@@ -24,10 +25,14 @@ var (
 type Service struct {
 	pool  *pgxpool.Pool
 	cache *cache.Cache
+	hub   pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
-	return &Service{pool: pool, cache: c}
+func NewService(pool *pgxpool.Pool, c *cache.Cache, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
+	return &Service{pool: pool, cache: c, hub: hub}
 }
 
 func (s *Service) assertWarehouseScope(ctx context.Context, companyID, userID, warehouseID string) error {

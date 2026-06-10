@@ -12,6 +12,7 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/companies"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 type Service struct {
@@ -19,10 +20,14 @@ type Service struct {
 	repo      *Repository
 	companies *companies.Service
 	notify    *notifications.Service
+	hub       pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, notify *notifications.Service) *Service {
-	return &Service{pool: pool, repo: repo, companies: companiesSvc, notify: notify}
+func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
+	return &Service{pool: pool, repo: repo, companies: companiesSvc, notify: notify, hub: hub}
 }
 
 func (s *Service) assertFieldModule(ctx context.Context, companyID string) error {
@@ -111,6 +116,11 @@ func (s *Service) CreateAndAssign(ctx context.Context, companyID, userID string,
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+
+	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+		"warehouseId": input.SourceWarehouseID,
+		"reason":      "FIELD_TASK",
+	})
 
 	itemSummary := make([]string, len(planned))
 	for i, p := range planned {
@@ -373,6 +383,10 @@ func (s *Service) ApproveTask(ctx context.Context, companyID, userID, id string)
 		return nil, err
 	}
 
+	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+		"warehouseId": warehouseID,
+		"reason":      "FIELD_TASK",
+	})
 	_ = s.notify.NotifyUser(ctx, assigneeID, "Vazifa tasdiqlandi",
 		fmt.Sprintf(`"%s" hisobotingiz tasdiqlandi.`, title), "SUCCESS")
 

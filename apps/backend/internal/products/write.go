@@ -237,10 +237,28 @@ func (s *Service) Create(ctx context.Context, companyID, userID string, in Creat
 		        jsonb_build_object('name', $4, 'categoryId', $5, 'type', $6, 'unit', $7), NOW())
 	`, companyID, userID, productID, in.Name, in.CategoryID, in.Type, in.Unit)
 
+	initialWarehouse := ""
+	for _, v := range in.Variants {
+		if v.InitialStock != nil && *v.InitialStock > 0 {
+			if v.WarehouseID != nil && strings.TrimSpace(*v.WarehouseID) != "" {
+				initialWarehouse = strings.TrimSpace(*v.WarehouseID)
+				break
+			}
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	return s.FindOne(ctx, productID, companyID, "")
+	if initialWarehouse != "" {
+		s.hub.EmitInventoryChanged(companyID, map[string]any{
+			"productId":   productID,
+			"warehouseId": initialWarehouse,
+			"reason":      "product.created",
+		})
+		s.hub.EmitDashboardRefresh(companyID)
+	}
+	return s.FindOne(ctx, productID, companyID, initialWarehouse)
 }
 
 func (s *Service) Update(ctx context.Context, id, companyID, userID string, in UpdateInput) (map[string]any, error) {
@@ -347,10 +365,37 @@ func (s *Service) Update(ctx context.Context, id, companyID, userID string, in U
 		}
 	}
 
+	for _, variantID := range in.RemovedVariantIDs {
+		if err := s.removeVariantOnUpdate(ctx, tx, companyID, userID, id, variantID); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(in.StockAdjustments) > 0 {
+		if err := s.applyStockAdjustmentsInTx(ctx, tx, companyID, userID, id, in.StockAdjustments); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	return s.FindOne(ctx, id, companyID, "")
+
+	if len(in.StockAdjustments) > 0 {
+		primaryWarehouse := strings.TrimSpace(in.StockAdjustments[0].WarehouseID)
+		payload := map[string]any{"productId": id, "reason": "product.updated"}
+		if primaryWarehouse != "" {
+			payload["warehouseId"] = primaryWarehouse
+		}
+		s.hub.EmitInventoryChanged(companyID, payload)
+		s.hub.EmitDashboardRefresh(companyID)
+	}
+
+	warehouseID := ""
+	if len(in.StockAdjustments) > 0 {
+		warehouseID = strings.TrimSpace(in.StockAdjustments[0].WarehouseID)
+	}
+	return s.FindOne(ctx, id, companyID, warehouseID)
 }
 
 func (s *Service) Remove(ctx context.Context, id, companyID, userID string) (map[string]any, error) {

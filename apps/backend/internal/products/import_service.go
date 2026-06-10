@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/tadbirkor/axis-erp/backend/internal/stock"
 )
 
 func (s *Service) ImportPreview(ctx context.Context, companyID string, file []byte, warehouseID, importMode string) (map[string]any, error) {
@@ -322,23 +324,35 @@ func (s *Service) importOneRow(ctx context.Context, companyID, userID string, ro
 			WHERE "companyId" = $1 AND "warehouseId" = $2 AND "productVariantId" = $3
 		`, companyID, warehouseID, variantID).Scan(&current)
 		newQty := computeTargetStock(current, *excelQty, mode)
-		if acc != nil {
-			delta := newQty - current
+		delta := newQty - current
+		if math.Abs(delta) > 1e-9 {
+			if delta < 0 && current+delta < -1e-9 {
+				return fmt.Errorf(
+					"Omborda yetarli qoldiq yo'q. Mavjud: %v, chiqim: %v (Excel: %v, rejim: %s)",
+					current, math.Abs(delta), *excelQty, mode,
+				)
+			}
+			line := stock.Line{
+				WarehouseID:      warehouseID,
+				ProductVariantID: variantID,
+				Quantity:         math.Abs(delta),
+				Note:             fmt.Sprintf("Excel import (%s)", mode),
+			}
 			if delta > 0 {
+				_, err = stock.RecordOneInTx(ctx, tx, companyID, userID, line, "ADJUSTMENT")
+			} else {
+				_, err = stock.RecordOneOutInTx(ctx, tx, companyID, userID, "ADJUSTMENT", line)
+			}
+			if err != nil {
+				return err
+			}
+			if acc != nil && delta > 0 {
 				label := row.Name
 				if variantName != "" && !strings.EqualFold(variantName, "Asosiy") {
 					label += " / " + variantName
 				}
 				trackImportStockInbound(acc, delta, row.PurchasePrice, currency, label)
 			}
-		}
-		_, err = tx.Exec(ctx, `
-			INSERT INTO "StockBalance" (id, "companyId", "warehouseId", "productVariantId", quantity, "reservedQuantity", "updatedAt")
-			VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, NOW())
-			ON CONFLICT ("warehouseId", "productVariantId") DO UPDATE SET quantity = EXCLUDED.quantity, "updatedAt" = NOW()
-		`, companyID, warehouseID, variantID, newQty)
-		if err != nil {
-			return err
 		}
 	}
 	_ = userID

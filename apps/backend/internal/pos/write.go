@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/tadbirkor/axis-erp/backend/internal/retailcredit"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 var (
@@ -96,6 +97,15 @@ func (s *Service) logPriceOverrides(ctx context.Context, tx pgx.Tx, companyID, u
 
 func (s *Service) invalidateCatalog(ctx context.Context, companyID, warehouseID string) {
 	s.cache.DelByPrefix(ctx, fmt.Sprintf("pos:catalog:%s:%s:", companyID, warehouseID))
+}
+
+func (s *Service) notifyPosInventory(ctx context.Context, companyID, warehouseID, reason string) {
+	s.invalidateCatalog(ctx, companyID, warehouseID)
+	payload := map[string]any{"reason": reason}
+	if strings.TrimSpace(warehouseID) != "" {
+		payload["warehouseId"] = warehouseID
+	}
+	pkgrealtime.NotifyInventory(s.hub, companyID, payload)
 }
 
 func (s *Service) Create(ctx context.Context, companyID, userID string, in CreateSaleInput) (map[string]any, error) {
@@ -386,7 +396,7 @@ func (s *Service) QuickCheckout(ctx context.Context, companyID, userID string, i
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	s.invalidateCatalog(ctx, companyID, in.WarehouseID)
+	s.notifyPosInventory(ctx, companyID, in.WarehouseID, "POS_SALE")
 	return quickCheckoutResponse(
 		saleID, saleNumber, in.WarehouseID, currency, method,
 		subtotal, discount, total, cashReceived, change,
@@ -581,7 +591,7 @@ func (s *Service) Checkout(ctx context.Context, id, companyID, userID string, in
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	s.invalidateCatalog(ctx, companyID, warehouseID)
+	s.notifyPosInventory(ctx, companyID, warehouseID, "POS_SALE")
 	return s.fetchSaleDetail(ctx, id, companyID)
 }
 
@@ -661,7 +671,7 @@ func (s *Service) Void(ctx context.Context, id, companyID, userID string, in Voi
 		return nil, err
 	}
 	if prevStatus == "COMPLETED" {
-		s.invalidateCatalog(ctx, companyID, warehouseID)
+		s.notifyPosInventory(ctx, companyID, warehouseID, "POS_VOID")
 	}
 	return s.fetchSaleDetail(ctx, id, companyID)
 }

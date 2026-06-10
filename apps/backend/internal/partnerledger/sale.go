@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 var qtySummaryRe = regexp.MustCompile(`^(.+?)\s*[×x]\s*([\d.,]+)$`)
@@ -263,6 +264,11 @@ func (s *Service) CreateSaleOrder(ctx context.Context, companyID, userID, contac
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+
+	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+		"warehouseId": input.WarehouseID,
+		"reason":      "PARTNER_SALE_ORDER",
+	})
 
 	totalsText := formatTotalsText(ledgerAmounts)
 	qtyText := formatNumber(totalQty)

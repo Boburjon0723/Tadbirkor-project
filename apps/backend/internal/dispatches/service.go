@@ -11,17 +11,22 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/picktasks"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 type Service struct {
-	pool     *pgxpool.Pool
-	repo     *Repository
-	picking  *picktasks.Service
-	notify   *notifications.Service
+	pool    *pgxpool.Pool
+	repo    *Repository
+	picking *picktasks.Service
+	notify  *notifications.Service
+	hub     pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, picking *picktasks.Service, notify *notifications.Service) *Service {
-	return &Service{pool: pool, repo: repo, picking: picking, notify: notify}
+func NewService(pool *pgxpool.Pool, repo *Repository, picking *picktasks.Service, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
+	return &Service{pool: pool, repo: repo, picking: picking, notify: notify, hub: hub}
 }
 
 var allowedOrderStatuses = map[string]bool{
@@ -249,6 +254,10 @@ func (s *Service) Send(ctx context.Context, id, companyID, userID string) (map[s
 		return nil, err
 	}
 
+	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+		"warehouseId": head.WarehouseID,
+		"reason":      "DISPATCH",
+	})
 	go s.notifyDispatchSent(head, isPartial)
 	return map[string]any{"success": true}, nil
 }

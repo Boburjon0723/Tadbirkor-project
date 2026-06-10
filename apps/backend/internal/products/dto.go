@@ -24,15 +24,25 @@ type CreateInput struct {
 	Variants    []VariantInput `json:"variants"`
 }
 
+type StockAdjustmentInput struct {
+	WarehouseID            string   `json:"warehouseId"`
+	ProductVariantID       string   `json:"productVariantId"`
+	Quantity               float64  `json:"quantity"`
+	Note                   *string  `json:"note"`
+	PartnerLedgerContactID *string  `json:"partnerLedgerContactId"`
+}
+
 type UpdateInput struct {
-	Name        *string        `json:"name"`
-	CategoryID  *string        `json:"categoryId"`
-	Description *string        `json:"description"`
-	ImageURL    *string        `json:"imageUrl"`
-	Unit        *string        `json:"unit"`
-	Type        *string        `json:"type"`
-	Status      *string        `json:"status"`
-	Variants    []VariantInput `json:"variants"`
+	Name               *string                `json:"name"`
+	CategoryID         *string                `json:"categoryId"`
+	Description        *string                `json:"description"`
+	ImageURL           *string                `json:"imageUrl"`
+	Unit               *string                `json:"unit"`
+	Type               *string                `json:"type"`
+	Status             *string                `json:"status"`
+	Variants           []VariantInput         `json:"variants"`
+	RemovedVariantIDs  []string               `json:"removedVariantIds"`
+	StockAdjustments   []StockAdjustmentInput `json:"stockAdjustments"`
 }
 
 type ImportRow struct {

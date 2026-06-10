@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/companies"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/tadbirkor/axis-erp/backend/pkg/scope"
 )
 
@@ -20,13 +21,18 @@ type Service struct {
 	pool      *pgxpool.Pool
 	repo      *Repository
 	companies *companies.Service
+	hub       pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
 	return &Service{
 		pool:      pool,
 		repo:      repo,
 		companies: companiesSvc,
+		hub:       hub,
 	}
 }
 
@@ -955,6 +961,11 @@ func (s *Service) Complete(ctx context.Context, id, companyID, userID string) (m
 		}
 		return nil, err
 	}
+	if intake.PartnerLedgerContactID != nil && strings.TrimSpace(*intake.PartnerLedgerContactID) != "" {
+		if err := linkIntakeMovementsToLedgerTx(ctx, tx, companyID, userID, *intake.PartnerLedgerContactID, intake.ID, movementNote); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.repo.MarkCompletedTx(ctx, tx, id, userID); err != nil {
 		return nil, err
 	}
@@ -972,6 +983,14 @@ func (s *Service) Complete(ctx context.Context, id, companyID, userID string) (m
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	for _, line := range updated.Lines {
+		s.hub.EmitInventoryChanged(companyID, map[string]any{
+			"warehouseId":      updated.WarehouseID,
+			"productVariantId": line.ProductVariantID,
+			"reason":           "WAREHOUSE_INTAKE",
+		})
+	}
+	s.hub.EmitDashboardRefresh(companyID)
 	warehouse, err := s.repo.LoadWarehouse(ctx, companyID, updated.WarehouseID)
 	if err != nil {
 		return nil, err

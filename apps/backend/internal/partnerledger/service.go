@@ -8,16 +8,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/pkg/phone"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 type Service struct {
 	pool   *pgxpool.Pool
 	repo   *Repository
 	notify *notifications.Service
+	hub    pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, notify *notifications.Service) *Service {
-	return &Service{pool: pool, repo: repo, notify: notify}
+func NewService(pool *pgxpool.Pool, repo *Repository, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
+	return &Service{pool: pool, repo: repo, notify: notify, hub: hub}
 }
 
 func (s *Service) GetGlobalSummary(ctx context.Context, companyID string) (map[string]any, error) {

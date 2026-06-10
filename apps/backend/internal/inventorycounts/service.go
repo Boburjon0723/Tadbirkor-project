@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 var (
@@ -25,12 +26,16 @@ var (
 )
 
 type Service struct {
-	pool    *pgxpool.Pool
-	notify  *notifications.Service
+	pool   *pgxpool.Pool
+	notify *notifications.Service
+	hub    pkgrealtime.Hub
 }
 
-func NewService(pool *pgxpool.Pool, notify *notifications.Service) *Service {
-	return &Service{pool: pool, notify: notify}
+func NewService(pool *pgxpool.Pool, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+	if hub == nil {
+		hub = pkgrealtime.Noop
+	}
+	return &Service{pool: pool, notify: notify, hub: hub}
 }
 
 func (s *Service) List(ctx context.Context, companyID, status, warehouseID string) ([]map[string]any, error) {
@@ -475,6 +480,11 @@ func (s *Service) Complete(ctx context.Context, id, companyID, userID string) (m
 	if err := releaseBlocksForCount(ctx, s.pool, id, companyID); err != nil {
 		return nil, err
 	}
+	s.hub.EmitInventoryChanged(companyID, map[string]any{
+		"warehouseId": warehouseID,
+		"reason":      "INVENTORY_COUNT",
+	})
+	s.hub.EmitDashboardRefresh(companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
