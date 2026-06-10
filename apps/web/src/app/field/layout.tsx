@@ -43,7 +43,7 @@ export default function FieldLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col">
-      <header className="p-4 border-b border-white/10 flex justify-between items-center">
+      <header className="mobile-safe-top p-4 border-b border-white/10 flex justify-between items-center">
         <div className="flex items-center gap-2 min-w-0">
           <AxisLogo size={32} showText={false} />
           <span className="font-black text-lg truncate">Axis Field</span>
@@ -52,9 +52,9 @@ export default function FieldLayout({ children }: { children: React.ReactNode })
           <LogOut size={20} />
         </button>
       </header>
-      <main className="flex-1 p-4 pb-24">{children}</main>
+      <main className="flex-1 p-4 pb-[calc(6rem+env(safe-area-inset-bottom))]">{children}</main>
       {!hideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/10 flex justify-around p-2">
+        <nav className="fixed bottom-0 left-0 right-0 bg-[#0a0a0a] border-t border-white/10 flex justify-around p-2 mobile-safe-bottom-nav">
           {nav.map((item) => {
             const active = pathname === item.href;
             const Icon = item.icon;

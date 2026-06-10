@@ -365,7 +365,7 @@ export default function POSPage() {
 
   return (
     <div
-      className={`pos-shell h-screen flex flex-col md:flex-row overflow-hidden p-2 md:p-8 gap-2 md:gap-8 bg-[var(--pos-bg)] ${theme === 'light' ? 'pos-theme-light' : ''}`}
+      className={`pos-shell h-screen flex flex-col md:flex-row overflow-hidden p-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:p-8 md:pt-8 gap-2 md:gap-8 bg-[var(--pos-bg)] ${theme === 'light' ? 'pos-theme-light' : ''}`}
     >
       <div className="flex-1 flex flex-col gap-1 md:gap-2 min-w-0 min-h-0">
         <PosBarcodeScanner

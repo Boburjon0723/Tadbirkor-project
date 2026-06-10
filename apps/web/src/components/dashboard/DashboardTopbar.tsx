@@ -23,7 +23,7 @@ export function DashboardTopbar({
 
   return (
     <header
-      className={`h-20 px-6 md:px-12 flex items-center justify-between border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-40 ${
+      className={`mobile-header-bar px-6 md:px-12 flex items-center justify-between border-b border-white/5 bg-[#050505]/80 backdrop-blur-xl sticky top-0 z-40 ${
         hiddenOnMobileWarehouse ? 'max-lg:hidden' : ''
       }`}
     >
@@ -31,7 +31,7 @@ export function DashboardTopbar({
         <button
           type="button"
           onClick={onOpenMobileMenu}
-          className="md:hidden p-2 hover:bg-white/5 rounded-xl text-gray-400 active:scale-95 transition-all"
+          className="md:hidden p-2.5 min-w-[44px] min-h-[44px] hover:bg-white/5 rounded-xl text-gray-400 active:scale-95 transition-all touch-manipulation"
         >
           <Menu size={24} />
         </button>

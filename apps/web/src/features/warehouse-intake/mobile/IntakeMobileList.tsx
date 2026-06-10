@@ -115,7 +115,7 @@ export function IntakeMobileList() {
 
   return (
     <div className="lg:hidden fixed inset-0 z-[60] bg-[#050505] text-[#dde4dd] flex flex-col">
-      <header className="shrink-0 bg-[#080808]/95 backdrop-blur-xl border-b border-white/10 px-4 h-14 flex items-center gap-3">
+      <header className="mobile-header-bar-compact shrink-0 bg-[#080808]/95 backdrop-blur-xl border-b border-white/10 px-4 flex items-center gap-3">
         <Link
           href="/dashboard"
           className="p-2 -ml-2 rounded-xl text-[#bbcabf] active:bg-white/5"

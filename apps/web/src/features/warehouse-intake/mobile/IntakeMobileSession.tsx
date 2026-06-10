@@ -165,7 +165,7 @@ export function IntakeMobileSession({ intake, onUpdated }: Props) {
 
   return (
     <div className="lg:hidden fixed inset-0 z-[100] bg-[#0e1511] text-[#dde4dd] flex flex-col overflow-hidden">
-      <header className="flex-shrink-0 h-14 px-4 flex items-center gap-3 border-b border-white/10 bg-[#0e1511]/95 backdrop-blur-xl">
+      <header className="mobile-header-bar-compact flex-shrink-0 px-4 flex items-center gap-3 border-b border-white/10 bg-[#0e1511]/95 backdrop-blur-xl">
         <Link
           href="/dashboard/warehouse-intake"
           className="p-2 -ml-2 active:scale-95 text-emerald-400"

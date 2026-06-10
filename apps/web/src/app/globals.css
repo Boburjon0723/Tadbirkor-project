@@ -215,6 +215,43 @@ body {
   .desktop-modal-title {
     @apply text-lg md:text-xl font-black leading-tight text-white;
   }
+
+  /* iPhone notch / status bar — viewport-fit: cover bilan mos */
+  .mobile-safe-top {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
+
+  .mobile-header-bar {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    min-height: calc(5rem + env(safe-area-inset-top));
+  }
+
+  .mobile-header-bar-compact {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+    min-height: calc(3.5rem + env(safe-area-inset-top));
+  }
+
+  .mobile-safe-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  @media (min-width: 768px) {
+    .mobile-safe-top,
+    .mobile-header-bar {
+      padding-top: 0;
+    }
+
+    .mobile-header-bar {
+      min-height: 5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-header-bar-compact {
+      padding-top: 0;
+      min-height: 3.5rem;
+    }
+  }
 }
 
 /* POS — Dark / Light (qaymoq, toza oq emas). Savat alohida rangda. */

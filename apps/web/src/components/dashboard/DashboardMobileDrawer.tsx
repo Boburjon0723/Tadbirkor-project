@@ -37,9 +37,9 @@ export function DashboardMobileDrawer({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed top-0 left-0 bottom-0 w-80 bg-[#080808] border-r border-white/5 z-[70] flex flex-col md:hidden"
+            className="fixed top-0 left-0 bottom-0 w-80 bg-[#080808] border-r border-white/5 z-[70] flex flex-col md:hidden mobile-safe-top"
           >
-            <div className="h-20 flex items-center px-6 border-b border-white/5 justify-between">
+            <div className="h-20 shrink-0 flex items-center px-6 border-b border-white/5 justify-between">
               <div className="flex items-center">
                 <Zap className="text-blue-500 fill-blue-500" size={24} />
                 <span className="ml-3 font-bold text-xl tracking-tight">Axis ERP</span>
@@ -47,7 +47,7 @@ export function DashboardMobileDrawer({
               <button
                 type="button"
                 onClick={onClose}
-                className="p-2 hover:bg-white/5 rounded-xl text-gray-500"
+                className="p-2.5 min-w-[44px] min-h-[44px] hover:bg-white/5 rounded-xl text-gray-500 touch-manipulation"
               >
                 <X size={20} />
               </button>
@@ -61,11 +61,11 @@ export function DashboardMobileDrawer({
                 layoutIdPrefix="mobile-sidebar"
               />
             </nav>
-            <div className="p-4 border-t border-white/5">
+            <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] border-t border-white/5">
               <button
                 type="button"
                 onClick={() => authService.logout()}
-                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all font-bold text-sm"
+                className="w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all font-bold text-sm touch-manipulation"
               >
                 <LogOut size={20} /> Chiqish
               </button>

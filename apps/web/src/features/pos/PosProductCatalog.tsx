@@ -116,7 +116,7 @@ export function PosProductCatalog({
 }: Props) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const mobileIconBtn =
-    'w-10 h-10 shrink-0 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] inline-flex items-center justify-center active:scale-95';
+    'w-11 h-11 min-w-[44px] min-h-[44px] shrink-0 rounded-xl bg-[var(--pos-input-bg)] border border-[var(--pos-border)] inline-flex items-center justify-center active:scale-95 touch-manipulation';
 
   const colors = [
     'bg-blue-500',
