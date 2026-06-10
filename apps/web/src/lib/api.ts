@@ -18,7 +18,7 @@ export function resolveApiUrl(): string {
   }
 
   if (!raw || raw === 'same-origin') {
-    return process.env.NODE_ENV === 'production' ? DEFAULT_PROD_API_URL : 'http://localhost:4002/api';
+    return process.env.NODE_ENV === 'production' ? DEFAULT_PROD_API_URL : 'http://localhost:4003/api';
   }
 
   return raw.endsWith('/api') ? raw : `${raw}/api`;

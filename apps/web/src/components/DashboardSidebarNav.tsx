@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import type { DashboardMenuGroup, DashboardMenuItem } from '@/lib/dashboard-menu';
@@ -14,6 +14,7 @@ import {
 type Props = {
   groups: DashboardMenuGroup[];
   pathname: string;
+  search?: string;
   collapsed?: boolean;
   onNavigate?: () => void;
   layoutIdPrefix?: string;
@@ -22,12 +23,14 @@ type Props = {
 function MenuLink({
   item,
   pathname,
+  search = '',
   collapsed,
   onNavigate,
   layoutIdPrefix,
 }: {
   item: DashboardMenuItem;
   pathname: string;
+  search?: string;
   collapsed?: boolean;
   onNavigate?: () => void;
   layoutIdPrefix?: string;
@@ -51,9 +54,8 @@ function MenuLink({
   }
 
   const router = useRouter();
-  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const isActive = isMenuItemActive(pathname, item.href, searchParams.toString());
+  const isActive = isMenuItemActive(pathname, item.href, search);
   const warmRoute = () => {
     prefetchDashboardRoute(router, item.href);
     prefetchDashboardRouteData(queryClient, item.href);
@@ -88,6 +90,7 @@ function MenuLink({
 export function DashboardSidebarNav({
   groups,
   pathname,
+  search = '',
   collapsed = false,
   onNavigate,
   layoutIdPrefix = 'sidebar',
@@ -108,6 +111,7 @@ export function DashboardSidebarNav({
                 key={item.href}
                 item={item}
                 pathname={pathname}
+                search={search}
                 collapsed={collapsed}
                 onNavigate={onNavigate}
                 layoutIdPrefix={layoutIdPrefix}

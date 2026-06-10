@@ -53,16 +53,62 @@ export type MenuGuardItem = {
   moduleMatch?: ModuleMatchMode;
 };
 
+function menuHrefMatchesPathForGuard(
+  pathname: string,
+  href: string,
+  search = '',
+): boolean {
+  const [path, queryString] = href.split('?');
+  const pathMatches =
+    path === '/dashboard'
+      ? pathname === '/dashboard'
+      : path === '/pos'
+        ? pathname === '/pos' || pathname.startsWith('/pos/')
+        : pathname === path || pathname.startsWith(`${path}/`);
+  if (!pathMatches) return false;
+  if (!queryString) return true;
+  const expected = new URLSearchParams(queryString);
+  const actual = new URLSearchParams(search.replace(/^\?/, ''));
+  let ok = true;
+  expected.forEach((value, key) => {
+    if (actual.get(key) !== value) ok = false;
+  });
+  return ok;
+}
+
+/** Yo‘lga mos keladigan barcha modul himoyasi bandlari. */
+export function findMenuGuardsForPath(
+  pathname: string,
+  items: MenuGuardItem[],
+  search = '',
+): MenuGuardItem[] {
+  return items.filter((item) => {
+    if (!item.moduleKeys?.length) return false;
+    return menuHrefMatchesPathForGuard(pathname, item.href, search);
+  });
+}
+
 /** Yo‘l uchun eng mos menyu bandi (eng uzun href — `/dashboard/reports` vs `/dashboard/reports/pos`). */
 export function findMenuGuardForPath(
   pathname: string,
   items: MenuGuardItem[],
+  search = '',
 ): MenuGuardItem | null {
-  const candidates = items.filter((item) => {
-    if (!item.moduleKeys?.length) return false;
-    if (item.href === '/dashboard') return pathname === '/dashboard';
-    return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  });
+  const candidates = findMenuGuardsForPath(pathname, items, search);
   if (!candidates.length) return null;
   return candidates.sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/** Bir nechta menyu bandi mos kelsa — kamida bittasining moduli yoqilgan bo‘lsa kirish mumkin. */
+export function isPathModuleAccessAllowed(
+  pathname: string,
+  items: MenuGuardItem[],
+  cfg: CompanyFeatureConfig | null | undefined,
+  search = '',
+): boolean {
+  const guards = findMenuGuardsForPath(pathname, items, search);
+  if (!guards.length) return true;
+  return guards.some((guard) =>
+    areModuleKeysEnabled(cfg, guard.moduleKeys ?? [], guard.moduleMatch ?? 'all'),
+  );
 }

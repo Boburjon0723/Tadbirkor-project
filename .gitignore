@@ -32,6 +32,7 @@ apps/api/scratch/
 
 # Archives & personal (repo kerak emas)
 files.zip
+*.rar
 CV_Boburjon_Safarov.html
 
 # Mobile

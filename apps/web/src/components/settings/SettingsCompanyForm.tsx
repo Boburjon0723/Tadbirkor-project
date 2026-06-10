@@ -123,7 +123,7 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
   };
 
   const handleCopySnippet = async () => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api';
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4003/api';
     const snippet = `fetch('${apiBase}/storefront/${company?.id}/products', {\n  headers: {\n    'x-storefront-token': '${company?.storefrontToken || ''}'\n  }\n}).then(res => res.json()).then(console.log);`;
     await navigator.clipboard.writeText(snippet);
     setSnippetCopied(true);
@@ -305,7 +305,7 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             </button>
           </div>
           <code className="block text-[11px] text-gray-400 break-all">
-            {`GET ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4002/api'}/storefront/${company?.id}/products`}
+            {`GET ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4003/api'}/storefront/${company?.id}/products`}
           </code>
           <p className="text-[11px] text-gray-500">
             Header: <span className="text-gray-300">x-storefront-token: {company?.storefrontToken || 'TOKEN_YARATING'}</span>

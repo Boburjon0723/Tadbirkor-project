@@ -12,6 +12,7 @@ type Props = {
   onToggleCollapsed: () => void;
   groups: DashboardMenuGroup[];
   pathname: string;
+  search?: string;
   role: SessionRole;
 };
 
@@ -20,6 +21,7 @@ export function DashboardDesktopSidebar({
   onToggleCollapsed,
   groups,
   pathname,
+  search = '',
   role,
 }: Props) {
   return (
@@ -38,6 +40,7 @@ export function DashboardDesktopSidebar({
         <DashboardSidebarNav
           groups={groups}
           pathname={pathname}
+          search={search}
           collapsed={collapsed}
           layoutIdPrefix="desktop-sidebar"
         />

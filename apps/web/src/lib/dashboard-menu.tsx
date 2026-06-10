@@ -403,11 +403,14 @@ export function orderMobileBottomNavItems(
   ];
 }
 
-export function isMenuItemActive(
+/** Menyu href (query bilan) joriy yo‘lga mos keladimi */
+export function menuHrefMatchesLocation(
   pathname: string,
   href: string,
   search = '',
 ): boolean {
+  if (href === '#support') return false;
+
   const [path, queryString] = href.split('?');
   const pathMatches =
     path === '/dashboard'
@@ -428,18 +431,24 @@ export function isMenuItemActive(
   return matches;
 }
 
+export function isMenuItemActive(
+  pathname: string,
+  href: string,
+  search = '',
+): boolean {
+  return menuHrefMatchesLocation(pathname, href, search);
+}
+
 /** Rol bo‘yicha yo‘l: menyuda yo‘q bo‘limlarga to‘g‘ridan-to‘g‘ri URL ochilmasin */
 export function isDashboardPathAllowedForRole(
   pathname: string,
   role: SessionRole,
   items: Pick<DashboardMenuItem, 'href' | 'roles'>[],
+  search = '',
 ): boolean {
-  const relevant = items.filter((item) => {
-    if (item.href === '#support') return false;
-    if (item.href === '/dashboard') return pathname === '/dashboard';
-    if (item.href === '/pos') return pathname === '/pos' || pathname.startsWith('/pos/');
-    return pathname === item.href || pathname.startsWith(`${item.href}/`);
-  });
+  const relevant = items.filter((item) =>
+    menuHrefMatchesLocation(pathname, item.href, search),
+  );
   if (!relevant.length) return true;
   return relevant.some((item) => item.roles.includes(role));
 }

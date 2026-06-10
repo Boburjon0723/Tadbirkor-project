@@ -32,6 +32,26 @@ services:
     ports:
       - "4002:4002"
 
+  # Go parallel backend (Strangler Fig) — NestJS o'zgarmaydi
+  backend:
+    build:
+      context: ../apps/backend
+    container_name: axis-erp-backend
+    environment:
+      PORT: 4003
+      NESTJS_URL: http://api:4002
+      JWT_SECRET: your_super_secret_jwt_key_here
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/axis_erp
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: http://localhost:3000,http://localhost
+      TELEGRAM_BOT_USERNAME: ""
+    depends_on:
+      - postgres
+      - redis
+      - api
+    ports:
+      - "4003:4003"
+
   web:
     build:
       context: ../apps/web
@@ -49,6 +69,7 @@ services:
     depends_on:
       - web
       - api
+      - backend
     ports:
       - "80:80"
     volumes:

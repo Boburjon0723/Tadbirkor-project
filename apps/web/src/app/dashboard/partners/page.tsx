@@ -390,7 +390,8 @@ export default function PartnersPage() {
 }
 
 function PartnerCard({ partner, onAccept, onReject, onBlock, onRemove, onConfigureVisibility }: any) {
-  const company = partner.isIncoming ? partner.ownerCompany : partner.partnerCompany;
+  const company =
+    (partner.isIncoming ? partner.ownerCompany : partner.partnerCompany) ?? partner.company;
 
   return (
     <motion.div 
@@ -428,8 +429,8 @@ function PartnerCard({ partner, onAccept, onReject, onBlock, onRemove, onConfigu
             </span>
           </div>
         </div>
-        <h3 className="text-lg md:text-xl font-black text-white mb-0.5 group-hover:text-blue-400 transition-colors truncate">{company.name}</h3>
-        <p className="text-gray-500 text-xs font-bold mb-6">STIR: {company.tin}</p>
+        <h3 className="text-lg md:text-xl font-black text-white mb-0.5 group-hover:text-blue-400 transition-colors truncate">{company?.name ?? 'Hamkor'}</h3>
+        <p className="text-gray-500 text-xs font-bold mb-6">STIR: {company?.tin ?? '—'}</p>
       </div>
 
       <div className="pt-5 border-t border-white/5">

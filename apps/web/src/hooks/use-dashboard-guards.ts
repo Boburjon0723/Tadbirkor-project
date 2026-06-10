@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import {
-  areModuleKeysEnabled,
-  findMenuGuardForPath,
-  isModuleKeyEnabled,
-} from '@/lib/feature-modules';
+import { isPathModuleAccessAllowed } from '@/lib/feature-modules';
 import { computeOnboardingProgress } from '@/lib/onboarding';
 import { prefetchDashboardRoutes } from '@/lib/dashboard-prefetch';
 import {
@@ -23,6 +19,7 @@ import type { CompanyFeatureConfig } from '@/services/companies.service';
 
 type Params = {
   pathname: string;
+  search?: string;
   role: SessionRole;
   layoutHold: boolean;
   sessionPending: boolean;
@@ -36,6 +33,7 @@ type Params = {
 
 export function useDashboardGuards({
   pathname,
+  search = '',
   role,
   layoutHold,
   sessionPending,
@@ -105,18 +103,15 @@ export function useDashboardGuards({
 
   useEffect(() => {
     if (layoutHold || !featureConfig.hasFeatureConfig) return;
-    const guard = findMenuGuardForPath(pathname, allMenuItems);
-    if (!guard?.moduleKeys?.length) return;
-    const match = guard.moduleMatch ?? 'all';
-    if (!areModuleKeysEnabled(featureConfig, guard.moduleKeys, match)) {
+    if (!isPathModuleAccessAllowed(pathname, allMenuItems, featureConfig, search)) {
       router.replace('/dashboard');
     }
-  }, [pathname, featureConfig, layoutHold, router, allMenuItems]);
+  }, [pathname, search, featureConfig, layoutHold, router, allMenuItems]);
 
   useEffect(() => {
     if (layoutHold || sessionPending) return;
-    if (!isDashboardPathAllowedForRole(pathname, role, allMenuItems)) {
+    if (!isDashboardPathAllowedForRole(pathname, role, allMenuItems, search)) {
       router.replace('/dashboard');
     }
-  }, [pathname, role, layoutHold, sessionPending, router, allMenuItems]);
+  }, [pathname, search, role, layoutHold, sessionPending, router, allMenuItems]);
 }

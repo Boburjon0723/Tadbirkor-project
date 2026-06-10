@@ -11,9 +11,16 @@ type Props = {
   onClose: () => void;
   groups: DashboardMenuGroup[];
   pathname: string;
+  search?: string;
 };
 
-export function DashboardMobileDrawer({ open, onClose, groups, pathname }: Props) {
+export function DashboardMobileDrawer({
+  open,
+  onClose,
+  groups,
+  pathname,
+  search = '',
+}: Props) {
   return (
     <AnimatePresence>
       {open && (
@@ -49,6 +56,7 @@ export function DashboardMobileDrawer({ open, onClose, groups, pathname }: Props
               <DashboardSidebarNav
                 groups={groups}
                 pathname={pathname}
+                search={search}
                 onNavigate={onClose}
                 layoutIdPrefix="mobile-sidebar"
               />
