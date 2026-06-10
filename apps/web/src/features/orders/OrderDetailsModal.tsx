@@ -79,7 +79,7 @@ export function OrderDetailsModal({
             initial={{ opacity: 0, y: 100 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 100 }}
-            className="relative w-full max-w-4xl glass-card rounded-t-[2.5rem] md:rounded-[3rem] p-6 md:p-10 bg-[#0a0a0a] border-white/10 shadow-2xl flex flex-col h-full md:h-auto max-h-[100vh] md:max-h-[90vh]"
+            className="relative w-full max-w-3xl lg:max-w-4xl glass-card rounded-t-2xl md:rounded-2xl p-4 md:p-6 bg-[#0a0a0a] border-white/10 shadow-2xl flex flex-col h-full md:h-auto max-h-[100vh] md:max-h-[92vh]"
           >
             <div className="flex justify-between items-start mb-6 md:mb-8">
               <div>
@@ -249,7 +249,7 @@ export function OrderDetailsModal({
                         <button
                           type="button"
                           onClick={() => onAction('reject', order.id)}
-                          className="flex-1 md:px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all"
+                          className="btn-dash-secondary flex-1 text-red-400 hover:bg-red-500/10"
                         >
                           Rad etish
                         </button>
@@ -274,14 +274,14 @@ export function OrderDetailsModal({
                       <button
                         type="button"
                         onClick={() => onAction('delete', order.id)}
-                        className="flex-1 md:px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all"
+                        className="btn-dash-secondary flex-1 text-red-400 hover:bg-red-500/10"
                       >
                         O&apos;chirish
                       </button>
                       <button
                         type="button"
                         onClick={() => onAction('cancel', order.id)}
-                        className="flex-1 md:px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all"
+                        className="btn-dash-secondary flex-1 text-red-400 hover:bg-red-500/10"
                       >
                         Bekor qilish
                       </button>
@@ -313,7 +313,7 @@ export function OrderDetailsModal({
                     <button
                       type="button"
                       onClick={() => onCloseRemainder(order.id)}
-                      className="flex-1 md:px-8 py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-orange-300 hover:bg-orange-500/10 transition-all"
+                      className="btn-dash-secondary flex-1 text-orange-300 hover:bg-orange-500/10"
                     >
                       {activeTab === 'my'
                         ? "Qolganini kutmayman"

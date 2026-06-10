@@ -32,6 +32,7 @@ import { AddPartnerLedgerContactModal } from '@/features/partner-ledger/AddPartn
 import { PartnerLedgerOperationModal } from '@/features/partner-ledger/PartnerLedgerOperationModal';
 import { PartnerLedgerSaleModal } from '@/features/partner-ledger/PartnerLedgerSaleModal';
 import { PartnerLedgerOperationDetailModal, operationHasDetail } from '@/features/partner-ledger/PartnerLedgerOperationDetailModal';
+import { PartnerLedgerOperationsMobile } from '@/features/partner-ledger/PartnerLedgerOperationsMobile';
 import {
   formatBalancesLine,
   formatLedgerAmount,
@@ -220,14 +221,13 @@ export default function PartnerLedgerPage() {
   const loading = permLoading || contactsLoading;
 
   return (
-    <ModuleGate moduleKey="PARTNER_LEDGER" moduleLabel="Hamkor daftari">
-      <div className="space-y-6 pb-20">
+    <ModuleGate moduleKey="PARTNER_LEDGER" moduleLabel="Qo‘lda hisob daftari">
+      <div className="dash-page">
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight">Hamkor daftari</h1>
-            <p className="text-gray-400 mt-2 text-sm max-w-xl">
-              Chiqim (sotish) va pul harakatlari shu yerda. Tovar kirimi ombordan qilinadi — daftar
-              avtomatik yangilanadi.
+            <h1 className="dash-page-title">Qo‘lda hisob daftari</h1>
+            <p className="dash-page-subtitle mt-1.5">
+              Tizimda ro‘yxatdan o‘tmagan hamkorlar bilan sotuv, to‘lov va qarz — qo‘lda yuritiladi.
             </p>
             <p className="text-gray-500 text-xs mt-1">Chapdan hamkor tanlang — har biri uchun alohida hisob.</p>
           </div>
@@ -235,7 +235,7 @@ export default function PartnerLedgerPage() {
             <button
               type="button"
               onClick={() => setAddContactOpen(true)}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-gray-900 font-black text-sm shrink-0"
+              className="btn-dash bg-white text-gray-900 shrink-0"
             >
               <Plus size={18} /> Hamkor qo‘shish
             </button>
@@ -262,7 +262,7 @@ export default function PartnerLedgerPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(260px,320px)_1fr] gap-6 min-h-[480px]">
-          <div className="glass-card rounded-3xl border border-white/10 overflow-hidden flex flex-col">
+          <div className="-mx-6 lg:mx-0 glass-card rounded-none lg:rounded-3xl border-y lg:border border-white/10 overflow-hidden flex flex-col">
             <div className="p-4 border-b border-white/10 flex items-center gap-2">
               <Users size={18} className="text-gray-400" />
               <span className="font-black text-sm">Hamkorlar</span>
@@ -472,12 +472,33 @@ export default function PartnerLedgerPage() {
                       </button>
                     ) : null}
                   </div>
+                  <div className="md:hidden">
+                    <PartnerLedgerOperationsMobile
+                      operations={operations}
+                      isLoading={opsLoading}
+                      canManage={canManage}
+                      sendingBatchId={sendingBatchId}
+                      sendPending={mutations.sendSaleOrderToPartner.isPending}
+                      onOpenDetail={setDetailOperation}
+                      onEdit={(op) => {
+                        setEditingOp(op);
+                        setOpModalOpen(true);
+                      }}
+                      onDelete={handleDeleteOp}
+                      onSendSaleOrder={(op) => void handleSendSaleOrderToPartner(op)}
+                    />
+                  </div>
+
                   {opsLoading ? (
-                    <PageSkeleton rows={3} />
+                    <div className="hidden md:block">
+                      <PageSkeleton rows={3} />
+                    </div>
                   ) : operations.length === 0 ? (
-                    <p className="text-gray-500 text-sm font-bold py-8 text-center">Operatsiyalar yo‘q</p>
+                    <p className="hidden md:block text-gray-500 text-sm font-bold py-8 text-center">
+                      Operatsiyalar yo‘q
+                    </p>
                   ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-white/10">
+                    <div className="hidden md:block overflow-x-auto rounded-2xl border border-white/10">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-white/10 text-left text-[10px] uppercase text-gray-500">

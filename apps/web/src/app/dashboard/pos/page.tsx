@@ -42,17 +42,17 @@ export default function PosCenterPage() {
   }, [searchParams, router]);
 
   return (
-    <ModuleGate moduleKey="POS" moduleLabel="POS markazi">
+    <ModuleGate moduleKey="POS" moduleLabel="Kassa boshqaruvi">
       <div className="space-y-8 pb-20">
         <div>
           <div className="flex items-center gap-3 mb-2">
             <CreditCard className="text-blue-500" size={28} />
-            <h1 className="text-2xl md:text-4xl font-black tracking-tight">
-              POS <span className="text-blue-500">markazi</span>
+            <h1 className="dash-page-title">
+              Kassa <span className="text-blue-500">boshqaruvi</span>
             </h1>
           </div>
-          <p className="text-gray-400 text-sm md:text-lg">
-            Kassa tarixi, chakana mijozlar (POS) va hisobot — B2B hamkorlar alohida.
+          <p className="dash-page-subtitle">
+            Sotuvlar tarixi, chakana mijozlar va kassa hisoboti.
           </p>
         </div>
 

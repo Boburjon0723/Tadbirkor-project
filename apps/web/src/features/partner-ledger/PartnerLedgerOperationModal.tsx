@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2 } from 'lucide-react';
+import { Loader2, PenLine } from 'lucide-react';
 import type { LedgerOperation, LedgerOperationType } from '@/services/partner-ledger.service';
 import { OPERATION_QUICK_ACTIONS } from './partner-ledger-utils';
 import { PartnerLedgerWorkflowInfo } from './PartnerLedgerWorkflowInfo';
+import { MobileFormShell } from '@/components/mobile/MobileFormShell';
 
 type Props = {
   open: boolean;
@@ -35,7 +35,6 @@ export function PartnerLedgerOperationModal({
   const [currency, setCurrency] = useState<'UZS' | 'USD'>('UZS');
   const [operationDate, setOperationDate] = useState('');
   const [notes, setNotes] = useState('');
-  const modalTransition = { duration: 0.12, ease: 'easeOut' as const };
 
   useEffect(() => {
     if (!open) return;
@@ -62,114 +61,99 @@ export function PartnerLedgerOperationModal({
   };
 
   return (
-    <AnimatePresence initial={false}>
-      {open && (
+    <MobileFormShell
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      zIndex={200}
+      icon={
+        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+          <PenLine size={20} />
+        </div>
+      }
+      title={initial ? 'Operatsiyani tahrirlash' : 'Yangi operatsiya'}
+      footer={
+        <button
+          type="submit"
+          form="partner-ledger-operation-form"
+          disabled={busy}
+          className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+        >
+          {busy && <Loader2 className="animate-spin" size={16} />}
+          Saqlash
+        </button>
+      }
+    >
+      {!initial && (
         <>
-          <motion.div
-            className="fixed inset-0 bg-black/70 z-[200]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={modalTransition}
-            onClick={onClose}
-          />
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={modalTransition}
-            className="fixed inset-x-4 top-[8vh] md:left-1/2 md:-translate-x-1/2 md:w-full md:max-w-lg z-[210] glass-card rounded-3xl border border-white/10 p-6 shadow-2xl"
-          >
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-black text-white">
-                {initial ? 'Operatsiyani tahrirlash' : 'Yangi operatsiya'}
-              </h2>
-              <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-white/10 text-gray-400">
-                <X size={20} />
-              </button>
-            </div>
-
-            {!initial && (
-              <>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {OPERATION_QUICK_ACTIONS.filter((a) => a.type !== 'SALE_OUT').map((a) => (
-                    <button
-                      key={a.type}
-                      type="button"
-                      onClick={() => setType(a.type)}
-                      className={`px-3 py-2 rounded-xl text-xs font-bold border text-left ${
-                        type === a.type
-                          ? 'bg-blue-600/30 border-blue-500 text-white'
-                          : 'bg-white/5 border-white/10 text-gray-400'
-                      }`}
-                    >
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-                {type === 'SALE_OUT' ? (
-                  <p className="text-xs text-amber-400/90 mb-3 leading-relaxed">
-                    Tovar sotish uchun sahifadagi «Sotish» tugmasidan katalogli buyurtmani ishlating.
-                  </p>
-                ) : null}
-                <PartnerLedgerWorkflowInfo variant="compact" />
-              </>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-500">Summa</label>
-                  <input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-500">Valyuta</label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value as 'UZS' | 'USD')}
-                    className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
-                  >
-                    <option value="UZS">UZS</option>
-                    <option value="USD">USD</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-500">Sana</label>
-                <input
-                  type="date"
-                  value={operationDate}
-                  onChange={(e) => setOperationDate(e.target.value)}
-                  className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-500">Eslatma</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                  className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold resize-none"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {OPERATION_QUICK_ACTIONS.filter((a) => a.type !== 'SALE_OUT').map((a) => (
               <button
-                type="submit"
-                disabled={busy}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                key={a.type}
+                type="button"
+                onClick={() => setType(a.type)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border text-left ${
+                  type === a.type
+                    ? 'bg-blue-600/30 border-blue-500 text-white'
+                    : 'bg-white/5 border-white/10 text-gray-400'
+                }`}
               >
-                {busy && <Loader2 className="animate-spin" size={16} />}
-                Saqlash
+                {a.label}
               </button>
-            </form>
-          </motion.div>
+            ))}
+          </div>
+          {type === 'SALE_OUT' ? (
+            <p className="text-xs text-amber-400/90 mb-3 leading-relaxed">
+              Tovar sotish uchun sahifadagi «Sotish» tugmasidan katalogli buyurtmani ishlating.
+            </p>
+          ) : null}
+          <PartnerLedgerWorkflowInfo variant="compact" />
         </>
       )}
-    </AnimatePresence>
+
+      <form id="partner-ledger-operation-form" onSubmit={handleSubmit} className="space-y-3 mt-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-[10px] font-black uppercase text-gray-500">Summa</label>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-black uppercase text-gray-500">Valyuta</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as 'UZS' | 'USD')}
+              className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
+            >
+              <option value="UZS">UZS</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] font-black uppercase text-gray-500">Sana</label>
+          <input
+            type="date"
+            value={operationDate}
+            onChange={(e) => setOperationDate(e.target.value)}
+            className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-[10px] font-black uppercase text-gray-500">Eslatma</label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={2}
+            className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 font-bold resize-none"
+          />
+        </div>
+      </form>
+    </MobileFormShell>
   );
 }

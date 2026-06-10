@@ -187,7 +187,7 @@ export function printReceiptsList(receipts: any[]) {
   th { background: #f3f4f6; }
   td.num { text-align: right; }
 </style></head><body>
-  <h1>Kelgan yuklar — ${receipts.length} ta</h1>
+  <h1>Yuk qabul qilish — ${receipts.length} ta</h1>
   <table>
     <thead><tr><th>Qabul №</th><th>Sotuvchi</th><th>Summa</th><th>Status</th><th>Sana</th></tr></thead>
     <tbody>${rows.join('')}</tbody>

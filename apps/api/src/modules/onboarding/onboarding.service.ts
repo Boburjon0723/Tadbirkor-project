@@ -17,6 +17,7 @@ const DEFAULT_FEATURE_KEYS = [
   'WAREHOUSE_BASIC',
   'STOCK_ADJUSTMENT',
   'B2B_ORDERS',
+  'GOODS_RECEIPTS_MAIN',
   'DEBT_TRACKING',
 ];
 
@@ -303,6 +304,7 @@ export class OnboardingService {
     if (hasPartners) {
       enabledFeatureKeys.push(
         'B2B_ORDERS',
+        'GOODS_RECEIPTS_MAIN',
         'PARTIAL_RECEIPT',
         'PRODUCT_MAPPING',
       );

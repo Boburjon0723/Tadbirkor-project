@@ -57,20 +57,20 @@ export default function FieldDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 pb-20">
+    <div className="dash-page">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+          <h1 className="dash-page-title flex items-center gap-3">
             <Truck className="text-cyan-400" /> Dala xodimlari
           </h1>
-          <p className="text-gray-400 mt-2">Vazifalar, tovar biriktirish va hisobot tasdiqlash</p>
+          <p className="dash-page-subtitle mt-1.5">Vazifalar, tovar biriktirish va hisobot tasdiqlash</p>
         </div>
 
-        <div className="flex gap-3">
-          <Link href="/dashboard/field/workers" className="px-5 py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-sm">
+        <div className="flex gap-2">
+          <Link href="/dashboard/field/workers" className="btn-dash-secondary font-bold">
             KPI / Balans
           </Link>
-          <Link href="/dashboard/field/new" className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-cyan-600 hover:bg-cyan-500 font-black text-sm">
+          <Link href="/dashboard/field/new" className="btn-dash bg-cyan-600 hover:bg-cyan-500 text-white">
             <Plus size={18} /> Yangi vazifa
           </Link>
         </div>

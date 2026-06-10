@@ -237,7 +237,7 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
             animate={{ y: 0, scale: 1 }}
             exit={{ y: '100%', scale: 1 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-t-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[92vh] sm:h-auto sm:max-h-[90vh] p-5 sm:p-10 absolute bottom-0 sm:relative"
+            className="relative w-full max-w-3xl lg:max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[92vh] sm:h-auto sm:max-h-[92vh] p-4 sm:p-5 md:p-6 absolute bottom-0 sm:relative"
           >
             <div className="flex justify-between items-start mb-6 sm:mb-8 shrink-0">
               <div className="flex items-center gap-3 sm:gap-4">
@@ -645,7 +645,7 @@ export function AcceptReceiptModal({ isOpen, onClose, receipt }: AcceptReceiptMo
                     type="button"
                     disabled={receiptBusy}
                     onClick={handleReject}
-                    className="flex-1 sm:px-8 py-3.5 sm:py-4 bg-white/5 border border-white/10 rounded-2xl font-black text-red-400 hover:bg-red-500/10 transition-all text-xs disabled:opacity-40"
+                    className="btn-dash-secondary flex-1 text-red-400 hover:bg-red-500/10 text-xs disabled:opacity-40"
                   >
                     Rad etish
                   </button>

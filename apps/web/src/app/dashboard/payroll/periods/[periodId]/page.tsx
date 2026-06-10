@@ -151,7 +151,7 @@ export default function PayrollPeriodDetailPage() {
             {period ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-3xl font-black tracking-tight">
+                  <h1 className="dash-page-title">
                     {formatPayrollMonth(period.year, period.month)}
                   </h1>
                   <span
@@ -167,7 +167,7 @@ export default function PayrollPeriodDetailPage() {
                 </p>
               </>
             ) : (
-              <h1 className="text-3xl font-black">Oylik davri</h1>
+              <h1 className="dash-page-title">Oylik davri</h1>
             )}
           </div>
         </div>

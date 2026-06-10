@@ -151,15 +151,15 @@ export default function ExpensesPage() {
 
   return (
     <ModuleGate moduleKey="EXPENSES" moduleLabel="Ichki xarajatlar">
-      <div className="space-y-6 pb-20">
+      <div className="dash-page">
         <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-amber-300">
               Oylik xarajat daftari
             </p>
-            <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-white">
+            <h1 className="mt-2 flex items-center gap-3 dash-page-title text-white">
               <Wallet2 className="text-amber-400" size={30} />
-              Xarajatlar
+              Ichki xarajatlar
             </h1>
           </div>
 

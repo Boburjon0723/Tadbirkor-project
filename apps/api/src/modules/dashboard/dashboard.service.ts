@@ -55,15 +55,16 @@ export class DashboardService {
           where: { warehouse: { companyId } },
           select: {
             quantity: true,
-            productVariant: { select: { salePrice: true, currency: true } },
+            productVariant: { select: { purchasePrice: true, currency: true } },
           },
         })
         .then((balances) => {
+          const round2 = (n: number) => Math.round(n * 100) / 100;
           return balances.reduce(
             (acc, b) => {
               const c = (b.productVariant.currency || 'UZS').toUpperCase();
-              const val = Number(b.productVariant.salePrice || 0) * Number(b.quantity);
-              acc[c] = (acc[c] || 0) + val;
+              const val = Number(b.productVariant.purchasePrice || 0) * Number(b.quantity);
+              acc[c] = round2((acc[c] || 0) + val);
               return acc;
             },
             { UZS: 0, USD: 0 } as Record<string, number>,

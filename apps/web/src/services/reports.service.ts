@@ -11,7 +11,7 @@ export type PosReportSummary = {
   cashSales: Record<string, number>;
   cardSales: Record<string, number>;
   creditSales: Record<string, number>;
-  openReceivablesTotal: number;
+  openReceivablesTotal: Record<string, number>;
 };
 
 export const reportsService = {

@@ -133,16 +133,16 @@ export default function PartnersPage() {
 
   return (
     <ModuleGate moduleKey="PARTNERS" moduleLabel="Hamkorlar">
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-white/5">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Hamkorlar <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Tarmog'i</span></h1>
-          <p className="text-gray-400 text-sm md:text-base">B2B aloqalar va hamkorlik so'rovlarini boshqarish.</p>
+          <h1 className="dash-page-title mb-1.5">B2B <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">hamkorlar</span></h1>
+          <p className="dash-page-subtitle">Hamkor kompaniyalar, so‘rovlar va aloqa holati.</p>
         </div>
         <button 
           onClick={() => setShowAddModal(true)}
-          className="group flex items-center gap-2.5 px-6 py-3.5 lg:px-8 lg:py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl lg:rounded-2xl transition-all shadow-[0_12px_24px_rgba(37,99,235,0.25)] active:scale-95 text-xs lg:text-sm whitespace-nowrap self-start md:self-auto"
+          className="btn-dash-primary group whitespace-nowrap self-start md:self-auto"
         >
           <UserPlus size={16} className="group-hover:scale-110 transition-transform" />
           Yangi hamkor
@@ -210,7 +210,7 @@ export default function PartnersPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="glass-card rounded-[3rem] overflow-hidden bg-white/[0.01] border border-white/5 min-h-[400px] shadow-xl">
+      <div className="dash-section min-h-[400px] shadow-xl">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center gap-6">
             <Loader2 className="animate-spin text-blue-500" size={50} />

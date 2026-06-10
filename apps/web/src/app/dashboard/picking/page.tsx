@@ -29,11 +29,11 @@ export default function PickingPage() {
     <div className="space-y-8 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/5">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">
-            Saralash <span className="text-amber-400">(Picking)</span>
+          <h1 className="dash-page-title">
+            Buyurtma <span className="text-amber-400">yig‘ish</span>
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Jo&apos;natma uchun ombordan mahsulotlarni saralash va skanerlash.
+          <p className="dash-page-subtitle mt-1.5">
+            Jo‘natma uchun ombordan mahsulotlarni yig‘ish va skanerlash.
           </p>
         </div>
         <div className="flex items-center gap-2">

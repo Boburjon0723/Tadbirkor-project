@@ -15,9 +15,9 @@ import { randomBytes } from 'crypto';
 import {
   WAREHOUSE_BUNDLE_ALL_ID,
   WAREHOUSE_FEATURE_BUNDLES,
-  WAREHOUSE_SECTION_FEATURE_DEFS,
   WAREHOUSE_SECTION_FEATURE_KEYS,
 } from '../../common/warehouse-section-features';
+import { syncSystemModuleCatalog } from '../../common/module-catalog';
 import { UpdateIntakeSettingsDto } from './dto/update-intake-settings.dto';
 import { UpdatePosReceiptSettingsDto } from './dto/update-pos-receipt-settings.dto';
 import {
@@ -35,6 +35,9 @@ const FEATURES_CACHE_TTL_MS = Number(process.env.FEATURES_CACHE_TTL_MS || 300_00
 
 @Injectable()
 export class CompaniesService {
+  private moduleCatalogSynced = false;
+  private moduleCatalogSyncing: Promise<void> | null = null;
+
   constructor(
     private prisma: PrismaService,
     private telegramLinkService: TelegramLinkService,
@@ -102,68 +105,32 @@ export class CompaniesService {
   }
 
   async getFeatureConfig(companyId: string) {
+    await this.ensureModuleCatalog();
     const key = AppCacheService.companyFeaturesKey(companyId);
     return this.cache.getOrSet(
       key,
       async () => {
-        await this.ensureWarehouseFeatureCatalog();
-        await this.ensurePayrollModuleCatalog();
         await this.ensureCompanyWarehouseSectionDefaults(companyId);
+        await this.ensureCompanyGoodsReceiptsDefaults(companyId);
         return this.loadFeatureConfig(companyId);
       },
       FEATURES_CACHE_TTL_MS,
     );
   }
 
-  /** PAYROLL moduli va feature katalogda bo‘lishi kerak (UI toggle) */
-  async ensurePayrollModuleCatalog() {
-    const moduleRecord = await (this.prisma as any).module.upsert({
-      where: { key: 'PAYROLL' },
-      update: {
-        name: 'Oylik',
-        description: 'Xodimlar maoshi hisoblash va tasdiqlash',
-      },
-      create: {
-        key: 'PAYROLL',
-        name: 'Oylik',
-        description: 'Xodimlar maoshi hisoblash va tasdiqlash',
-      },
-    });
-
-    await (this.prisma as any).feature.upsert({
-      where: { key: 'PAYROLL_MAIN' },
-      update: {
-        name: 'Oylik hisoblash',
-        description: 'Davr bo‘yicha maosh, bonus va tasdiqlash',
-      },
-      create: {
-        moduleId: moduleRecord.id,
-        key: 'PAYROLL_MAIN',
-        name: 'Oylik hisoblash',
-        description: 'Davr bo‘yicha maosh, bonus va tasdiqlash',
-      },
-    });
-  }
-
-  /** Feature jadvalida ombor bo‘limlari mavjudligini kafolatlash */
-  async ensureWarehouseFeatureCatalog() {
-    const warehouseModule = await (this.prisma as any).module.findUnique({
-      where: { key: 'WAREHOUSE' },
-    });
-    if (!warehouseModule) return;
-
-    for (const def of WAREHOUSE_SECTION_FEATURE_DEFS) {
-      await (this.prisma as any).feature.upsert({
-        where: { key: def.key },
-        update: { name: def.name, description: def.description },
-        create: {
-          moduleId: warehouseModule.id,
-          key: def.key,
-          name: def.name,
-          description: def.description,
-        },
-      });
+  /** Barcha tizim modullari va feature lar DB da bo‘lishi kerak (Sozlamalar → Modullar) */
+  async ensureModuleCatalog() {
+    if (this.moduleCatalogSynced) return;
+    if (!this.moduleCatalogSyncing) {
+      this.moduleCatalogSyncing = syncSystemModuleCatalog(this.prisma as any)
+        .then(() => {
+          this.moduleCatalogSynced = true;
+        })
+        .finally(() => {
+          this.moduleCatalogSyncing = null;
+        });
     }
+    await this.moduleCatalogSyncing;
   }
 
   /** Eski kompaniyalar: ombor yoqilgan bo‘lsa, yangi bo‘limlar default yoqilgan */
@@ -198,6 +165,47 @@ export class CompaniesService {
           data: { companyId, featureId: feature.id, enabled: true },
         });
       }
+    }
+  }
+
+  /** Eski kompaniyalar: B2B yoki PARTIAL_RECEIPT yoqilgan bo‘lsa, Kelgan yuklar modulini ham yoqish */
+  private async ensureCompanyGoodsReceiptsDefaults(companyId: string) {
+    const configCount = await (this.prisma as any).companyFeature.count({
+      where: { companyId },
+    });
+    if (configCount === 0) return;
+
+    const goodsFeatures = await (this.prisma as any).feature.findMany({
+      where: { key: { in: ['GOODS_RECEIPTS_MAIN', 'PARTIAL_RECEIPT'] } },
+      select: { id: true, key: true },
+    });
+    if (!goodsFeatures.length) return;
+
+    const hasAnyGoodsReceiptConfig = await (this.prisma as any).companyFeature.findFirst({
+      where: {
+        companyId,
+        featureId: { in: goodsFeatures.map((f: { id: string }) => f.id) },
+      },
+    });
+    if (hasAnyGoodsReceiptConfig) return;
+
+    const hasLegacyAccess = await (this.prisma as any).companyFeature.findFirst({
+      where: {
+        companyId,
+        enabled: true,
+        OR: [
+          { feature: { key: { in: ['B2B_ORDERS', 'PARTIAL_RECEIPT', 'B2B_MAIN'] } } },
+          { feature: { module: { key: 'B2B' } } },
+          { feature: { key: 'WAREHOUSE_BASIC' } },
+        ],
+      },
+    });
+    if (!hasLegacyAccess) return;
+
+    for (const feature of goodsFeatures) {
+      await (this.prisma as any).companyFeature.create({
+        data: { companyId, featureId: feature.id, enabled: true },
+      });
     }
   }
 
@@ -395,7 +403,7 @@ export class CompaniesService {
       deduped.set(u.key.toUpperCase(), u.enabled);
     }
 
-    await this.ensureWarehouseFeatureCatalog();
+    await this.ensureModuleCatalog();
 
     for (const [key, enabled] of deduped.entries()) {
       const feature = await (this.prisma as any).feature.findUnique({
@@ -471,7 +479,7 @@ export class CompaniesService {
     }
 
     if (featureKeyRaw) {
-      await this.ensureWarehouseFeatureCatalog();
+      await this.ensureModuleCatalog();
       const featureKey = featureKeyRaw.toUpperCase();
       const feature = await (this.prisma as any).feature.findUnique({
         where: { key: featureKey },
@@ -490,12 +498,7 @@ export class CompaniesService {
 
     const moduleKey = moduleKeyRaw.toUpperCase();
 
-    if (moduleKey === 'WAREHOUSE') {
-      await this.ensureWarehouseFeatureCatalog();
-    }
-    if (moduleKey === 'PAYROLL') {
-      await this.ensurePayrollModuleCatalog();
-    }
+    await this.ensureModuleCatalog();
 
     const moduleRecord = await (this.prisma as any).module.findUnique({
       where: { key: moduleKey },

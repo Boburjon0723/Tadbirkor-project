@@ -336,7 +336,7 @@ export function IntakeMobileList() {
       <button
         type="button"
         onClick={() => setCreateOpen(true)}
-        className="fixed bottom-6 right-5 w-14 h-14 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center active:scale-90 z-[70]"
+        className="fixed right-5 w-14 h-14 rounded-full bg-blue-600 text-white shadow-2xl flex items-center justify-center active:scale-90 z-[70] bottom-[calc(1.5rem+env(safe-area-inset-bottom))]"
         aria-label="Yangi kirim"
       >
         <Plus size={26} strokeWidth={2.5} />

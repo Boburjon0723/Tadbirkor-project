@@ -21,6 +21,7 @@ import { ProductModalWarehousePicker } from './ProductModalWarehousePicker';
 import { ProductModalBasicSection } from './ProductModalBasicSection';
 import { ProductModalVariantCard } from './ProductModalVariantCard';
 import { PartnerLedgerContactSelect } from '@/features/partner-ledger/PartnerLedgerContactSelect';
+import { useKeyboardInset } from '@/hooks/use-keyboard-inset';
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -46,6 +47,52 @@ export function ProductModal({
   const { data: warehouses } = useWarehouses();
   const { createProduct, updateProduct } = useProductActions();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const keyboardActive = isOpen && isMobileViewport;
+  const { inset: keyboardInset, viewportHeight, offsetTop } =
+    useKeyboardInset(keyboardActive);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobileViewport(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
+  React.useEffect(() => {
+    if (!keyboardActive) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [keyboardActive]);
+
+  const handleFieldFocus = useCallback(
+    (e: React.FocusEvent) => {
+      if (!isMobileViewport) return;
+      const el = e.target;
+      if (!(el instanceof HTMLElement)) return;
+      if (!el.matches('input, textarea, select')) return;
+      window.setTimeout(() => {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 280);
+    },
+    [isMobileViewport],
+  );
+
+  const mobilePanelStyle = isMobileViewport
+    ? {
+        position: 'fixed' as const,
+        top: offsetTop,
+        left: 0,
+        right: 0,
+        height: viewportHeight ?? undefined,
+        maxHeight: viewportHeight ?? undefined,
+      }
+    : undefined;
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
@@ -501,7 +548,7 @@ export function ProductModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex flex-col md:items-center md:justify-center md:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -511,10 +558,24 @@ export function ProductModal({
           />
           
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={
+              isMobileViewport
+                ? { opacity: 0, y: '100%' }
+                : { opacity: 0, scale: 0.96, y: 16 }
+            }
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-4xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            exit={
+              isMobileViewport
+                ? { opacity: 0, y: '100%' }
+                : { opacity: 0, scale: 0.96, y: 16 }
+            }
+            transition={
+              isMobileViewport
+                ? { type: 'spring', damping: 28, stiffness: 320 }
+                : { duration: 0.2 }
+            }
+            style={mobilePanelStyle}
+            className="relative w-full h-full md:h-auto md:max-w-3xl lg:max-w-4xl bg-[#0a0a0a] md:border md:border-white/10 md:rounded-2xl shadow-2xl overflow-hidden flex flex-col md:max-h-[92vh] pt-[env(safe-area-inset-top)] md:!top-auto md:!left-auto md:!right-auto md:!h-auto md:!max-h-[92vh]"
           >
             {detailLoading && (
               <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm">
@@ -523,51 +584,65 @@ export function ProductModal({
               </div>
             )}
             {/* Header */}
-            <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                  <Package size={24} />
+            <div className="shrink-0 border-b border-white/5 bg-white/[0.02]">
+              <div className="flex items-start gap-3 p-4 md:p-8 md:pb-6">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                  <Package size={22} className="md:w-6 md:h-6" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black">
+                <div className="flex-1 min-w-0 pr-2">
+                  <h2 className="text-lg md:text-2xl font-black leading-tight">
                     {product?.id ? (
                       <>Mahsulotni <span className="text-blue-500">tahrirlash</span></>
                     ) : (
                       <>Yangi <span className="text-blue-500">Mahsulot</span></>
                     )}
                   </h2>
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-gray-500 text-xs md:text-sm mt-0.5 hidden sm:block">
                     {product?.id
                       ? "Variantlar, narx va ombor qoldig'ini yangilang"
                       : "Katalogingizga yangi mahsulot va variantlarni qo'shing"}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-2.5 md:p-3 hover:bg-white/5 rounded-xl md:rounded-2xl transition-colors shrink-0"
+                  aria-label="Yopish"
+                >
+                  <X size={22} className="md:w-6 md:h-6" />
+                </button>
               </div>
 
-              <ProductModalWarehousePicker
-                productId={product?.id}
-                warehouses={warehouses}
-                targetWarehouseId={formData.targetWarehouseId}
-                configWarehouseName={configWarehouse?.name}
-                resolvedWarehouseId={resolvedWarehouseId}
-                showStockColumn={showStockColumn}
-                isOpen={isWarehouseDropdownOpen}
-                onToggle={() => setIsWarehouseDropdownOpen(!isWarehouseDropdownOpen)}
-                onSelect={(warehouseId) => {
-                  lastWarehouseForStockSync.current = null;
-                  stockTouchedRef.current = false;
-                  setFormData((prev) => ({ ...prev, targetWarehouseId: warehouseId }));
-                  setIsWarehouseDropdownOpen(false);
-                }}
-                onClose={() => setIsWarehouseDropdownOpen(false)}
-              />
-              <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl transition-colors">
-                <X size={24} />
-              </button>
+              {showStockColumn && (
+                <div className="px-4 pb-4 md:px-5 md:pb-5">
+                  <ProductModalWarehousePicker
+                    productId={product?.id}
+                    warehouses={warehouses}
+                    targetWarehouseId={formData.targetWarehouseId}
+                    configWarehouseName={configWarehouse?.name}
+                    resolvedWarehouseId={resolvedWarehouseId}
+                    showStockColumn={showStockColumn}
+                    isOpen={isWarehouseDropdownOpen}
+                    onToggle={() => setIsWarehouseDropdownOpen(!isWarehouseDropdownOpen)}
+                    onSelect={(warehouseId) => {
+                      lastWarehouseForStockSync.current = null;
+                      stockTouchedRef.current = false;
+                      setFormData((prev) => ({ ...prev, targetWarehouseId: warehouseId }));
+                      setIsWarehouseDropdownOpen(false);
+                    }}
+                    onClose={() => setIsWarehouseDropdownOpen(false)}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Content */}
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-12 custom-scrollbar">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div
+              ref={scrollRef}
+              onFocusCapture={handleFieldFocus}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-5 md:p-8 space-y-8 md:space-y-12 custom-scrollbar scroll-pt-4 scroll-pb-28 md:scroll-pb-4"
+            >
               <ProductModalBasicSection
                 formData={formData}
                 categories={categories}
@@ -584,19 +659,19 @@ export function ProductModal({
                 variantCount={product?.variants?.length}
               />
               {/* Variants Section */}
-              <div className="space-y-8">
-                <div className="flex items-center justify-between px-2">
+              <div className="space-y-4 md:space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:px-2">
                   <div className="flex items-center gap-3">
                     <div className="w-1.5 h-6 bg-blue-500 rounded-full shadow-[0_0_15px_rgba(59,130,246,0.6)]" />
-                    <h3 className="text-xl font-black text-white/90">Mahsulot Variantlari</h3>
+                    <h3 className="text-base md:text-xl font-black text-white/90">Variantlar</h3>
                   </div>
                   <button
                     type="button"
                     onClick={handleAddVariant}
-                    className="group flex items-center gap-3 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl text-xs font-black transition-all shadow-lg shadow-blue-600/20 active:scale-95"
+                    className="group flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl md:rounded-2xl text-xs font-black transition-all shadow-lg shadow-blue-600/20 active:scale-95"
                   >
                     <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" /> 
-                    Variant qo'shish
+                    Variant qo&apos;shish
                   </button>
                 </div>
 
@@ -610,7 +685,7 @@ export function ProductModal({
                 </div>
               ) : null}
 
-              <div className="space-y-6">
+              <div className="divide-y divide-white/5 md:divide-y-0 md:space-y-6 border-t border-white/5 md:border-t-0">
                   {formData.variants.map((variant, index) => (
                     <ProductModalVariantCard
                       key={variant.id ?? `new-${index}`}
@@ -629,12 +704,18 @@ export function ProductModal({
                 </div>
               </div>
 
-              {/* Footer Section */}
-              <div className="pt-10 flex items-center justify-end gap-5">
+            </div>
+
+              {/* Footer — klaviatura ustida qoladi (panel visualViewport ga mos) */}
+              <div
+                className={`desktop-modal-footer bg-[#0a0a0a]/95 backdrop-blur-xl ${
+                  keyboardInset > 0 ? 'py-2' : 'py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]'
+                }`}
+              >
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-sm font-bold hover:bg-white/10 hover:border-white/20 transition-all active:scale-95"
+                  className="w-full sm:w-auto px-6 py-3.5 md:py-4 bg-white/5 border border-white/10 rounded-xl md:rounded-2xl text-sm font-bold hover:bg-white/10 transition-all active:scale-[0.98]"
                 >
                   Bekor qilish
                 </button>
@@ -646,16 +727,18 @@ export function ProductModal({
                     createProduct.isPending ||
                     updateProduct.isPending
                   }
-                  className="relative group px-12 py-4 bg-blue-600 overflow-hidden rounded-2xl transition-all shadow-2xl shadow-blue-600/30 active:scale-95 disabled:opacity-50"
+                  className="relative group w-full sm:w-auto px-6 md:px-12 py-3.5 md:py-4 bg-blue-600 overflow-hidden rounded-xl md:rounded-2xl transition-all shadow-xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  <span className="relative text-white font-black text-sm tracking-widest uppercase">
+                  <span className="relative text-white font-black text-sm tracking-wide uppercase flex items-center justify-center gap-2">
                     {isSaving || createProduct.isPending || updateProduct.isPending ? (
-                      <div className="flex items-center gap-2">
+                      <>
                         <Loader2 className="animate-spin" size={18} />
                         Saqlanmoqda...
-                      </div>
-                    ) : 'Mahsulotni Saqlash'}
+                      </>
+                    ) : (
+                      'Saqlash'
+                    )}
                   </span>
                 </button>
               </div>

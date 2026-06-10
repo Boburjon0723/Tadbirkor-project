@@ -318,16 +318,16 @@ export const ImportProductModal: React.FC<ImportProductModalProps> = ({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-5xl bg-[#0a0a0a] border border-white/10 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="desktop-modal-panel max-w-4xl lg:max-w-5xl"
       >
         {/* Header */}
-        <div className="p-8 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+        <div className="desktop-modal-header flex items-center justify-between bg-white/[0.02]">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-blue-600/20 flex items-center justify-center text-blue-500">
               <Upload size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-black tracking-tight text-white">
+              <h2 className="desktop-modal-title">
                 Excel <span className="text-emerald-400">kirim</span>
               </h2>
               <p className="text-gray-500 text-sm font-medium">
@@ -632,12 +632,12 @@ export const ImportProductModal: React.FC<ImportProductModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-8 border-t border-white/10 bg-white/[0.02] flex items-center justify-between gap-4">
+        <div className="desktop-modal-footer bg-white/[0.02] sm:justify-between">
           <button
             type="button"
             onClick={reset}
             disabled={importing}
-            className="px-8 py-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-2xl text-sm font-black transition-all disabled:opacity-40"
+            className="btn-dash-secondary text-gray-400 hover:text-white"
           >
             Faylni almashtirish
           </button>
@@ -647,7 +647,7 @@ export const ImportProductModal: React.FC<ImportProductModalProps> = ({
               <button
                 type="button"
                 onClick={() => void handleStopImport()}
-                className="px-8 py-4 bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/30 rounded-2xl text-sm font-black transition-all"
+                className="btn-dash bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/30"
               >
                 Importni bekor qilish
               </button>
@@ -655,7 +655,7 @@ export const ImportProductModal: React.FC<ImportProductModalProps> = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-8 py-4 text-gray-500 hover:text-white text-sm font-black transition-all focus:outline-none"
+                className="btn-dash text-gray-500 hover:text-white"
               >
                 Bekor qilish
               </button>

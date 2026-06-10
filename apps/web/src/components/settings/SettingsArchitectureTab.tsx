@@ -43,7 +43,7 @@ export function SettingsArchitectureTab() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="glass-card p-6 sm:p-12 rounded-[2rem] sm:rounded-[3rem] bg-white/[0.01] border border-white/5 overflow-x-auto">
+      <div className="dash-section p-4 sm:p-6 overflow-x-auto">
         <div className="flex items-center justify-between min-w-[800px] relative">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-rose-500/20 -translate-y-1/2" />
           {steps.map((step, idx) => (

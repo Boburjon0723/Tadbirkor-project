@@ -85,7 +85,8 @@ export class PosReportsService {
       }
     }
 
-    const openReceivables = await this.prisma.retailReceivable.aggregate({
+    const openReceivableRows = await this.prisma.retailReceivable.groupBy({
+      by: ['currency'],
       where: {
         companyId,
         status: { in: ['OPEN', 'PARTIAL'] },
@@ -93,17 +94,29 @@ export class PosReportsService {
       _sum: { remainingAmount: true },
     });
 
+    const openReceivablesTotal = init();
+    for (const row of openReceivableRows) {
+      const cur = normalizeCurrency(row.currency);
+      openReceivablesTotal[cur] = Number(row._sum.remainingAmount || 0);
+    }
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    const roundBucket = (bucket: { UZS: number; USD: number }) => ({
+      UZS: round2(bucket.UZS),
+      USD: round2(bucket.USD),
+    });
+
     return {
       source: 'POS_SALE',
       receiptsCount,
       itemsSold,
-      grossSales,
-      discounts,
-      netSales,
-      cashSales,
-      cardSales,
-      creditSales,
-      openReceivablesTotal: Number(openReceivables._sum.remainingAmount || 0),
+      grossSales: roundBucket(grossSales),
+      discounts: roundBucket(discounts),
+      netSales: roundBucket(netSales),
+      cashSales: roundBucket(cashSales),
+      cardSales: roundBucket(cardSales),
+      creditSales: roundBucket(creditSales),
+      openReceivablesTotal,
     };
   }
 

@@ -86,54 +86,50 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       <AnimatePresence>
         {state?.open && (
           <motion.div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            className="desktop-modal-overlay z-[200]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              className="desktop-modal-backdrop"
               onClick={() => close(false)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md rounded-[2rem] border border-white/10 bg-[#0a0a0a] p-8 shadow-2xl"
+              className="desktop-modal-panel max-w-md p-4 md:p-5"
             >
-              <div className="flex items-start gap-4 mb-6">
+              <div className="flex items-start gap-3 mb-4">
                 <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                     isDanger ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
                   }`}
                 >
-                  <AlertTriangle size={24} />
+                  <AlertTriangle size={20} />
                 </div>
-                <div>
-                  <h3 className="text-xl font-black text-white">
+                <div className="min-w-0">
+                  <h3 className="desktop-modal-title">
                     {state.title || 'Tasdiqlash'}
                   </h3>
-                  <p className="text-gray-400 text-sm mt-2 leading-relaxed">
+                  <p className="text-gray-400 text-sm mt-1.5 leading-relaxed">
                     {state.message}
                   </p>
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <button
                   type="button"
                   onClick={() => close(false)}
-                  className="flex-1 py-3 rounded-xl bg-white/5 border border-white/10 font-bold text-gray-400 hover:bg-white/10 transition-all"
+                  className="btn-dash-secondary flex-1"
                 >
                   {state.cancelLabel || 'Bekor qilish'}
                 </button>
                 <button
                   type="button"
                   onClick={() => close(true)}
-                  className={`flex-1 py-3 rounded-xl font-black text-white transition-all ${
-                    isDanger
-                      ? 'bg-red-600 hover:bg-red-500'
-                      : 'bg-blue-600 hover:bg-blue-500'
-                  }`}
+                  className={`flex-1 ${isDanger ? 'btn-dash-danger' : 'btn-dash-primary'}`}
                 >
                   {state.confirmLabel || 'Ha, davom etish'}
                 </button>

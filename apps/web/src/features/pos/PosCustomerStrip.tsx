@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User, UserPlus, X, Loader2 } from 'lucide-react';
 import { retailCustomersService } from '@/services/retail-customers.service';
 import {
@@ -45,13 +45,18 @@ export function PosCustomerStrip({
     : 'bg-[var(--pos-input-bg)] border-[var(--pos-border)] text-[var(--pos-text)]';
   const iconColor = isCart ? 'text-cyan-300' : 'text-[var(--pos-accent)]';
   const [query, setQuery] = useState('');
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(isSheet);
   const [showQuick, setShowQuick] = useState(false);
   const [quickPhone, setQuickPhone] = useState('');
+  const pickLockRef = useRef(false);
   const prefetchRecent = usePrefetchPosCustomers();
   const { data: results = [], isFetching } = usePosCustomerPicker(
     pickerOpen ? query : '',
   );
+
+  useEffect(() => {
+    if (isSheet && pickerOpen) prefetchRecent();
+  }, [isSheet, pickerOpen, prefetchRecent]);
 
   const label =
     value.customerName ||
@@ -65,6 +70,13 @@ export function PosCustomerStrip({
   };
 
   const pick = (c: { id: string; name: string; phone?: string | null }) => {
+    if (pickLockRef.current) return;
+    pickLockRef.current = true;
+
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     onChange({
       retailCustomerId: c.id,
       customerName: c.name,
@@ -73,7 +85,12 @@ export function PosCustomerStrip({
     setQuery('');
     setPickerOpen(false);
     setShowQuick(false);
+    toast.success(`${c.name} savatga biriktirildi`, { duration: 2200 });
     onPicked?.();
+
+    window.setTimeout(() => {
+      pickLockRef.current = false;
+    }, 350);
   };
 
   const quickAdd = async () => {
@@ -182,21 +199,46 @@ export function PosCustomerStrip({
           Oxirgi mijozlar
         </p>
       )}
+      {isSheet && pickerOpen && !value.retailCustomerId && !query.trim() && (
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            clear();
+          }}
+          className={`w-full text-left px-4 ${itemPy} rounded-xl border border-[var(--pos-cart-border)] bg-[var(--pos-cart-bg)] text-sm font-bold touch-manipulation active:scale-[0.99]`}
+        >
+          Mehmon (mijozsiz davom etish)
+        </button>
+      )}
       {showList && (
         <ul className={`${listMaxH} overflow-y-auto space-y-1 custom-scrollbar`}>
-          {results.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(c)}
-                className={`w-full text-left px-4 ${itemPy} rounded-xl hover:bg-[var(--pos-accent)]/20 text-sm font-bold active:bg-[var(--pos-accent)]/30`}
-              >
-                {c.name}
-                {c.phone ? <span className={`${labelColor} ml-2`}>{c.phone}</span> : null}
-              </button>
-            </li>
-          ))}
+          {results.map((c) => {
+            const selected = value.retailCustomerId === c.id;
+            return (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    pick(c);
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    pick(c);
+                  }}
+                  className={`w-full text-left px-4 ${itemPy} rounded-xl text-sm font-bold touch-manipulation active:scale-[0.99] ${
+                    selected
+                      ? 'bg-[var(--pos-accent)]/25 border border-[var(--pos-accent)]/40'
+                      : 'hover:bg-[var(--pos-accent)]/20 active:bg-[var(--pos-accent)]/30'
+                  }`}
+                >
+                  {c.name}
+                  {c.phone ? <span className={`${labelColor} ml-2`}>{c.phone}</span> : null}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
       {pickerOpen && query.trim() && results.length === 0 && !isFetching && (

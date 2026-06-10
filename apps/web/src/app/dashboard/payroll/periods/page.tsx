@@ -59,10 +59,10 @@ export default function PayrollPeriodsPage() {
           </Link>
           <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+              <h1 className="dash-page-title flex items-center gap-3">
                 <Banknote className="text-violet-400" /> Oylik davrlari
               </h1>
-              <p className="text-gray-500 font-bold text-sm mt-1">
+              <p className="dash-page-subtitle mt-1">
                 Hisoblash, tasdiqlash va to‘lov holati
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function PayrollPeriodsPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-violet-600 hover:bg-violet-500 font-black text-sm"
+                className="btn-dash bg-violet-600 hover:bg-violet-500 text-white"
               >
                 <Plus size={18} /> Yangi davr
               </button>

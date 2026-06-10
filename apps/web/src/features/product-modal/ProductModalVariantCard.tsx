@@ -51,9 +51,9 @@ function ProductModalVariantCardInner({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-6 md:p-7 bg-white/[0.03] border border-white/10 rounded-[2rem] relative group/card hover:bg-white/[0.04] transition-all hover:border-white/20 hover:shadow-2xl hover:shadow-black/40"
+      className="py-5 md:py-7 md:px-7 md:bg-white/[0.03] md:border md:border-white/10 md:rounded-[2rem] relative group/card md:hover:bg-white/[0.04] transition-all md:hover:border-white/20 md:hover:shadow-2xl md:hover:shadow-black/40"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {visibleConfig.showVariantName && (
@@ -247,9 +247,10 @@ function ProductModalVariantCardInner({
         <button
           type="button"
           onClick={() => onRemove(index)}
-          className="absolute -top-3 -right-3 w-10 h-10 bg-red-500/15 text-red-400 border border-red-500/25 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all opacity-100 shadow-xl backdrop-blur-md"
+          className="mt-4 md:mt-0 md:absolute md:-top-3 md:-right-3 w-full md:w-10 h-11 md:h-10 bg-red-500/10 text-red-400 border border-red-500/20 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 md:gap-0 hover:bg-red-500 hover:text-white transition-all"
         >
           <Trash2 size={18} />
+          <span className="text-xs font-bold md:hidden">Variantni o&apos;chirish</span>
         </button>
       )}
     </motion.div>

@@ -255,17 +255,19 @@ export default function ActivityPage() {
   };
 
   return (
-    <div className="space-y-10 pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+    <div className="dash-page">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Harakatlar <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Tarixi</span></h1>
-          <p className="text-gray-400 text-sm md:text-base">Tizimdagi barcha operatsiyalar va foydalanuvchilar harakati monitoringi.</p>
+          <h1 className="dash-page-title mb-1">
+            Tizim <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">jurnali</span>
+          </h1>
+          <p className="dash-page-subtitle">
+            Kim, qachon va nima o‘zgartirgani — barcha harakatlar tarixi.
+          </p>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
         {[
           { title: "Bugungi harakatlar", value: stats?.totalToday || 0, icon: TrendingUp, color: "blue" },
           { title: "Narx o'zgarishlari", value: stats?.priceUpdates || 0, icon: Tag, color: "purple" },
@@ -277,7 +279,7 @@ export default function ActivityPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.08, type: 'spring', stiffness: 100 }}
             whileHover={{ y: -4, scale: 1.01 }}
-            className="glass-card p-6 md:p-8 rounded-[2.5rem] relative overflow-hidden group shadow-lg border border-white/5 hover:border-white/10 transition-all duration-300"
+            className="glass-card p-4 md:p-5 lg:p-6 rounded-2xl lg:rounded-[2rem] relative overflow-hidden group shadow-lg border border-white/5 hover:border-white/10 transition-all duration-300"
           >
             <div className="relative flex flex-col gap-4">
               <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-colors duration-300 ${statColorStyles[stat.color] || statColorStyles.blue}`}>
@@ -293,7 +295,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Filters (optimized and spacious) */}
-      <div className="glass-card p-5 rounded-[2.5rem] flex flex-col xl:flex-row gap-4 items-center bg-white/[0.01] relative z-20 border border-white/5">
+      <div className="glass-card p-4 lg:p-5 rounded-2xl lg:rounded-[2rem] flex flex-col lg:flex-row gap-3 lg:gap-4 items-stretch lg:items-center bg-white/[0.01] relative z-20 border border-white/5">
         <div className="relative flex-1 w-full group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-blue-500 transition-colors w-4.5 h-4.5" />
           <input 
@@ -405,7 +407,7 @@ export default function ActivityPage() {
       </div>
 
       {/* Timeline */}
-      <div className="glass-card rounded-[3rem] p-6 md:p-10 relative overflow-hidden bg-white/[0.01] border border-white/5 shadow-xl">
+      <div className="dash-section p-4 md:p-6 relative shadow-xl">
         <div className="absolute left-[54px] md:left-[71px] top-20 bottom-20 w-px bg-gradient-to-b from-blue-500/0 via-blue-500/10 to-blue-500/0 hidden sm:block" />
 
         {isLoading ? (
@@ -536,7 +538,7 @@ export default function ActivityPage() {
         <div className="space-y-1.5">
           <h5 className="font-black text-emerald-400 text-sm md:text-base">Audit va Monitoring Nazorati</h5>
           <p className="text-xs md:text-sm text-gray-500 leading-relaxed font-medium">
-            Harakatlar tarixi (Activity Timeline) tizimdagi har bir o'zgarishni soniyalarigacha aniqlikda qayd etadi. 
+            Faollik jurnali tizimdagi har bir o‘zgarishni soniyalarigacha aniqlikda qayd etadi. 
             Bu xavfsizlik va xatoliklarni aniqlashda asosiy vosita hisoblanadi. Xavfsizlik maqsadida ushbu yozuvlar 
             tizimdan o'chirib yuborilmaydi va doimiy saqlanadi.
           </p>

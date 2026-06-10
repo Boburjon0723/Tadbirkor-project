@@ -88,7 +88,7 @@ export class TelegramTasksService {
       if (n > 0) counts.push(`🤝 Hamkor so‘rovi: ${n} ta`);
     }
 
-    if (this.roleCanField(role) && this.moduleOn(enabledModules, 'FIELD')) {
+    if (this.roleCanField(role) && this.moduleOn(enabledModules, 'FIELD_SERVICE')) {
       const n = await this.prisma.fieldTask.count({
         where: { companyId, status: 'REPORTED' },
       });
@@ -121,7 +121,7 @@ export class TelegramTasksService {
       include: { feature: { include: { module: { select: { key: true } } } } },
     });
     if (!rows.length) {
-      return new Set(['WAREHOUSE', 'B2B', 'PARTNERS', 'DEBT', 'POS', 'FIELD', 'EMPLOYEES']);
+      return new Set(['WAREHOUSE', 'B2B', 'PARTNERS', 'DEBT', 'POS', 'FIELD_SERVICE', 'EMPLOYEES']);
     }
     return new Set(
       rows.map((r: any) => String(r.feature?.module?.key || '').toUpperCase()).filter(Boolean),

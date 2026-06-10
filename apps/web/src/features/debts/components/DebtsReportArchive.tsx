@@ -32,7 +32,7 @@ export function DebtsReportArchive({ activeTab, onExportPdf, onExportExcel }: Pr
   const years = data?.archiveYears ?? 3;
 
   return (
-    <div className="glass-card rounded-[2rem] md:rounded-[2.5rem] border border-white/5 bg-white/[0.01] overflow-hidden">
+    <div className="dash-section overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

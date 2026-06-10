@@ -50,6 +50,7 @@ export function PosCustomerMobileSheet({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-1 shrink-0" />
             <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--pos-cart-border)] shrink-0">

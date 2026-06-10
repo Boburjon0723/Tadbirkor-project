@@ -105,6 +105,28 @@ body {
     scrollbar-width: none;
   }
 
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.02);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
   .neon-border {
     position: relative;
   }
@@ -129,6 +151,69 @@ body {
   @keyframes gradient-move {
     0% { background-position: 0% 50%; }
     100% { background-position: 200% 50%; }
+  }
+}
+
+/* 15.6" noutbuk (1366–1920px) — ixcham dashboard va modallar */
+@layer components {
+  .dash-page {
+    @apply space-y-5 lg:space-y-7 pb-16 md:pb-20;
+  }
+
+  .dash-page-title {
+    @apply text-2xl md:text-3xl lg:text-4xl font-black tracking-tight;
+  }
+
+  .dash-page-subtitle {
+    @apply text-gray-400 text-sm md:text-base max-w-2xl;
+  }
+
+  .dash-section {
+    @apply glass-card rounded-xl lg:rounded-2xl overflow-hidden bg-white/[0.01] border border-white/5;
+  }
+
+  .btn-dash {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 md:px-5 md:py-3 rounded-xl text-sm font-black transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap;
+  }
+
+  .btn-dash-primary {
+    @apply btn-dash bg-blue-600 hover:bg-blue-500 text-white;
+  }
+
+  .btn-dash-secondary {
+    @apply btn-dash bg-white/5 border border-white/10 text-gray-200 hover:bg-white/10;
+  }
+
+  .btn-dash-danger {
+    @apply btn-dash bg-red-600/90 hover:bg-red-500 text-white;
+  }
+
+  .desktop-modal-overlay {
+    @apply fixed inset-0 flex items-center justify-center p-3 sm:p-4;
+  }
+
+  .desktop-modal-backdrop {
+    @apply absolute inset-0 bg-black/75 backdrop-blur-sm;
+  }
+
+  .desktop-modal-panel {
+    @apply relative w-full flex flex-col max-h-[92vh] overflow-hidden bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl;
+  }
+
+  .desktop-modal-header {
+    @apply shrink-0 border-b border-white/5 px-4 py-3 md:px-5 md:py-4;
+  }
+
+  .desktop-modal-body {
+    @apply flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 md:px-5 custom-scrollbar;
+  }
+
+  .desktop-modal-footer {
+    @apply shrink-0 border-t border-white/10 px-4 py-3 md:px-5 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3;
+  }
+
+  .desktop-modal-title {
+    @apply text-lg md:text-xl font-black leading-tight text-white;
   }
 }
 

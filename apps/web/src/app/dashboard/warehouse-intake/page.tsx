@@ -81,15 +81,15 @@ export default function WarehouseIntakeListPage() {
   };
 
   return (
-    <ModuleGate moduleKey="WAREHOUSE_INTAKE" moduleLabel="Ombor kirimi">
+    <ModuleGate moduleKey="WAREHOUSE_INTAKE" moduleLabel="Skaner kirimi">
       <div className="hidden lg:block space-y-8 pb-12 min-w-[1024px]">
         <div className="flex items-end justify-between gap-6 pb-6 border-b border-white/5">
           <div>
-            <h1 className="text-3xl font-black tracking-tight">
-              Ombor <span className="text-blue-500">kirimi</span>
+            <h1 className="dash-page-title">
+              Skaner <span className="text-blue-500">kirimi</span>
             </h1>
-            <p className="text-gray-500 text-sm mt-2">
-              Qo&apos;lda va skaner orqali mahsulot qabul qilish (desktop)
+            <p className="dash-page-subtitle mt-1.5">
+              Barkod orqali tez mahsulot qabul qilish (desktop)
             </p>
           </div>
           <button

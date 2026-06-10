@@ -65,7 +65,7 @@ function ProfitHero({ data }: { data: MonthlyOverview }) {
         )}
         <div>
           <p
-            className={`text-3xl md:text-4xl font-black tabular-nums ${
+            className={`text-2xl md:text-3xl lg:text-4xl font-black tabular-nums ${
               isProfit ? 'text-emerald-300' : isLoss ? 'text-red-300' : 'text-white'
             }`}
           >

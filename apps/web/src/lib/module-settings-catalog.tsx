@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { GROUP, SECTION } from '@/lib/dashboard-labels';
 import {
   Warehouse as WarehouseIcon,
   ShoppingCart,
@@ -8,6 +9,7 @@ import {
   CreditCard,
   Users,
   Truck,
+  PackageCheck,
   Store,
   Wallet2,
   TrendingUp,
@@ -35,21 +37,21 @@ export type ModuleSettingDefinition = {
 
 /** Sidebar guruhlari bilan mos */
 export const MODULE_SETTING_GROUPS: { id: ModuleSettingGroupId; title: string }[] = [
-  { id: 'warehouse', title: 'Ombor' },
-  { id: 'pos', title: 'Chakana (POS)' },
-  { id: 'b2b', title: 'B2B savdo' },
-  { id: 'finance', title: 'Moliya (B2B)' },
-  { id: 'field', title: 'Dala xizmati' },
-  { id: 'reports', title: 'Hisobot' },
-  { id: 'company', title: 'Kompaniya' },
+  { id: 'warehouse', title: GROUP.warehouse },
+  { id: 'pos', title: GROUP.pos },
+  { id: 'b2b', title: GROUP.b2b },
+  { id: 'finance', title: GROUP.finance },
+  { id: 'field', title: GROUP.field },
+  { id: 'reports', title: GROUP.reports },
+  { id: 'company', title: GROUP.company },
 ];
 
 export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'WAREHOUSE',
     groupId: 'warehouse',
-    name: 'Ombor',
-    desc: 'Qoldiqlar va harakatlar',
+    name: 'Ombor (katalog va qoldiq)',
+    desc: 'Mahsulotlar, qoldiq va harakatlar',
     details:
       'Katalog va qoldiq. Saralash, ATP, inventarizatsiya — shu modul ichidagi alohida bo‘limlardan yoqiladi.',
     icon: WarehouseIcon,
@@ -57,8 +59,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'POS',
     groupId: 'pos',
-    name: 'POS / Kassa',
-    desc: 'Chakana sotuv interfeysi',
+    name: SECTION.posKassa,
+    desc: 'Kassada tezkor sotuv',
     details:
       'Sotuvchi roli uchun kassa ekrani va tezkor sotuv. Chakana nasiya (mijozlar qarzi) alohida: Sozlamalar → Kompaniya → «POS nasiya». «Qarz Daftari» moduli — B2B hamkorlar uchun.',
     icon: CreditCard,
@@ -66,17 +68,26 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'B2B',
     groupId: 'b2b',
-    name: 'B2B Savdo',
-    desc: 'Hamkorlar va buyurtmalar',
+    name: SECTION.orders,
+    desc: 'Hamkorlar orasidagi buyurtmalar',
     details:
       'Kompaniyalararo buyurtma oqimi, tasdiqlash va workflow asosidagi vazifalar shu yerda ishlaydi.',
     icon: ShoppingCart,
   },
   {
+    key: 'GOODS_RECEIPTS',
+    groupId: 'b2b',
+    name: SECTION.receipts,
+    desc: 'Hamkordan kelgan yukni qabul qilish',
+    details:
+      'Jo‘natma bo‘yicha qabul qilish, qisman qabul, PDF va qabul tarixi. Omborchi va menejer uchun.',
+    icon: PackageCheck,
+  },
+  {
     key: 'PARTNERS',
     groupId: 'b2b',
-    name: 'Hamkorlar',
-    desc: 'Hamkor kompaniyalar bilan ishlash',
+    name: SECTION.partners,
+    desc: 'B2B hamkor kompaniyalar ro‘yxati',
     details:
       'Yetkazib beruvchi/xaridor hamkorlar ro‘yxati, statuslar va aloqador ma’lumotlar boshqariladi.',
     icon: Globe,
@@ -84,8 +95,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'PRODUCT_MAPPING',
     groupId: 'b2b',
-    name: 'Mahsulot Mapping',
-    desc: 'Hamkor mahsulotlarini bog‘lash',
+    name: SECTION.productMapping,
+    desc: 'Hamkor nomini o‘z katalogingizga bog‘lash',
     details:
       'Ichki SKU bilan hamkor SKU moslashuvi, qabul va jo‘natma jarayonlaridagi nomuvofiqlikni kamaytiradi.',
     icon: Package,
@@ -93,8 +104,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'DEBT',
     groupId: 'finance',
-    name: 'Qarz daftari',
-    desc: "O'zaro hisob-kitoblar",
+    name: SECTION.debts,
+    desc: 'B2B hamkorlar bilan qarz va to‘lovlar',
     details:
       'Qarz yozuvlari, to‘lov yaratish, tasdiqlash/rad etish va audit tarixi shu modulda yuritiladi (B2B hamkorlar).',
     icon: Banknote,
@@ -102,8 +113,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'PARTNER_LEDGER',
     groupId: 'finance',
-    name: 'Hamkor daftari',
-    desc: 'Tizimda bo‘lmagan hamkorlar',
+    name: SECTION.partnerLedger,
+    desc: 'Tizimda ro‘yxatdan o‘tmagan hamkorlar hisobi',
     details:
       'Xomashyo kirimi, sotish, tushum va to‘lov — qo‘lda yuritiladigan hisob. Platformada ro‘yxatdan o‘tmagan hamkorlar uchun.',
     icon: Users,
@@ -119,16 +130,16 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'INCOME',
     groupId: 'finance',
-    name: 'Kirimlar',
-    desc: 'Tushum va daromad',
+    name: SECTION.income,
+    desc: 'Savddan tashqari qo‘lda kiritiladigan tushumlar',
     details: 'Savdo, qarz qaytimi, xizmat haqi va boshqa qo‘lda kiritiladigan kirimlar.',
     icon: TrendingUp,
   },
   {
     key: 'PAYROLL',
     groupId: 'finance',
-    name: 'Oylik',
-    desc: 'Xodimlar maoshi',
+    name: SECTION.payroll,
+    desc: 'Xodimlar ish haqi hisobi',
     details:
       'Asosiy oylik, bonus/jarima, davr bo‘yicha hisoblash va tasdiqlash. EMPLOYEES moduli yoqilgan bo‘lishi kerak.',
     icon: Banknote,
@@ -136,8 +147,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'FIELD_SERVICE',
     groupId: 'field',
-    name: 'Dala xodimlari',
-    desc: 'Montaj, kuryer va tashqaridagi ishlar',
+    name: SECTION.field,
+    desc: 'Montaj, kuryer va tashqaridagi vazifalar',
     details:
       'Vazifa yaratish, ombordan tovar biriktirish, ishchi hisoboti va tasdiqlash. FIELD_WORKER roli mobil /field interfeysidan ishlaydi.',
     icon: Truck,
@@ -145,15 +156,15 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'REPORTS',
     groupId: 'reports',
-    name: 'Hisobotlar',
-    desc: 'Yig‘ma ko‘rinishlar',
+    name: SECTION.reports,
+    desc: 'Savdo, ombor va moliya ko‘rinishi',
     details: 'Ombor marjasi, oy moliyasi (foyda/zarar) va Excel eksport.',
     icon: BarChart3,
   },
   {
     key: 'STOREFRONT',
     groupId: 'company',
-    name: 'Onlayn do‘kon',
+    name: SECTION.storefront,
     desc: 'Veb-sayt bilan sinxron',
     details: 'Tashqi vitrina, mahsulot va buyurtmalar sinxroni (keyingi versiyalarda kengayadi).',
     icon: Store,
@@ -161,8 +172,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'EMPLOYEES',
     groupId: 'company',
-    name: 'Xodimlar',
-    desc: 'Jamoa va hisoblar',
+    name: SECTION.team,
+    desc: 'Xodimlar va tizimga kirish hisoblari',
     details:
       'Xodim qo‘shish va jamoa ro‘yxati (Jamoa sahifasi) shu modulga bog‘liq. Rollar: Sozlamalar → Rollar.',
     icon: Users,
@@ -170,8 +181,8 @@ export const MODULE_SETTINGS_CATALOG: ModuleSettingDefinition[] = [
   {
     key: 'INTEGRATIONS',
     groupId: 'company',
-    name: 'Ulanishlar',
-    desc: 'Telegram, API, webhook',
+    name: SECTION.integrations,
+    desc: 'Telegram bot va boshqa ulanishlar',
     details: 'Tashqi tizimlar, Telegram va webhook orqali ulanishlarni markazlashtirish.',
     icon: Link2,
   },

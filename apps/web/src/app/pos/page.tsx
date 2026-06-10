@@ -448,6 +448,7 @@ export default function POSPage() {
         onSwitchCart={switchCart}
         onRemoveCart={removeCart}
         paymentInFlight={paymentInFlight}
+        onOpenCustomerPicker={openCustomerSheet}
       />
 
       <PosCheckoutModal

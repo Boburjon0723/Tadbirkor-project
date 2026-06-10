@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Package, Plus, LayoutGrid, List, Search, ChevronDown, ShoppingCart, LogOut, ScanLine, ArrowLeft, User, X } from 'lucide-react-native';
 import { PosCustomerPickerSheet } from '../../components/pos/PosCustomerPickerSheet';
 import { getPosCustomerLabel, hasPosCustomer, type PosCustomerSelection } from '../../lib/pos-customer.util';
+import { roundMoney } from '../../lib/money';
 import { nextSessionLabel } from '../../lib/pos-session.util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -295,7 +296,7 @@ export default function POSScreen({ route, navigation }: any) {
     const currency = variant.currency || 'UZS';
     
     if (!acc[currency]) acc[currency] = 0;
-    acc[currency] += price * item.qty;
+    acc[currency] = roundMoney(acc[currency] + roundMoney(price * item.qty));
     return acc;
   }, {} as Record<string, number>);
 

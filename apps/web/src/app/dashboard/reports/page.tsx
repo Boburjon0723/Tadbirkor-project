@@ -131,14 +131,14 @@ export default function ReportsPage() {
 
   if (loading && !summary) {
     return (
-      <div className="max-w-7xl mx-auto p-6 md:p-10">
+      <div className="dash-page">
         <PageSkeleton rows={2} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 md:p-10 space-y-8">
+    <div className="dash-page max-w-7xl mx-auto">
       <ReportsPageHeader
         exporting={exporting}
         isFetching={isFetching}

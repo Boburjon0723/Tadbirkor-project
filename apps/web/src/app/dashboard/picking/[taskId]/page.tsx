@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, ScanLine, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { MobileScanField } from '@/components/mobile/MobileScanField';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { usePickTaskActions } from '@/hooks/logistics/use-picking';
 import { pickingService } from '@/services/picking.service';
@@ -32,13 +33,13 @@ export default function PickTaskPage() {
     enabled: Boolean(taskId),
   });
 
-  const handleScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcode.trim()) return;
+  const handleScan = async (code?: string) => {
+    const scanned = (code ?? barcode).trim();
+    if (!scanned) return;
     try {
       const res = await scan.mutateAsync({
         taskId,
-        barcode: barcode.trim(),
+        barcode: scanned,
         quantity: Number(qty) || 1,
       });
       setBarcode('');
@@ -86,7 +87,7 @@ export default function PickTaskPage() {
   const done = task.status === 'COMPLETED';
 
   return (
-    <div className="max-w-lg mx-auto space-y-6 pb-20">
+    <div className="w-full max-w-lg md:mx-auto space-y-4 md:space-y-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-20">
       <Link
         href={task.dispatchId ? `/dashboard/picking/dispatch/${task.dispatchId}` : '/dashboard/picking'}
         className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white"
@@ -110,33 +111,20 @@ export default function PickTaskPage() {
         </div>
 
         {!done && (
-          <form onSubmit={handleScan} className="mt-6 space-y-3">
-            <label className="text-xs font-bold text-gray-400 uppercase">Barcode / SKU</label>
-            <div className="flex gap-2">
-              <input
-                autoFocus
-                value={barcode}
-                onChange={(e) => setBarcode(e.target.value)}
-                placeholder="Skanerlang..."
-                className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white"
-              />
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                className="w-20 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-white text-center"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={scan.isPending}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-500 text-black font-black disabled:opacity-50"
-            >
-              {scan.isPending ? <Loader2 className="animate-spin" size={18} /> : <ScanLine size={18} />}
-              Skaner qilish
-            </button>
-          </form>
+          <div className="mt-6">
+            <MobileScanField
+              value={barcode}
+              onChange={setBarcode}
+              onSubmit={handleScan}
+              busy={scan.isPending}
+              qty={qty}
+              onQtyChange={setQty}
+              showQty
+              placeholder="Barcode / SKU skaner..."
+              accentClass="bg-amber-500 text-black"
+              scannerTitle="Saralash skaner"
+            />
+          </div>
         )}
 
         {picked >= required && !done && (

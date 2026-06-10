@@ -1,5 +1,32 @@
 export type SaleCurrency = 'UZS' | 'USD';
 
+/** Backend `round2` bilan mos: 2 xonagacha yaxlitlash */
+export function roundMoney(value: number): number {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+/** Ombor miqdori — uzun kasr satrlarini qisqartirish */
+export function formatStockQty(value: number): string {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0';
+  const rounded = Math.round(n * 1000) / 1000;
+  if (Math.abs(rounded - Math.round(rounded)) < 1e-9) {
+    return Math.round(rounded).toLocaleString('uz-UZ');
+  }
+  return rounded.toLocaleString('uz-UZ', { maximumFractionDigits: 3 });
+}
+
+/** POS savat jami — har qator alohida yaxlitlanadi (PosService.resolveItems bilan bir xil) */
+export function calcPosCartTotal(
+  items: Array<{ price: number; quantity: number }>,
+): number {
+  const subtotal = items.reduce(
+    (sum, item) => sum + roundMoney(item.price * item.quantity),
+    0,
+  );
+  return roundMoney(subtotal);
+}
+
 export function normalizeSaleCurrency(value: unknown): SaleCurrency {
   return String(value || 'UZS').toUpperCase() === 'USD' ? 'USD' : 'UZS';
 }

@@ -20,6 +20,7 @@ import type { PosCartItem } from './types';
 import type { SaleCurrency } from '@/lib/currency';
 import type { CartSession } from './usePosMultiCart';
 import { PosMobileSessionsBar } from './PosMobileSessionsBar';
+import { getPosCustomerLabel, hasPosCustomer } from './pos-customer.util';
 
 type Props = {
   cart: PosCartItem[];
@@ -41,6 +42,7 @@ type Props = {
   onSwitchCart: (id: string) => void;
   onRemoveCart: (id: string) => void;
   paymentInFlight?: boolean;
+  onOpenCustomerPicker?: () => void;
 };
 
 export function PosCartSidebar({
@@ -63,7 +65,10 @@ export function PosCartSidebar({
   onSwitchCart,
   onRemoveCart,
   paymentInFlight = false,
+  onOpenCustomerPicker,
 }: Props) {
+  const customerLabel = getPosCustomerLabel(customer);
+  const customerSelected = hasPosCustomer(customer);
   const showDesktop =
     typeof window !== 'undefined' && window.innerWidth >= 768;
 
@@ -194,6 +199,35 @@ export function PosCartSidebar({
                   tone="cart"
                 />
               </div>
+
+              {onOpenCustomerPicker && (
+                <div className="md:hidden px-6 pt-3">
+                  <button
+                    type="button"
+                    onClick={onOpenCustomerPicker}
+                    disabled={paymentInFlight}
+                    className="w-full flex items-center gap-3 p-3 rounded-2xl border border-[var(--pos-cart-border)] bg-[var(--pos-cart-card)] active:scale-[0.99] disabled:opacity-50"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[var(--pos-cart-bg)] border border-[var(--pos-cart-border)] inline-flex items-center justify-center shrink-0">
+                      <User
+                        size={18}
+                        className={customerSelected ? 'text-cyan-300' : 'text-[var(--pos-cart-muted)]'}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--pos-cart-muted)]">
+                        Mijoz
+                      </p>
+                      <p className="text-sm font-bold truncate text-[var(--pos-cart-text)]">
+                        {customerSelected
+                          ? customerLabel
+                          : 'Tanlanmagan — bosing'}
+                      </p>
+                    </div>
+                    <ChevronRight size={18} className="text-[var(--pos-cart-muted)] shrink-0" />
+                  </button>
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 space-y-3 md:space-y-4">
                 <AnimatePresence mode="popLayout">

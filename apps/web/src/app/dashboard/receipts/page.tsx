@@ -29,6 +29,7 @@ import {
   receiptStatusBadgeStyle,
 } from '@/features/receipts/receipt-export';
 import { useSession } from '@/hooks/use-session';
+import { MOBILE_FULL_BLEED } from '@/lib/mobile-pwa';
 import { isWarehouseReceiptsOpsRole } from '@/lib/warehouse-receipts-view';
 
 export default function ReceiptsPage() {
@@ -82,12 +83,12 @@ export default function ReceiptsPage() {
   });
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-white/5">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Yuklarni <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">Qabul Qilish</span></h1>
-          <p className="text-gray-400 text-sm md:text-base">Sotuvchilardan kelgan yuklarni tekshirish va omborga qabul qilish.</p>
+          <h1 className="dash-page-title mb-1.5">Yuk <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">qabul qilish</span></h1>
+          <p className="dash-page-subtitle">Hamkordan kelgan jo‘natmani tekshirish va omborga qabul qilish.</p>
         </div>
         {!warehouseOps && (
           <div className="flex flex-wrap gap-2">
@@ -181,7 +182,7 @@ export default function ReceiptsPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="glass-card rounded-[2.5rem] md:rounded-[3rem] overflow-hidden bg-white/[0.01] border border-white/5 shadow-xl">
+      <div className="dash-section shadow-xl">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center gap-6">
             <Loader2 className="animate-spin text-emerald-500" size={50} />
@@ -287,18 +288,18 @@ export default function ReceiptsPage() {
                 </tbody>
               </table>
             </div>
+          </>
+        )}
+      </div>
 
-            {/* Mobile View */}
-            <div className="md:hidden p-4 space-y-4">
+      {!isLoading && (
+        <div className={`${MOBILE_FULL_BLEED} border-t border-white/5 divide-y divide-white/5 bg-[#050505]`}>
               {filteredReceipts?.length === 0 ? (
                 <div className="py-20 text-center text-gray-500 font-bold text-sm">Qabullar topilmadi</div>
-              ) : filteredReceipts?.map((receipt: any, idx: number) => (
-                <motion.div 
+              ) : filteredReceipts?.map((receipt: any) => (
+                <article 
                   key={receipt.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.04, duration: 0.25 }}
-                  className="p-5 bg-white/5 border border-white/5 rounded-3xl space-y-4"
+                  className="w-full px-4 py-3.5 space-y-3"
                 >
                   <div className="flex justify-between items-start">
                     <p className="font-black text-white text-base">{receiptDisplayId(receipt.id)}</p>
@@ -360,12 +361,10 @@ export default function ReceiptsPage() {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </article>
               ))}
-            </div>
-          </>
-        )}
-      </div>
+        </div>
+      )}
 
       <ReceiptDetailsDrawer
         receipt={drawerReceipt}

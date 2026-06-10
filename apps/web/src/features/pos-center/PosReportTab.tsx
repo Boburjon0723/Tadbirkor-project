@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { formatSaleAmountMap } from '@/lib/currency';
 import { reportsService, type PosReportSummary } from '@/services/reports.service';
 import { motion } from 'framer-motion';
 
@@ -151,7 +152,9 @@ export function PosReportTab() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400"><AlertTriangle size={18} /></div>
             <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Ochiq qarzlar (jami)</p>
           </div>
-          <p className="text-3xl font-black text-amber-400 tabular-nums">{fmt(Number(data.openReceivablesTotal || 0))} <span className="text-sm text-gray-500">UZS</span></p>
+          <p className="text-3xl font-black text-amber-400 tabular-nums">
+            {formatSaleAmountMap(data.openReceivablesTotal)}
+          </p>
         </motion.div>
       </div>
 

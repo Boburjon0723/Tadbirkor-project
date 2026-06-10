@@ -21,6 +21,20 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
       },
     ],
+    shortcuts: [
+      {
+        name: 'Ombor kirimi',
+        short_name: 'Kirim',
+        url: '/dashboard/warehouse-intake',
+        icons: [{ src: `/favicon.png?v=${v}`, sizes: '512x512' }],
+      },
+      {
+        name: 'Mahsulotlar',
+        short_name: 'Ombor',
+        url: '/dashboard/inventory',
+        icons: [{ src: `/favicon.png?v=${v}`, sizes: '512x512' }],
+      },
+    ],
   };
 }
 

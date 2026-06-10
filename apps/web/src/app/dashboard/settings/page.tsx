@@ -86,11 +86,11 @@ export default function SettingsPage() {
   ] as const;
 
   return (
-    <div className="max-w-5xl space-y-8 pb-20">
+    <div className="max-w-5xl dash-page">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">Sozlamalar</h1>
-          <p className="text-gray-400">Tizimni o&apos;zingizga mos ravishda boshqaring.</p>
+          <h1 className="dash-page-title mb-1.5">Sozlamalar</h1>
+          <p className="dash-page-subtitle">Tizimni o&apos;zingizga mos ravishda boshqaring.</p>
         </div>
         <div
           className={`px-4 py-2 rounded-2xl border flex items-center gap-3 ${

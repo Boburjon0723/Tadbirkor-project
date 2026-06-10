@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationsService } from "@/services/notifications.service";
 import { getNotificationsSocket } from "@/lib/notifications-socket";
@@ -179,4 +179,19 @@ export function useNotificationActions() {
     markAsRead,
     markAllAsRead,
   };
+}
+
+/** Sahifaga kirganda bir marta barcha o‘qilmaganlarni o‘qilgan deb belgilaydi. */
+export function useMarkNotificationsReadOnPageEnter() {
+  const { data: unreadCount = 0, isSuccess } = useUnreadCount();
+  const { markAllAsRead } = useNotificationActions();
+  const didRun = useRef(false);
+
+  useEffect(() => {
+    if (!isSuccess || didRun.current) return;
+    didRun.current = true;
+    if (unreadCount > 0) {
+      markAllAsRead.mutate();
+    }
+  }, [isSuccess, unreadCount, markAllAsRead]);
 }

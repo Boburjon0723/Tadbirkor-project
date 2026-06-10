@@ -6,9 +6,11 @@ import { X, Building2, User, KeyRound, Mail, Phone, ArrowRight, Loader2, CheckCi
 import { useTranslation } from '@/context/LanguageContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { authService } from '@/services/auth.service';
 import { fetchPostAuthPath } from '@/lib/onboarding';
+import { prefetchSession } from '@/hooks/use-session';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -27,6 +29,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const [loginFailed, setLoginFailed] = React.useState(false);
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   React.useEffect(() => {
     setStep(1);
@@ -95,12 +98,13 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         await authService.login(formData.login, formData.password);
       }
 
-      setSuccess(true);
       const redirectTo = await fetchPostAuthPath(mode);
-      setTimeout(() => {
-        onClose();
-        router.push(redirectTo);
-      }, 1500);
+      if (mode === 'login') {
+        await prefetchSession(queryClient);
+      }
+      setSuccess(true);
+      onClose();
+      router.push(redirectTo);
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Tizimda xatolik yuz berdi';
       setError(message);

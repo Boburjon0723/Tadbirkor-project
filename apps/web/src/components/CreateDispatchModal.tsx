@@ -213,7 +213,7 @@ export function CreateDispatchModal({ isOpen, onClose, order }: CreateDispatchMo
       {isOpen && (
         <div className="fixed inset-0 z-[145] flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/90 backdrop-blur-md" />
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-4xl glass-card rounded-[3rem] p-10 bg-[#0a0a0a] border-white/10 shadow-2xl flex flex-col max-h-[90vh]">
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="desktop-modal-panel max-w-3xl lg:max-w-4xl p-4 md:p-6">
             <div className="flex justify-between items-start mb-8">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500">
@@ -423,12 +423,12 @@ export function CreateDispatchModal({ isOpen, onClose, order }: CreateDispatchMo
                  </p>
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto">
-                <button type="button" disabled={isSubmitting} onClick={onClose} className="flex-1 md:px-10 py-4 bg-white/5 hover:bg-white/10 text-gray-400 font-black rounded-2xl transition-all disabled:opacity-40">Bekor qilish</button>
+                <button type="button" disabled={isSubmitting} onClick={onClose} className="btn-dash-secondary flex-1 text-gray-400">Bekor qilish</button>
                 <button 
                   type="button"
                   onClick={handleCreateDraft}
                   disabled={!selectedWarehouseId || !allItemsAvailable || isSubmitting}
-                  className="flex-[2] md:px-12 py-4 bg-amber-600 hover:bg-amber-500 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-900/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                  className="btn-dash flex-[2] bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20 justify-center gap-3"
                 >
                   {isSubmitting ? <Loader2 className="animate-spin" /> : (
                     <>Saralashga o&apos;tish <ArrowRight size={20} /></>

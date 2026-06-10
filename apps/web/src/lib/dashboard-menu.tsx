@@ -3,6 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { HelpCircle } from 'lucide-react';
 import type { ModuleMatchMode } from '@/lib/feature-modules';
 import type { SessionRole } from '@/hooks/use-session';
+import { GROUP, SECTION } from '@/lib/dashboard-labels';
 
 export type DashboardMenuIcons = {
   LayoutDashboard: LucideIcon;
@@ -32,9 +33,8 @@ export type DashboardMenuItem = {
   roles: SessionRole[];
   moduleKeys?: string[];
   moduleMatch?: ModuleMatchMode;
-  /** Mobil pastki navigatsiyada ko‘rsatish */
+  /** Mobil pastki navda ustuvor tartib (kichik = chaproq) */
   mobileNav?: boolean;
-  /** Pastki nav tartibi (kichik = chapda); maks. 4 ta */
   mobileNavPriority?: number;
 };
 
@@ -54,11 +54,11 @@ export function buildDashboardMenuGroups(
   return [
     {
       id: 'general',
-      title: 'Umumiy',
+      title: GROUP.general,
       items: [
         {
           icon: <I.LayoutDashboard size={s} />,
-          label: 'Asosiy',
+          label: SECTION.dashboard,
           href: '/dashboard',
           roles: ['owner', 'manager', 'accountant', 'warehouse', 'sales'],
           mobileNav: true,
@@ -68,18 +68,18 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'pos',
-      title: 'Chakana (POS)',
+      title: GROUP.pos,
       items: [
         {
           icon: <I.CreditCard size={s} />,
-          label: 'POS / Kassa',
+          label: SECTION.posKassa,
           href: '/pos',
           roles: ['owner', 'manager', 'sales'],
           moduleKeys: ['POS'],
         },
         {
           icon: <I.History size={s} />,
-          label: 'POS markazi',
+          label: SECTION.posCenter,
           href: '/dashboard/pos',
           roles: ['owner', 'manager', 'accountant', 'sales'],
           moduleKeys: ['POS'],
@@ -88,11 +88,11 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'warehouse',
-      title: 'Ombor',
+      title: GROUP.warehouse,
       items: [
         {
           icon: <I.Box size={s} />,
-          label: 'Mahsulotlar va qoldiq',
+          label: SECTION.inventory,
           href: '/dashboard/inventory',
           roles: ['owner', 'manager', 'warehouse', 'accountant', 'sales'],
           moduleKeys: ['WAREHOUSE_BASIC'],
@@ -101,7 +101,7 @@ export function buildDashboardMenuGroups(
         },
         {
           icon: <I.PackagePlus size={s} />,
-          label: 'Ombor kirimi',
+          label: SECTION.warehouseIntake,
           href: '/dashboard/warehouse-intake',
           roles: ['owner', 'manager', 'warehouse'],
           moduleKeys: ['WAREHOUSE_INTAKE'],
@@ -110,21 +110,21 @@ export function buildDashboardMenuGroups(
         },
         {
           icon: <I.Settings size={s} />,
-          label: 'Kirim sozlamalari',
+          label: SECTION.warehouseIntakeSettings,
           href: '/dashboard/warehouse-intake/settings',
           roles: ['owner', 'manager'],
           moduleKeys: ['WAREHOUSE_INTAKE'],
         },
         {
           icon: <I.History size={s} />,
-          label: 'Ombor tarixi',
-          href: '/dashboard/warehouse',
+          label: SECTION.warehouseHistory,
+          href: '/dashboard/warehouse?tab=history',
           roles: ['owner', 'manager', 'warehouse', 'accountant'],
           moduleKeys: ['WAREHOUSE_BASIC'],
         },
         {
           icon: <I.History size={s} />,
-          label: 'Faollik jurnali',
+          label: SECTION.activity,
           href: '/dashboard/activity',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['WAREHOUSE_BASIC', 'B2B', 'DEBT'],
@@ -132,7 +132,7 @@ export function buildDashboardMenuGroups(
         },
         {
           icon: <I.Truck size={s} />,
-          label: 'Saralash (picking)',
+          label: SECTION.picking,
           href: '/dashboard/picking',
           roles: ['owner', 'manager', 'warehouse'],
           moduleKeys: ['WAREHOUSE_PICKING'],
@@ -146,7 +146,7 @@ export function buildDashboardMenuGroups(
         },
         {
           icon: <I.Box size={s} />,
-          label: 'Inventarizatsiya',
+          label: SECTION.inventoryCount,
           href: '/dashboard/inventory-count',
           roles: ['owner', 'manager', 'warehouse'],
           moduleKeys: ['WAREHOUSE_INVENTORY_COUNT'],
@@ -155,25 +155,25 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'b2b',
-      title: 'B2B savdo',
+      title: GROUP.b2b,
       items: [
         {
           icon: <I.Handshake size={s} />,
-          label: 'Hamkorlar',
+          label: SECTION.partners,
           href: '/dashboard/partners',
           roles: ['owner', 'manager', 'sales'],
           moduleKeys: ['PARTNERS'],
         },
         {
           icon: <I.GitBranch size={s} />,
-          label: 'Mahsulot mapping',
+          label: SECTION.productMapping,
           href: '/dashboard/product-mappings',
           roles: ['owner', 'manager'],
           moduleKeys: ['PRODUCT_MAPPING'],
         },
         {
           icon: <I.ShoppingBag size={s} />,
-          label: 'Buyurtmalar',
+          label: SECTION.orders,
           href: '/dashboard/orders',
           roles: ['owner', 'manager', 'sales'],
           moduleKeys: ['B2B'],
@@ -182,49 +182,50 @@ export function buildDashboardMenuGroups(
         },
         {
           icon: <I.Truck size={s} />,
-          label: 'Kelgan yuklar',
+          label: SECTION.receipts,
           href: '/dashboard/receipts',
           roles: ['owner', 'manager', 'warehouse'],
-          moduleKeys: ['WAREHOUSE_BASIC', 'B2B'],
-          moduleMatch: 'any',
+          moduleKeys: ['GOODS_RECEIPTS'],
+          mobileNav: true,
+          mobileNavPriority: 3,
         },
       ],
     },
     {
       id: 'finance',
-      title: 'Moliya (B2B)',
+      title: GROUP.finance,
       items: [
         {
           icon: <I.Wallet size={s} />,
-          label: 'Qarz daftari',
+          label: SECTION.debts,
           href: '/dashboard/debts',
           roles: ['owner', 'accountant', 'manager'],
           moduleKeys: ['DEBT'],
         },
         {
           icon: <I.Users size={s} />,
-          label: 'Hamkor daftari',
+          label: SECTION.partnerLedger,
           href: '/dashboard/partner-ledger',
           roles: ['owner', 'accountant', 'manager'],
           moduleKeys: ['PARTNER_LEDGER'],
         },
         {
           icon: <I.Wallet2 size={s} />,
-          label: 'Xarajatlar',
+          label: SECTION.expenses,
           href: '/dashboard/expenses',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['EXPENSES'],
         },
         {
           icon: <I.TrendingUp size={s} />,
-          label: 'Kirimlar',
+          label: SECTION.income,
           href: '/dashboard/income',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['INCOME'],
         },
         {
           icon: <I.Banknote size={s} />,
-          label: 'Xodimlar (oylik)',
+          label: SECTION.payroll,
           href: '/dashboard/payroll',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['PAYROLL'],
@@ -233,11 +234,11 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'field',
-      title: 'Dala xizmati',
+      title: GROUP.field,
       items: [
         {
           icon: <I.Truck size={s} />,
-          label: 'Dala xodimlari',
+          label: SECTION.field,
           href: '/dashboard/field',
           roles: ['owner', 'manager', 'warehouse'],
           moduleKeys: ['FIELD_SERVICE'],
@@ -246,18 +247,18 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'reports',
-      title: 'Hisobot',
+      title: GROUP.reports,
       items: [
         {
           icon: <I.BarChart3 size={s} />,
-          label: 'Umumiy hisobotlar',
+          label: SECTION.reports,
           href: '/dashboard/reports',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['REPORTS'],
         },
         {
           icon: <I.TrendingUp size={s} />,
-          label: 'Oy moliyasi',
+          label: SECTION.reportsMonthly,
           href: '/dashboard/reports/monthly',
           roles: ['owner', 'manager', 'accountant'],
           moduleKeys: ['REPORTS'],
@@ -266,25 +267,25 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'company',
-      title: 'Kompaniya',
+      title: GROUP.company,
       items: [
         {
           icon: <I.Store size={s} />,
-          label: 'Onlayn do‘kon',
+          label: SECTION.storefront,
           href: '/dashboard/storefront',
           roles: ['owner', 'manager'],
           moduleKeys: ['STOREFRONT'],
         },
         {
           icon: <I.Users size={s} />,
-          label: 'Xodimlar',
+          label: SECTION.team,
           href: '/dashboard/settings/team',
           roles: ['owner', 'manager'],
           moduleKeys: ['EMPLOYEES'],
         },
         {
           icon: <I.Link2 size={s} />,
-          label: 'Ulanishlar',
+          label: SECTION.integrations,
           href: '/dashboard/integrations',
           roles: ['owner', 'manager'],
           moduleKeys: ['INTEGRATIONS'],
@@ -293,17 +294,17 @@ export function buildDashboardMenuGroups(
     },
     {
       id: 'system',
-      title: 'Tizim',
+      title: GROUP.system,
       items: [
         {
           icon: <I.Settings size={s} />,
-          label: 'Sozlamalar',
+          label: SECTION.settings,
           href: '/dashboard/settings',
           roles: ['owner'],
         },
         {
           icon: <HelpCircle size={s} className="text-blue-400" />,
-          label: 'Yordam',
+          label: SECTION.help,
           href: '#support',
           roles: ['owner', 'manager', 'accountant', 'warehouse', 'sales'],
           mobileNav: true,
@@ -318,10 +319,113 @@ export function flattenMenuGroups(groups: DashboardMenuGroup[]): DashboardMenuIt
   return groups.flatMap((g) => g.items);
 }
 
-export function isMenuItemActive(pathname: string, href: string): boolean {
-  if (href === '/dashboard') return pathname === '/dashboard';
-  if (href === '/pos') return pathname === '/pos' || pathname.startsWith('/pos/');
-  return pathname === href || pathname.startsWith(`${href}/`);
+/** Mobil pastki nav: markazda Asosiy, chapda tarix/hisobot, o‘ngda tez-tez ishlatiladiganlar */
+const MOBILE_NAV_CENTER_HREF = '/dashboard';
+
+/** Kamroq ishlatiladigan — Asosiyning chap tomoni */
+const MOBILE_NAV_LEFT_ORDER = [
+  '/dashboard/reports',
+  '/dashboard/reports/monthly',
+  '/dashboard/warehouse?tab=history',
+  '/dashboard/activity',
+  '/dashboard/debts',
+  '/dashboard/partner-ledger',
+  '/dashboard/expenses',
+  '/dashboard/income',
+  '/dashboard/payroll',
+  '/dashboard/field',
+  '/dashboard/product-mappings',
+  '/dashboard/pos',
+  '/dashboard/picking',
+  '/dashboard/inventory-count',
+  '/dashboard/warehouse',
+  '/dashboard/storefront',
+  '/dashboard/settings/team',
+  '/dashboard/integrations',
+  '/dashboard/settings',
+  '/dashboard/platform-admin',
+] as const;
+
+/** Tez-tez ishlatiladigan — Asosiyning o‘ng tomoni */
+const MOBILE_NAV_RIGHT_ORDER = [
+  '/pos',
+  '/dashboard/warehouse-intake',
+  '/dashboard/inventory',
+  '/dashboard/receipts',
+  '/dashboard/orders',
+  '/dashboard/partners',
+  '#support',
+] as const;
+
+const MOBILE_NAV_RIGHT_WAREHOUSE: readonly string[] = [
+  '/dashboard/warehouse-intake',
+  '/dashboard/receipts',
+  '/dashboard/inventory',
+  '#support',
+];
+
+function pickNavItemsByOrder(
+  items: DashboardMenuItem[],
+  order: readonly string[],
+): DashboardMenuItem[] {
+  const byHref = new Map(items.map((item) => [item.href, item]));
+  return order
+    .map((href) => byHref.get(href))
+    .filter((item): item is DashboardMenuItem => Boolean(item));
+}
+
+export function orderMobileBottomNavItems(
+  items: DashboardMenuItem[],
+  role?: SessionRole,
+): DashboardMenuItem[] {
+  const byHref = new Map(items.map((item) => [item.href, item]));
+  const center = byHref.get(MOBILE_NAV_CENTER_HREF);
+
+  const rightOrder =
+    role === 'warehouse' ? MOBILE_NAV_RIGHT_WAREHOUSE : MOBILE_NAV_RIGHT_ORDER;
+
+  const left = pickNavItemsByOrder(items, MOBILE_NAV_LEFT_ORDER);
+  const right = pickNavItemsByOrder(items, rightOrder);
+
+  const placed = new Set<string>([
+    ...left.map((item) => item.href),
+    ...right.map((item) => item.href),
+    MOBILE_NAV_CENTER_HREF,
+  ]);
+
+  const remainder = items.filter((item) => !placed.has(item.href));
+
+  return [
+    ...left,
+    ...remainder,
+    ...(center ? [center] : []),
+    ...right.filter((item) => item.href !== MOBILE_NAV_CENTER_HREF),
+  ];
+}
+
+export function isMenuItemActive(
+  pathname: string,
+  href: string,
+  search = '',
+): boolean {
+  const [path, queryString] = href.split('?');
+  const pathMatches =
+    path === '/dashboard'
+      ? pathname === '/dashboard'
+      : path === '/pos'
+        ? pathname === '/pos' || pathname.startsWith('/pos/')
+        : pathname === path || pathname.startsWith(`${path}/`);
+
+  if (!pathMatches) return false;
+  if (!queryString) return true;
+
+  const expected = new URLSearchParams(queryString);
+  const actual = new URLSearchParams(search.replace(/^\?/, ''));
+  let matches = true;
+  expected.forEach((value, key) => {
+    if (actual.get(key) !== value) matches = false;
+  });
+  return matches;
 }
 
 /** Rol bo‘yicha yo‘l: menyuda yo‘q bo‘limlarga to‘g‘ridan-to‘g‘ri URL ochilmasin */

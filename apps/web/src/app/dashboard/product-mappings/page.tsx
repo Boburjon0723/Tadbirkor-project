@@ -204,20 +204,20 @@ export default function ProductMappingsPage() {
 
   return (
     <ModuleGate moduleKey="PRODUCT_MAPPING" moduleLabel="Mahsulot Mapping">
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">Mahsulotlar <span className="text-blue-500">Mappingi</span></h1>
-          <p className="text-gray-400 text-lg">
-            Hamkorlaringiz mahsulotlarini o&apos;zingizning bazangizga moslashtiring.
+          <h1 className="dash-page-title mb-1.5">Mahsulot <span className="text-blue-500">moslashuvi</span></h1>
+          <p className="dash-page-subtitle">
+            Hamkor mahsulot nomini o&apos;z katalogingizdagi mahsulotga bog&apos;lang.
             Yuk qabulidagi nom bilan <span className="text-white font-bold">bir xil</span> yozing
             (masalan: <span className="text-blue-400">A-001 — Qora (Qora)</span>).
           </p>
         </div>
         <button 
           onClick={openCreateModal}
-          className="group flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-[1.5rem] transition-all shadow-[0_15px_30px_rgba(37,99,235,0.3)] active:scale-95"
+          className="btn-dash-primary group"
         >
           <div className="p-1 bg-white/20 rounded-lg group-hover:rotate-45 transition-transform">
             <Plus size={20} />
@@ -243,7 +243,7 @@ export default function ProductMappingsPage() {
       </div>
 
       {/* Mappings Table/Grid */}
-      <div className="glass-card rounded-[3rem] overflow-hidden border-white/5">
+      <div className="dash-section">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -364,13 +364,13 @@ export default function ProductMappingsPage() {
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 30 }}
-              className="relative w-full max-w-2xl glass-card rounded-[3rem] p-10 md:p-12 shadow-2xl border-white/10 overflow-hidden"
+              className="desktop-modal-panel max-w-2xl overflow-hidden"
             >
                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] -mr-32 -mt-32" />
                
-               <div className="flex justify-between items-start mb-10 relative z-10">
+               <div className="desktop-modal-header flex justify-between items-start relative z-10">
                 <div>
-                  <h3 className="text-3xl font-black mb-3 text-blue-400">
+                  <h3 className="desktop-modal-title text-blue-400">
                     {editingId ? (
                       <>Mappingni <span className="text-white">Tahrirlash</span></>
                     ) : (
@@ -388,7 +388,7 @@ export default function ProductMappingsPage() {
                 </div>
               </div>
 
-              <form onSubmit={handleSave} className="space-y-8 relative z-10">
+              <form onSubmit={handleSave} className="desktop-modal-body space-y-6 relative z-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Step 1: Hamkor */}
                   <div className="space-y-3">
@@ -538,19 +538,19 @@ export default function ProductMappingsPage() {
                    </div>
                 </div>
 
-                <div className="flex items-center gap-4 pt-4">
+                <div className="desktop-modal-footer !px-0">
                   <button
                     type="button"
                     onClick={closeModal}
                     disabled={saving}
-                    className="flex-1 py-5 bg-white/5 text-gray-400 font-black rounded-2xl hover:bg-white/10 transition-all disabled:opacity-50"
+                    className="btn-dash-secondary flex-1 text-gray-400"
                   >
                     Bekor qilish
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex-[2] py-5 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-500 transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(37,99,235,0.3)] disabled:opacity-50"
+                    className="btn-dash-primary flex-[2] justify-center gap-3"
                   >
                     {saving ? 'Saqlanmoqda...' : editingId ? 'Yangilash' : 'Saqlash'}
                     {!saving && <ArrowRight size={20} />}

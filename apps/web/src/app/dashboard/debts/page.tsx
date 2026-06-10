@@ -41,6 +41,7 @@ import {
 } from '@/features/debts/debts-utils';
 import { DebtsKpiCards } from '@/features/debts/components/DebtsKpiCards';
 import { DebtsTable } from '@/features/debts/components/DebtsTable';
+import { DebtsListMobile } from '@/features/debts/components/DebtsListMobile';
 import { DebtsReportArchive } from '@/features/debts/components/DebtsReportArchive';
 import { DebtPaymentModal } from '@/features/debts/components/DebtPaymentModal';
 import { DebtsPartnerDrawer } from '@/features/debts/components/DebtsPartnerDrawer';
@@ -458,12 +459,12 @@ export default function DebtsPage() {
   };
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-white/5">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Moliya <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">Markazi</span></h1>
-          <p className="text-gray-400 text-sm md:text-base">Debitorlik va kreditorlik qarzlar, to'lovlar va balans nazorati.</p>
+          <h1 className="dash-page-title mb-1.5">B2B <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500">qarzlar</span></h1>
+          <p className="dash-page-subtitle">Hamkorlar bilan qarz, to‘lov va balans nazorati.</p>
         </div>
       </div>
 
@@ -515,7 +516,15 @@ export default function DebtsPage() {
         </div>
       </div>
 
-      {/* Main Table */}
+      <div className="md:hidden -mx-6">
+        <DebtsListMobile
+          isLoading={isLoading}
+          partnerGroupsWithPending={partnerGroupsWithPending}
+          activeTab={activeTab}
+          openPartnerDetail={openPartnerDetail}
+        />
+      </div>
+
       <DebtsTable
         isLoading={isLoading}
         partnerGroupsWithPending={partnerGroupsWithPending}

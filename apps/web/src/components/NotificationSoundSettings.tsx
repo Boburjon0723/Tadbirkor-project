@@ -98,7 +98,7 @@ export function NotificationSoundSettings({ compact = false }: { compact?: boole
   }
 
   return (
-    <div className="p-6 bg-emerald-500/5 border border-emerald-500/15 rounded-[2rem] space-y-4">
+    <div className="p-4 md:p-6 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl md:rounded-[2rem] space-y-4">
       <div className="flex items-start gap-4">
         <BellRing className="text-emerald-400 shrink-0" size={24} />
         <div className="space-y-1">

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
+  calcPosCartTotal,
   formatSaleAmount,
   normalizeSaleCurrency,
   type SaleCurrency,
@@ -19,10 +20,7 @@ export function usePosCart() {
   const [cart, setCart] = useState<PosCartItem[]>([]);
 
   const cartCurrency: SaleCurrency = cart[0]?.currency || 'UZS';
-  const totalAmount = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const totalAmount = calcPosCartTotal(cart);
 
   const formatMoney = useCallback(
     (value: number, currency: SaleCurrency = cartCurrency) =>

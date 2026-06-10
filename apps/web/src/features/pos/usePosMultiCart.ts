@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadPosCart, savePosCart } from './pos-cart-persist';
 import {
+  calcPosCartTotal,
   formatSaleAmount,
   normalizeSaleCurrency,
   type SaleCurrency,
@@ -161,10 +162,7 @@ export function usePosMultiCart(options?: UsePosMultiCartOptions) {
 
   const cartCurrency: SaleCurrency = cart[0]?.currency ?? 'UZS';
 
-  const totalAmount = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  const totalAmount = calcPosCartTotal(cart);
 
   const formatMoney = useCallback(
     (value: number, currency: SaleCurrency = cartCurrency) =>

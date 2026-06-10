@@ -94,10 +94,10 @@ export function InventoryPageHeader({
           </div>
         ) : null}
 
-        <h1 className="hidden md:block text-3xl md:text-4xl font-black tracking-tight mb-1.5">
-          Mahsulotlar <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Katalogi</span>
+        <h1 className="hidden md:block dash-page-title mb-1">
+          Katalog <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">va qoldiq</span>
         </h1>
-        <p className="hidden md:block text-gray-400 text-sm md:text-base">
+        <p className="hidden md:block dash-page-subtitle">
           {catalogReadOnly
             ? 'Mahsulotlar va ombor qoldig‘ini ko‘rish (tahrirlash yo‘q).'
             : 'Barcha mahsulotlar, variantlar va narxlarni boshqarish.'}

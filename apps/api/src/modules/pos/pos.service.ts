@@ -95,6 +95,14 @@ export class PosService {
     return Math.round(value * 100) / 100;
   }
 
+  /** Bir valyutada bo‘lsa yig‘indi; UZS+USD aralash bo‘lsa null (totalByCurrency ishlating) */
+  private singleCurrencyTotal(byCurrency: Record<string, number>): number | null {
+    const active = Object.entries(byCurrency).filter(([, value]) => value > 0);
+    if (active.length === 0) return 0;
+    if (active.length === 1) return active[0][1];
+    return null;
+  }
+
   private async generateSaleNumber(companyId: string, tx: PrismaTx): Promise<string> {
     const now = new Date();
     const y = now.getUTCFullYear();
@@ -585,14 +593,14 @@ export class PosService {
       timezone: 'Asia/Tashkent',
       completed: {
         count: completedCount,
-        total: Object.values(completedTotalByCurrency).reduce((sum, value) => sum + value, 0),
-        discount: Object.values(completedDiscountByCurrency).reduce((sum, value) => sum + value, 0),
+        total: this.singleCurrencyTotal(completedTotalByCurrency),
+        discount: this.singleCurrencyTotal(completedDiscountByCurrency),
         totalByCurrency: completedTotalByCurrency,
         discountByCurrency: completedDiscountByCurrency,
       },
       voided: {
         count: voidedCount,
-        total: Object.values(voidedTotalByCurrency).reduce((sum, value) => sum + value, 0),
+        total: this.singleCurrencyTotal(voidedTotalByCurrency),
         totalByCurrency: voidedTotalByCurrency,
       },
       draft: { count: draftCount },

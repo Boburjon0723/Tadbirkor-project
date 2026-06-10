@@ -265,7 +265,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       <OrdersPageHeader
         onNewOrder={() => {
           setEditOrderId(null);
@@ -286,9 +286,8 @@ export default function OrdersPage() {
         onSearchChange={setSearchTerm}
       />
 
-      <div className="glass-card rounded-[2rem] md:rounded-[3rem] border border-white/5 bg-white/[0.01] overflow-visible">
+      <div className="hidden md:block dash-section overflow-visible">
         <OrdersListTable {...listProps} />
-        <OrdersListMobile {...listProps} />
         {hasNextPage && (
           <div className="p-6 border-t border-white/5 flex justify-center">
             <button
@@ -296,6 +295,22 @@ export default function OrdersPage() {
               disabled={isFetchingNextPage}
               onClick={() => void fetchNextPage()}
               className="px-8 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-black text-gray-300 disabled:opacity-50"
+            >
+              {isFetchingNextPage ? 'Yuklanmoqda...' : `Yana yuklash (${partnerGroups.length} hamkor)`}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="md:hidden -mx-6">
+        <OrdersListMobile {...listProps} />
+        {hasNextPage && (
+          <div className="py-4 border-t border-white/5 flex justify-center bg-[#050505]">
+            <button
+              type="button"
+              disabled={isFetchingNextPage}
+              onClick={() => void fetchNextPage()}
+              className="px-6 py-3 rounded-xl bg-white/5 text-sm font-black text-gray-300 disabled:opacity-50"
             >
               {isFetchingNextPage ? 'Yuklanmoqda...' : `Yana yuklash (${partnerGroups.length} hamkor)`}
             </button>

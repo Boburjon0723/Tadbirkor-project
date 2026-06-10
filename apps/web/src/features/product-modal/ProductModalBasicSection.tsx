@@ -47,13 +47,13 @@ export function ProductModalBasicSection({
   variantCount,
 }: Props) {
   return (
-    <div className="bg-white/[0.02] border border-white/5 rounded-[2.5rem] p-8 space-y-8">
-      <div className="flex items-center gap-3 mb-2">
+    <div className="space-y-5 md:space-y-8 md:bg-white/[0.02] md:border md:border-white/5 md:rounded-[2.5rem] md:p-8 pb-6 md:pb-8 border-b border-white/5 md:border-b-0">
+      <div className="flex items-center gap-3">
         <div className="w-1.5 h-5 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-        <h3 className="text-lg font-bold text-white/90">Asosiy Ma&apos;lumotlar</h3>
+        <h3 className="text-base md:text-lg font-bold text-white/90">Asosiy ma&apos;lumotlar</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-8">
         <div className="space-y-3">
           <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-500 ml-1">
             Mahsulot Nomi
@@ -69,7 +69,7 @@ export function ProductModalBasicSection({
               value={formData.name}
               onChange={(e) => onFieldChange('name', e.target.value)}
               placeholder="Masalan: Premium Shakar"
-              className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-6 focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/[0.02] transition-all placeholder:text-gray-600"
+              className="w-full bg-white/[0.03] border border-white/10 rounded-xl md:rounded-2xl py-3.5 md:py-4 pl-12 pr-4 focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/[0.02] transition-all placeholder:text-gray-600 text-base"
             />
           </div>
         </div>
@@ -189,7 +189,7 @@ export function ProductModalBasicSection({
                 value={formData.sku}
                 onChange={(e) => onFieldChange('sku', e.target.value)}
                 placeholder="Masalan: SHK-001 yoki bo'sh qoldiring"
-                className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-12 pr-6 focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/[0.02] transition-all placeholder:text-gray-600"
+                className="w-full bg-white/[0.03] border border-white/10 rounded-xl md:rounded-2xl py-3.5 md:py-4 pl-12 pr-4 focus:outline-none focus:border-blue-500/50 focus:bg-blue-500/[0.02] transition-all placeholder:text-gray-600 text-base"
               />
             </div>
           </div>

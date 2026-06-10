@@ -209,7 +209,7 @@ export function QuickStockModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[110] flex flex-col md:items-center md:justify-center md:p-4">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -218,13 +218,14 @@ export function QuickStockModal({
             onClick={handleClose}
           />
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-[2rem] shadow-2xl overflow-hidden"
+            initial={{ opacity: 0, y: '100%' }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+            className="relative flex flex-col w-full h-full md:h-auto md:max-w-lg md:max-h-[92vh] bg-[#0a0a0a] md:border md:border-white/10 md:rounded-[2rem] shadow-2xl overflow-hidden pt-[env(safe-area-inset-top)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-white/5 flex items-start justify-between gap-4">
+            <div className="p-4 md:p-6 border-b border-white/5 flex items-start justify-between gap-4 shrink-0">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">
                   Tezkor kirim / chiqim
@@ -245,7 +246,8 @@ export function QuickStockModal({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 md:p-6 space-y-5 scroll-pb-28">
               <div className="flex gap-2 p-1 bg-white/5 rounded-xl border border-white/10">
                 <button
                   type="button"
@@ -403,10 +405,12 @@ export function QuickStockModal({
                 </div>
               )}
 
+            </div>
+            <div className="shrink-0 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:pb-6">
               <button
                 type="submit"
                 disabled={pending || !selectedProduct || !variantId}
-                className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-[0.98] ${
+                className={`w-full py-4 rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 disabled:opacity-40 transition-all active:scale-[0.98] ${
                   mode === 'IN'
                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
                     : 'bg-red-600 hover:bg-red-500 text-white'
@@ -419,6 +423,7 @@ export function QuickStockModal({
                 )}
                 {mode === 'IN' ? 'Kirimni tasdiqlash' : 'Chiqimni tasdiqlash'}
               </button>
+            </div>
             </form>
           </motion.div>
         </div>

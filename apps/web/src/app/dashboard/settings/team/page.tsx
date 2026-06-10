@@ -167,7 +167,7 @@ export default function TeamPage() {
         </p>
         <Link
           href="/dashboard/settings?tab=modullar"
-          className="inline-flex px-8 py-4 bg-blue-600 rounded-2xl font-black text-white"
+          className="btn-dash-primary"
         >
           Modullarga o‘tish
         </Link>
@@ -185,12 +185,12 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-black tracking-tight mb-2">Jamoa <span className="text-blue-500">boshqaruvi</span></h1>
-          <p className="text-gray-400 text-lg max-w-xl">
+          <h1 className="dash-page-title mb-1.5">Jamoa <span className="text-blue-500">boshqaruvi</span></h1>
+          <p className="dash-page-subtitle">
             Yangi login ochish va xodimlar ro‘yxati. <strong className="text-gray-300">Rollar</strong> (sotuvchi, buxgalter va h.k.){' '}
             alohida:&nbsp;
             <Link href="/dashboard/settings?tab=rollar" className="text-blue-400 font-black hover:text-blue-300 underline-offset-2 hover:underline">
@@ -201,14 +201,14 @@ export default function TeamPage() {
         <div className="flex flex-col sm:flex-row gap-3 shrink-0">
           <Link
             href="/dashboard/settings?tab=rollar"
-            className="flex items-center justify-center gap-2 px-6 py-4 bg-white/5 border border-white/10 hover:bg-white/10 text-gray-300 font-black rounded-[1.5rem] transition-all text-sm"
+            className="btn-dash-secondary text-gray-300"
           >
             <Shield size={18} className="text-blue-400" />
             Rollarni boshqarish
           </Link>
           <button 
             onClick={() => setIsInviteModalOpen(true)}
-            className="group flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-[1.5rem] transition-all shadow-[0_15px_30px_rgba(37,99,235,0.3)] active:scale-95"
+            className="btn-dash-primary group"
           >
             <UserPlus size={20} />
             Xodim qo‘shish
@@ -236,7 +236,7 @@ export default function TeamPage() {
       </div>
 
       {/* Users Table — overflow-visible: amallar menyusi kesilmasin */}
-      <div className="glass-card rounded-[3rem] overflow-visible bg-white/[0.01] border border-white/5">
+      <div className="dash-section overflow-visible">
         {isLoading ? (
           <div className="py-32 flex flex-col items-center justify-center gap-6">
             <Loader2 className="animate-spin text-blue-500" size={50} />
@@ -442,9 +442,9 @@ export default function TeamPage() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-t-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[90vh] sm:h-auto sm:max-h-[90vh] p-6 sm:p-10 absolute bottom-0 sm:relative"
+              className="desktop-modal-panel max-w-2xl h-[90vh] sm:h-auto absolute bottom-0 sm:relative rounded-t-2xl sm:rounded-2xl"
             >
-              <div className="flex justify-between items-start mb-6 sm:mb-8 shrink-0">
+              <div className="desktop-modal-header flex justify-between items-start shrink-0">
                 <div>
                   <h3 className="text-xl sm:text-3xl font-black mb-1">Xodim <span className="text-blue-500">Taklif Qilish</span></h3>
                   <p className="text-gray-500 text-xs sm:text-sm">Yangi xodim uchun login va parol yarating.</p>

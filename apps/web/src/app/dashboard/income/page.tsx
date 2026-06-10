@@ -152,15 +152,15 @@ export default function IncomePage() {
 
   return (
     <ModuleGate moduleKey="INCOME" moduleLabel="Kirimlar">
-      <div className="space-y-6 pb-20">
+      <div className="dash-page">
         <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-emerald-300">
               Oylik kirim daftari
             </p>
-            <h1 className="mt-2 flex items-center gap-3 text-3xl font-black tracking-tight text-white">
+            <h1 className="mt-2 flex items-center gap-3 dash-page-title text-white">
               <TrendingUp className="text-emerald-400" size={30} />
-              Kirimlar
+              Boshqa tushumlar
             </h1>
           </div>
 

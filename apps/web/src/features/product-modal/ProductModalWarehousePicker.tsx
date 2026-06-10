@@ -40,7 +40,7 @@ export function ProductModalWarehousePicker({
         <button
           type="button"
           onClick={onToggle}
-          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 focus:outline-none focus:border-blue-500/50 transition-all flex items-center justify-between text-sm min-w-[200px]"
+          className="w-full bg-white/5 border border-white/10 rounded-xl md:rounded-2xl py-3.5 md:py-4 px-4 md:px-6 focus:outline-none focus:border-blue-500/50 transition-all flex items-center justify-between text-sm min-w-0"
         >
           <span className={targetWarehouseId ? 'text-white' : 'text-gray-500'}>
             {targetWarehouseId

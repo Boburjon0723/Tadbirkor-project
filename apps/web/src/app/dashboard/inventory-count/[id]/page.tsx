@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, CheckCircle2, ScanLine } from 'lucide-react';
+import { ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
+import { MobileScanField } from '@/components/mobile/MobileScanField';
 import {
   useInventoryCount,
   useInventoryCountActions,
@@ -56,13 +57,13 @@ export default function InventoryCountDetailPage() {
     }
   };
 
-  const handleScan = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scanBarcode.trim()) return;
+  const handleScan = async (barcode?: string) => {
+    const code = (barcode ?? scanBarcode).trim();
+    if (!code) return;
     try {
       const res = await scan.mutateAsync({
         countId: id,
-        barcode: scanBarcode.trim(),
+        barcode: code,
         countedQuantity: Number(scanQty) || 1,
       });
       setScanBarcode('');
@@ -121,7 +122,7 @@ export default function InventoryCountDetailPage() {
   }
 
   return (
-    <div className="space-y-6 pb-20 max-w-3xl mx-auto">
+    <div className="w-full max-w-3xl md:mx-auto space-y-4 md:space-y-6 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-20">
       <Link href="/dashboard/inventory-count" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white">
         <ArrowLeft size={16} />
         Ro&apos;yxat
@@ -164,33 +165,19 @@ export default function InventoryCountDetailPage() {
       </div>
 
       {isActive && canAdjust && (
-        <form
-          onSubmit={handleScan}
-          className="glass-card rounded-2xl p-4 border border-teal-500/20 flex flex-col sm:flex-row gap-3"
-        >
-          <input
-            autoFocus
+        <div className="glass-card rounded-2xl p-4 border border-teal-500/20 sticky top-0 z-10 backdrop-blur-xl bg-[#050505]/90">
+          <MobileScanField
             value={scanBarcode}
-            onChange={(e) => setScanBarcode(e.target.value)}
-            placeholder="Barcode / SKU skaner..."
-            className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white"
+            onChange={setScanBarcode}
+            onSubmit={handleScan}
+            busy={scan.isPending}
+            qty={scanQty}
+            onQtyChange={setScanQty}
+            showQty
+            accentClass="bg-teal-600"
+            scannerTitle="Inventarizatsiya skaner"
           />
-          <input
-            type="number"
-            min={0}
-            value={scanQty}
-            onChange={(e) => setScanQty(e.target.value)}
-            className="w-24 bg-black/40 border border-white/10 rounded-xl px-3 py-3 text-white text-center"
-          />
-          <button
-            type="submit"
-            disabled={scan.isPending}
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-teal-600 text-white font-black"
-          >
-            {scan.isPending ? <Loader2 className="animate-spin" size={18} /> : <ScanLine size={18} />}
-            Skaner
-          </button>
-        </form>
+        </div>
       )}
 
       <div className="space-y-3">

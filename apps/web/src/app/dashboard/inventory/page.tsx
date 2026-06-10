@@ -25,6 +25,7 @@ import { InventoryPageHeader } from '@/features/inventory/InventoryPageHeader';
 import { InventoryToolbar } from '@/features/inventory/InventoryToolbar';
 import { InventoryProductsTable } from '@/features/inventory/InventoryProductsTable';
 import { InventoryProductsMobileList } from '@/features/inventory/InventoryProductsMobileList';
+import { WarehouseOperatorMobileHub } from '@/features/warehouse/WarehouseOperatorMobileHub';
 import {
   warehouseFieldConfig,
   filterProductsForWarehouse,
@@ -228,7 +229,7 @@ export default function InventoryPage() {
   }, [productPages?.pages, displayedProducts]);
 
   return (
-    <div className="space-y-10 pb-20">
+    <div className="dash-page">
       <InventoryPageHeader
         catalogReadOnly={catalogReadOnly}
         selectedWarehouseId={selectedWarehouseId}
@@ -295,7 +296,7 @@ export default function InventoryPage() {
         }}
       />
 
-      <div className="glass-card rounded-[2rem] md:rounded-[3rem] overflow-hidden border border-white/5 bg-white/[0.01]">
+      <div className="hidden md:block dash-section">
         <InventoryProductsTable
           products={displayedProducts}
           selectedWarehouseId={selectedWarehouseId}
@@ -312,6 +313,25 @@ export default function InventoryPage() {
             )
           }
         />
+        {hasNextPage && (
+          <div className="p-6 border-t border-white/5 flex justify-center">
+            <button
+              type="button"
+              disabled={isFetchingNextPage}
+              onClick={() => void fetchNextPage()}
+              className="px-8 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-black text-gray-300 disabled:opacity-50"
+            >
+              {isFetchingNextPage
+                ? 'Yuklanmoqda...'
+                : `Yana yuklash (${displayedProducts.length} / ${catalogStats.productCount})`}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* PWA: to‘liq kenglikdagi mahsulot ro‘yxati (layout padding dan chiqadi) */}
+      <div className="md:hidden -mx-6">
+        <WarehouseOperatorMobileHub />
         <InventoryProductsMobileList
           products={displayedProducts}
           selectedWarehouseId={selectedWarehouseId}
@@ -328,12 +348,12 @@ export default function InventoryPage() {
           }
         />
         {hasNextPage && (
-          <div className="p-6 border-t border-white/5 flex justify-center">
+          <div className="py-4 border-t border-white/5 flex justify-center bg-[#050505]">
             <button
               type="button"
               disabled={isFetchingNextPage}
               onClick={() => void fetchNextPage()}
-              className="px-8 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-sm font-black text-gray-300 disabled:opacity-50"
+              className="px-6 py-3 rounded-xl bg-white/5 active:bg-white/10 text-sm font-black text-gray-300 disabled:opacity-50"
             >
               {isFetchingNextPage
                 ? 'Yuklanmoqda...'

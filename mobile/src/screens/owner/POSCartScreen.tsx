@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, TextI
 import { ArrowLeft, Trash2, Minus, Plus, Banknote, CreditCard, QrCode, Search, UserPlus } from 'lucide-react-native';
 import { api, fixImageUrl } from '../../api/client';
 import { usePosCreditAccess } from '../../hooks/usePosCreditAccess';
+import { calcPosCartTotal, roundMoney } from '../../lib/money';
 
 export default function POSCartScreen({ route, navigation }: any) {
   const posCredit = usePosCreditAccess();
@@ -133,7 +134,7 @@ export default function POSCartScreen({ route, navigation }: any) {
     const qty = Number(item.qty) || 0;
     
     if (!acc[currency]) acc[currency] = 0;
-    acc[currency] += price * qty;
+    acc[currency] = roundMoney(acc[currency] + roundMoney(price * qty));
     return acc;
   }, {} as Record<string, number>);
 
@@ -179,10 +180,12 @@ export default function POSCartScreen({ route, navigation }: any) {
         unitPrice: Number(item.product.variants?.[0]?.salePrice || 0)
       }));
 
-      const totalAmount = cart.reduce((acc, item) => {
-        const p = item.product.variants?.[0]?.salePrice || 0;
-        return acc + (Number(p) * Number(item.qty));
-      }, 0);
+      const totalAmount = calcPosCartTotal(
+        cart.map((item) => ({
+          price: Number(item.product.variants?.[0]?.salePrice || 0),
+          quantity: Number(item.qty),
+        })),
+      );
 
       if (method === 'CREDIT') {
         const name = creditCustomerName.trim();

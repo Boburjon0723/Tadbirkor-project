@@ -10,6 +10,10 @@ import { DispatchesService } from '../dispatches/dispatches.service';
 import { GoodsReceiptAcceptService } from '../goods-receipts/goods-receipt-accept.service';
 import { DebtsService } from '../debts/debts.service';
 import { computeTrialEndsAt } from '../../common/trial.util';
+import {
+  SYSTEM_MODULE_CATALOG,
+  syncSystemModuleCatalog,
+} from '../../common/module-catalog';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
@@ -346,63 +350,7 @@ export class TestFlowService {
 
   async initializeModules() {
     this.logger.log('Initializing system modules and features...');
-
-    const modules = [
-      { key: 'WAREHOUSE', name: 'Ombor' },
-      { key: 'B2B', name: 'B2B Savdo' },
-      { key: 'PARTNERS', name: 'Hamkorlar' },
-      { key: 'PRODUCT_MAPPING', name: 'Mahsulot Mapping' },
-      { key: 'DEBT', name: 'Qarz Daftari' },
-      { key: 'POS', name: 'POS / Kassa' },
-      { key: 'EMPLOYEES', name: 'Xodimlar' },
-      { key: 'STOREFRONT', name: 'Onlayn do‘kon' },
-      { key: 'EXPENSES', name: 'Ichki xarajatlar' },
-      { key: 'PAYROLL', name: 'Oylik' },
-      { key: 'REPORTS', name: 'Hisobotlar' },
-      { key: 'INTEGRATIONS', name: 'Ulanishlar' },
-    ];
-
-    const { WAREHOUSE_SECTION_FEATURE_DEFS } = await import(
-      '../../common/warehouse-section-features'
-    );
-
-    for (const m of modules) {
-      const moduleRecord = await (this.prisma as any).module.upsert({
-        where: { key: m.key },
-        update: { name: m.name },
-        create: {
-          key: m.key,
-          name: m.name,
-        },
-      });
-
-      if (m.key === 'WAREHOUSE') {
-        for (const def of WAREHOUSE_SECTION_FEATURE_DEFS) {
-          await (this.prisma as any).feature.upsert({
-            where: { key: def.key },
-            update: { name: def.name, description: def.description },
-            create: {
-              moduleId: moduleRecord.id,
-              key: def.key,
-              name: def.name,
-              description: def.description,
-            },
-          });
-        }
-        continue;
-      }
-
-      await (this.prisma as any).feature.upsert({
-        where: { key: `${m.key}_MAIN` },
-        update: { name: `${m.name} Asosiy` },
-        create: {
-          moduleId: moduleRecord.id,
-          key: `${m.key}_MAIN`,
-          name: `${m.name} Asosiy`,
-        },
-      });
-    }
-
-    return { success: true, count: modules.length };
+    await syncSystemModuleCatalog(this.prisma as any);
+    return { success: true, count: SYSTEM_MODULE_CATALOG.length };
   }
 }

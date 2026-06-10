@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import type { DashboardMenuGroup, DashboardMenuItem } from '@/lib/dashboard-menu';
@@ -51,8 +51,9 @@ function MenuLink({
   }
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const isActive = isMenuItemActive(pathname, item.href);
+  const isActive = isMenuItemActive(pathname, item.href, searchParams.toString());
   const warmRoute = () => {
     prefetchDashboardRoute(router, item.href);
     prefetchDashboardRouteData(queryClient, item.href);

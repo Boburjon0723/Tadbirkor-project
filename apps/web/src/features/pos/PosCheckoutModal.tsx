@@ -10,7 +10,7 @@ import {
   User,
   X,
 } from 'lucide-react';
-import { saleCurrencySuffix, type SaleCurrency } from '@/lib/currency';
+import { roundMoney, saleCurrencySuffix, type SaleCurrency } from '@/lib/currency';
 import {
   PosCustomerStrip,
   type PosCustomerSelection,
@@ -57,7 +57,7 @@ export function PosCheckoutModal({
   const received = Number(cashReceivedInput) || 0;
   const change =
     paymentMethod === 'cash' && received >= totalAmount
-      ? received - totalAmount
+      ? roundMoney(received - totalAmount)
       : 0;
   const cashOk =
     paymentMethod !== 'cash' || received >= totalAmount;
@@ -147,7 +147,7 @@ export function PosCheckoutModal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="w-full max-w-2xl max-h-[92vh] overflow-y-auto bg-[var(--pos-modal-bg)] border border-[var(--pos-border)] rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 relative shadow-2xl custom-scrollbar text-[var(--pos-text)]"
+            className="w-full max-w-xl lg:max-w-2xl max-h-[92vh] overflow-y-auto bg-[var(--pos-modal-bg)] border border-[var(--pos-border)] rounded-2xl p-4 md:p-6 relative shadow-2xl custom-scrollbar text-[var(--pos-text)]"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none" />
             <div className="relative space-y-6 md:space-y-10">
