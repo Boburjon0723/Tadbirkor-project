@@ -86,7 +86,8 @@ func (c Config) IsRegistrationEnabled() bool {
 	if c.RegistrationEnabled != nil {
 		return *c.RegistrationEnabled
 	}
-	return !c.IsProduction
+	// Ro‘yxatdan o‘tish ochiq; yopish uchun AUTH_REGISTRATION_ENABLED=false
+	return true
 }
 
 func getEnv(key, fallback string) string {

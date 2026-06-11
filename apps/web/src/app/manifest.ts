@@ -6,9 +6,11 @@ export default function manifest(): MetadataRoute.Manifest {
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 8) ||
     '1';
 
+  const iconBase = `/brand/axis-logo.png?v=${v}`;
+
   return {
     name: 'Axis ERP',
-    short_name: 'AxisERP',
+    short_name: 'Axis ERP',
     description: "O'zbekiston tadbirkorlari uchun ERP platforma",
     start_url: '/',
     display: 'standalone',
@@ -16,9 +18,22 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#050505',
     icons: [
       {
-        src: `/favicon.png?v=${v}`,
+        src: iconBase,
+        type: 'image/png',
+        sizes: '192x192',
+        purpose: 'any',
+      },
+      {
+        src: iconBase,
         type: 'image/png',
         sizes: '512x512',
+        purpose: 'any',
+      },
+      {
+        src: iconBase,
+        type: 'image/png',
+        sizes: '512x512',
+        purpose: 'maskable',
       },
     ],
     shortcuts: [
@@ -26,15 +41,14 @@ export default function manifest(): MetadataRoute.Manifest {
         name: 'Ombor kirimi',
         short_name: 'Kirim',
         url: '/dashboard/warehouse-intake',
-        icons: [{ src: `/favicon.png?v=${v}`, sizes: '512x512' }],
+        icons: [{ src: iconBase, sizes: '192x192' }],
       },
       {
         name: 'Mahsulotlar',
         short_name: 'Ombor',
         url: '/dashboard/inventory',
-        icons: [{ src: `/favicon.png?v=${v}`, sizes: '512x512' }],
+        icons: [{ src: iconBase, sizes: '192x192' }],
       },
     ],
   };
 }
-

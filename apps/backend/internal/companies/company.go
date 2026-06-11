@@ -17,13 +17,16 @@ var ErrCompanyNotFound = errors.New("Kompaniya topilmadi")
 var ErrTinTaken = errors.New("Ushbu STIR (TIN) allaqachon boshqa kompaniya tomonidan foydalanilgan")
 
 type UpdateCompanyInput struct {
-	Name          *string `json:"name"`
-	LegalName     *string `json:"legalName"`
-	Tin           *string `json:"tin"`
-	Address       *string `json:"address"`
-	Phone         *string `json:"phone"`
-	BusinessType  *string `json:"businessType"`
-	StorefrontURL *string `json:"storefrontUrl"`
+	Name                          *string  `json:"name"`
+	LegalName                     *string  `json:"legalName"`
+	Tin                           *string  `json:"tin"`
+	Address                       *string  `json:"address"`
+	Phone                         *string  `json:"phone"`
+	BusinessType                  *string  `json:"businessType"`
+	StorefrontURL                 *string  `json:"storefrontUrl"`
+	PosCreditEnabled              *bool    `json:"posCreditEnabled"`
+	PosMaxDiscountPercent         *float64 `json:"posMaxDiscountPercent"`
+	InventoryVarianceTolerancePct *float64 `json:"inventoryVarianceTolerancePct"`
 }
 
 func (s *Service) FindOne(ctx context.Context, id string) (map[string]any, error) {
@@ -86,6 +89,29 @@ func (s *Service) Update(ctx context.Context, id string, in UpdateCompanyInput) 
 	if in.StorefrontURL != nil {
 		url := strings.TrimRight(strings.TrimSpace(*in.StorefrontURL), "/")
 		add("storefrontUrl", url)
+	}
+	if in.PosCreditEnabled != nil {
+		add("posCreditEnabled", *in.PosCreditEnabled)
+	}
+	if in.PosMaxDiscountPercent != nil {
+		pct := *in.PosMaxDiscountPercent
+		if pct < 0 {
+			pct = 0
+		}
+		if pct > 100 {
+			pct = 100
+		}
+		add("posMaxDiscountPercent", pct)
+	}
+	if in.InventoryVarianceTolerancePct != nil {
+		pct := *in.InventoryVarianceTolerancePct
+		if pct < 0 {
+			pct = 0
+		}
+		if pct > 100 {
+			pct = 100
+		}
+		add("inventoryVarianceTolerancePct", pct)
 	}
 	if len(sets) == 0 {
 		return existing, nil

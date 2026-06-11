@@ -198,18 +198,28 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             onChange={(e) => setForm({...form, tin: e.target.value.replace(/\D/g, '')})}
           />
         </div>
-        <label className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl cursor-pointer">
+        <label
+          className={`flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl ${
+            canWrite ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'
+          }`}
+        >
           <div>
             <p className="font-black text-sm">POS nasiya (mijozlar qarzi)</p>
             <p className="text-xs text-gray-500 font-bold mt-1">
               Yoqilganda kassada «Nasiya» to&apos;lovi va Mijozlar qarzi bo&apos;limi ishlaydi.
             </p>
+            {!canWrite && (
+              <p className="text-xs text-amber-400 font-bold mt-2">
+                Sinov tugagan — yoqish uchun «Obuna» tabida faollashtiring yoki administrator bilan bog&apos;laning.
+              </p>
+            )}
           </div>
           <input
             type="checkbox"
             checked={form.posCreditEnabled}
+            disabled={!canWrite}
             onChange={(e) => setForm({ ...form, posCreditEnabled: e.target.checked })}
-            className="w-5 h-5 accent-blue-500"
+            className="w-5 h-5 accent-blue-500 disabled:cursor-not-allowed"
           />
         </label>
         <div className="space-y-2">

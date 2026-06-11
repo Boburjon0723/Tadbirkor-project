@@ -20,11 +20,11 @@ export const metadata: Metadata = {
   manifest: `/manifest.webmanifest?v=${assetVersion}`,
   icons: {
     icon: [
+      { url: `/brand/axis-logo.png?v=${assetVersion}`, type: 'image/png', sizes: '512x512' },
       { url: `/favicon.ico?v=${assetVersion}`, sizes: 'any' },
-      { url: `/favicon.png?v=${assetVersion}`, type: 'image/png', sizes: '512x512' },
     ],
-    apple: [{ url: `/apple-touch-icon.png?v=${assetVersion}`, type: 'image/png', sizes: '180x180' }],
-    shortcut: [{ url: `/favicon.ico?v=${assetVersion}` }],
+    apple: [{ url: `/brand/axis-logo.png?v=${assetVersion}`, type: 'image/png', sizes: '180x180' }],
+    shortcut: [{ url: `/brand/axis-logo.png?v=${assetVersion}` }],
   },
   appleWebApp: {
     capable: true,
