@@ -8,6 +8,7 @@ export type StockIntakeHistoryLine = {
   productName: string;
   variantName: string;
   quantity: number;
+  unit?: string | null;
   barcode?: string | null;
   sku?: string | null;
 };
@@ -41,9 +42,10 @@ export type StockSingleHistoryItem = {
   productVariant: {
     id: string;
     name: string;
-    product: { id: string; name: string };
+    product: { id: string; name: string; unit?: string | null };
   };
   quantity: number;
+  unit?: string | null;
   note?: string | null;
 };
 

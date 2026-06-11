@@ -184,12 +184,20 @@ func nullIfEmpty(s string) any {
 func (s *Service) updateExistingVariantTx(
 	ctx context.Context,
 	tx pgx.Tx,
-	companyID, productID string,
+	companyID, userID, productID string,
 	v VariantInput,
 	index int,
 	canonicalSKU string,
 ) error {
 	vid := strings.TrimSpace(*v.ID)
+	var oldSale float64
+	var oldPurchase *float64
+	if err := tx.QueryRow(ctx, `
+		SELECT "salePrice", "purchasePrice" FROM "ProductVariant"
+		WHERE id = $1 AND "companyId" = $2 AND "productId" = $3
+	`, vid, companyID, productID).Scan(&oldSale, &oldPurchase); err != nil {
+		return err
+	}
 	sets := []string{`name = $1`, `"updatedAt" = NOW()`}
 	args := []any{v.Name}
 	n := 2
@@ -264,7 +272,39 @@ func (s *Service) updateExistingVariantTx(
 		n+2,
 	)
 	_, err := tx.Exec(ctx, sql, args...)
-	return err
+	if err != nil {
+		return err
+	}
+
+	saleChanged := v.SalePrice != oldSale
+	purchaseChanged := v.PurchasePrice != nil && ((oldPurchase == nil && *v.PurchasePrice != 0) || (oldPurchase != nil && *v.PurchasePrice != *oldPurchase))
+	if saleChanged || purchaseChanged {
+		newData := map[string]any{
+			"productId":        productID,
+			"productVariantId": vid,
+			"variantName":      v.Name,
+		}
+		oldData := map[string]any{"salePrice": oldSale}
+		newData["salePrice"] = v.SalePrice
+		if oldPurchase != nil {
+			oldData["purchasePrice"] = *oldPurchase
+		}
+		if v.PurchasePrice != nil {
+			newData["purchasePrice"] = *v.PurchasePrice
+		} else if oldPurchase != nil {
+			newData["purchasePrice"] = *oldPurchase
+		}
+		auditNew, _ := json.Marshal(newData)
+		auditOld, _ := json.Marshal(oldData)
+		_, err = tx.Exec(ctx, `
+			INSERT INTO "AuditLog" (id, "companyId", "userId", action, "entityType", "entityId", "newData", "oldData", "createdAt")
+			VALUES (gen_random_uuid()::text, $1, $2, 'product.price_updated', 'PRODUCT_VARIANT', $3, $4, $5, NOW())
+		`, companyID, userID, vid, string(auditNew), string(auditOld))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) Create(ctx context.Context, companyID, userID string, in CreateInput) (map[string]any, error) {
@@ -413,7 +453,7 @@ func (s *Service) Update(ctx context.Context, id, companyID, userID string, in U
 		}
 		for i, v := range in.Variants {
 			if v.ID != nil && strings.TrimSpace(*v.ID) != "" {
-				if err := s.updateExistingVariantTx(ctx, tx, companyID, id, v, i, canonicalSKU); err != nil {
+				if err := s.updateExistingVariantTx(ctx, tx, companyID, userID, id, v, i, canonicalSKU); err != nil {
 					return nil, err
 				}
 				continue

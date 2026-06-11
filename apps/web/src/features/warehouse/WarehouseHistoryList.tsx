@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Loader2, Package, PackagePlus, User } from 'luc
 import { motion, AnimatePresence } from 'framer-motion';
 import type { StockHistoryItem } from '@/features/warehouse/warehouse-history-types';
 import { isIntakeHistoryItem } from '@/features/warehouse/warehouse-history-types';
+import { formatStockQuantity } from '@/lib/product-units';
 
 type Props = {
   items?: StockHistoryItem[];
@@ -51,7 +52,7 @@ function IntakeHistoryCard({ item }: { item: StockHistoryItem & { kind: 'intake'
             <span>{formatDate(item.createdAt)}</span>
             {item.warehouse?.name && <span>{item.warehouse.name}</span>}
             <span className="text-emerald-400 font-bold">
-              {item.lineCount} poz · {item.totalUnits} dona
+              {item.lineCount} poz
             </span>
           </div>
           {item.createdBy && (
@@ -100,8 +101,9 @@ function IntakeHistoryCard({ item }: { item: StockHistoryItem & { kind: 'intake'
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-lg font-black text-emerald-400">+{line.quantity}</p>
-                      <p className="text-[10px] font-bold uppercase text-gray-500">dona</p>
+                      <p className="text-lg font-black text-emerald-400">
+                        +{formatStockQuantity(line.quantity, line.unit)}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -146,7 +148,7 @@ function SingleHistoryRow({ item }: { item: StockHistoryItem & { kind: 'single' 
         </span>
         <span className={`font-black ${isIn ? 'text-emerald-400' : 'text-red-400'}`}>
           {isIn ? '+' : '-'}
-          {item.quantity}
+          {formatStockQuantity(item.quantity, item.unit ?? item.productVariant.product.unit)}
         </span>
         {item.createdBy && (
           <span className="flex items-center gap-1.5 text-gray-400 text-xs">

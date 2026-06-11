@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -144,6 +145,16 @@ func sourceLabel(sourceType string) string {
 		return "Qo'lda"
 	case "POS_SALE":
 		return "POS sotuv"
+	case "PARTNER_SALE":
+		return "Hamkor sotuvi"
+	case "DISPATCH":
+		return "Jo'natma"
+	case "GOODS_RECEIPT":
+		return "B2B qabul"
+	case "STOCK_IN_MANUAL":
+		return "Qo'lda kirim"
+	case "STOCK_OUT_MANUAL":
+		return "Qo'lda chiqim"
 	case "ADJUSTMENT":
 		return "Tuzatish"
 	case "TRANSFER":
@@ -158,14 +169,35 @@ func sourceLabel(sourceType string) string {
 	}
 }
 
+type movementHistoryRow struct {
+	id, whID, variantID, mType, sourceType string
+	sourceID                                 *string
+	qty                                      float64
+	note, createdBy, userName                *string
+	createdAt                                time.Time
+	whName, variantName, productID, productName, unit string
+	barcode, sku                             *string
+}
+
+func movementCreatedBy(createdBy, userName *string) any {
+	if createdBy == nil {
+		return nil
+	}
+	name := "Noma'lum"
+	if userName != nil {
+		name = *userName
+	}
+	return map[string]any{"id": *createdBy, "fullName": name}
+}
+
 func (s *Service) GetMovements(ctx context.Context, companyID, userID, warehouseID string) ([]map[string]any, error) {
 	resolved, err := s.resolveWarehouse(ctx, companyID, userID, warehouseID)
 	if err != nil {
 		return nil, err
 	}
 	sql := `
-		SELECT sm.id, sm."warehouseId", sm."productVariantId", sm.type, sm.quantity, sm."sourceType", sm.note, sm."createdBy", sm."createdAt",
-		       w.name, pv.name, p.name, u."fullName"
+		SELECT sm.id, sm."warehouseId", sm."productVariantId", sm.type, sm.quantity, sm."sourceType", sm."sourceId", sm.note, sm."createdBy", sm."createdAt",
+		       w.name, pv.name, pv.barcode, pv.sku, p.id, p.name, COALESCE(p.unit, 'dona'), u."fullName"
 		FROM "StockMovement" sm
 		JOIN "Warehouse" w ON w.id = sm."warehouseId"
 		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
@@ -178,45 +210,145 @@ func (s *Service) GetMovements(ctx context.Context, companyID, userID, warehouse
 		sql += ` AND sm."warehouseId" = $2`
 		args = append(args, resolved)
 	}
-	sql += ` ORDER BY sm."createdAt" DESC LIMIT 100`
+	sql += ` ORDER BY sm."createdAt" DESC LIMIT 300`
 
 	rows, err := s.pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := []map[string]any{}
+
+	movements := []movementHistoryRow{}
 	for rows.Next() {
-		var id, whID, variantID, mType, sourceType string
-		var qty float64
-		var note, createdBy, userName *string
-		var createdAt time.Time
-		var whName, variantName, productName string
-		if err := rows.Scan(&id, &whID, &variantID, &mType, &qty, &sourceType, &note, &createdBy, &createdAt,
-			&whName, &variantName, &productName, &userName); err != nil {
+		var row movementHistoryRow
+		if err := rows.Scan(
+			&row.id, &row.whID, &row.variantID, &row.mType, &row.qty, &row.sourceType, &row.sourceID, &row.note, &row.createdBy, &row.createdAt,
+			&row.whName, &row.variantName, &row.barcode, &row.sku, &row.productID, &row.productName, &row.unit, &row.userName,
+		); err != nil {
 			return nil, err
 		}
-		var by any = nil
-		if createdBy != nil {
-			name := "Noma'lum"
-			if userName != nil {
-				name = *userName
+		movements = append(movements, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(movements) == 0 {
+		return []map[string]any{}, nil
+	}
+
+	intakeIDs := []string{}
+	seenIntake := map[string]struct{}{}
+	for _, m := range movements {
+		if m.sourceType == "WAREHOUSE_INTAKE" && m.sourceID != nil && strings.TrimSpace(*m.sourceID) != "" {
+			if _, ok := seenIntake[*m.sourceID]; !ok {
+				seenIntake[*m.sourceID] = struct{}{}
+				intakeIDs = append(intakeIDs, *m.sourceID)
 			}
-			by = map[string]any{"id": *createdBy, "fullName": name}
 		}
-		out = append(out, map[string]any{
-			"kind": "single", "id": id, "createdAt": createdAt, "type": mType,
-			"sourceType": sourceType, "sourceLabel": sourceLabel(sourceType),
-			"createdBy": by,
-			"warehouse": map[string]any{"id": whID, "name": whName},
-			"productVariant": map[string]any{
-				"id": variantID, "name": variantName,
-				"product": map[string]any{"name": productName},
-			},
-			"quantity": qty, "note": note,
+	}
+
+	intakeMeta := map[string]struct{ reference, note *string }{}
+	if len(intakeIDs) > 0 {
+		irows, err := s.pool.Query(ctx, `
+			SELECT id, reference, note FROM "WarehouseIntake"
+			WHERE "companyId" = $1 AND id = ANY($2)
+		`, companyID, intakeIDs)
+		if err != nil {
+			return nil, err
+		}
+		for irows.Next() {
+			var id, reference string
+			var note *string
+			if err := irows.Scan(&id, &reference, &note); err != nil {
+				irows.Close()
+				return nil, err
+			}
+			intakeMeta[id] = struct{ reference, note *string }{reference: &reference, note: note}
+		}
+		irows.Close()
+	}
+
+	intakeGroups := map[string][]movementHistoryRow{}
+	singles := []movementHistoryRow{}
+	for _, m := range movements {
+		if m.sourceType == "WAREHOUSE_INTAKE" && m.sourceID != nil {
+			intakeGroups[*m.sourceID] = append(intakeGroups[*m.sourceID], m)
+		} else {
+			singles = append(singles, m)
+		}
+	}
+
+	history := []map[string]any{}
+	for sourceID, lines := range intakeGroups {
+		if len(lines) == 0 {
+			continue
+		}
+		anchor := lines[0]
+		for _, l := range lines[1:] {
+			if l.createdAt.After(anchor.createdAt) {
+				anchor = l
+			}
+		}
+		meta := intakeMeta[sourceID]
+		reference := "Ombor kirimi"
+		if meta.reference != nil && strings.TrimSpace(*meta.reference) != "" {
+			reference = *meta.reference
+		} else if anchor.note != nil && strings.TrimSpace(*anchor.note) != "" {
+			reference = *anchor.note
+		}
+		totalUnits := 0.0
+		intakeLines := make([]map[string]any, 0, len(lines))
+		for _, l := range lines {
+			totalUnits += l.qty
+			intakeLines = append(intakeLines, map[string]any{
+				"id": l.id, "productName": l.productName, "variantName": l.variantName,
+				"quantity": l.qty, "unit": l.unit,
+				"barcode": l.barcode, "sku": l.sku,
+			})
+		}
+		sort.Slice(intakeLines, func(i, j int) bool {
+			a, _ := intakeLines[i]["productName"].(string)
+			b, _ := intakeLines[j]["productName"].(string)
+			return strings.Compare(a, b) < 0
+		})
+		var intakeNote any
+		if meta.note != nil {
+			intakeNote = *meta.note
+		}
+		history = append(history, map[string]any{
+			"kind": "intake", "id": sourceID, "intakeId": sourceID, "reference": reference,
+			"createdAt": anchor.createdAt, "type": "IN", "sourceType": "WAREHOUSE_INTAKE",
+			"sourceLabel": sourceLabel("WAREHOUSE_INTAKE"),
+			"createdBy": movementCreatedBy(anchor.createdBy, anchor.userName),
+			"warehouse": map[string]any{"id": anchor.whID, "name": anchor.whName},
+			"totalUnits": totalUnits, "lineCount": len(lines), "note": intakeNote,
+			"lines": intakeLines,
 		})
 	}
-	return out, nil
+
+	for _, m := range singles {
+		history = append(history, map[string]any{
+			"kind": "single", "id": m.id, "createdAt": m.createdAt, "type": m.mType,
+			"sourceType": m.sourceType, "sourceLabel": sourceLabel(m.sourceType),
+			"createdBy": movementCreatedBy(m.createdBy, m.userName),
+			"warehouse": map[string]any{"id": m.whID, "name": m.whName},
+			"productVariant": map[string]any{
+				"id": m.variantID, "name": m.variantName,
+				"product": map[string]any{"id": m.productID, "name": m.productName, "unit": m.unit},
+			},
+			"quantity": m.qty, "unit": m.unit, "note": m.note,
+		})
+	}
+
+	sort.Slice(history, func(i, j int) bool {
+		ti, _ := history[i]["createdAt"].(time.Time)
+		tj, _ := history[j]["createdAt"].(time.Time)
+		return ti.After(tj)
+	})
+	if len(history) > 100 {
+		history = history[:100]
+	}
+	return history, nil
 }
 
 func (s *Service) verifyEntities(ctx context.Context, companyID, warehouseID, variantID string) error {

@@ -2,6 +2,7 @@ package partnerledger
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -361,10 +362,18 @@ func (r *Repository) SoftDeleteContact(ctx context.Context, contactID string) er
 }
 
 func (r *Repository) CreateAuditLog(ctx context.Context, companyID, userID, action, entityType, entityID string, newData any) error {
+	var newDataBytes []byte
+	if newData != nil {
+		b, err := json.Marshal(newData)
+		if err != nil {
+			return err
+		}
+		newDataBytes = b
+	}
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO "AuditLog" (id, "companyId", "userId", action, "entityType", "entityId", "newData", "createdAt")
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-	`, uuid.NewString(), companyID, userID, action, entityType, entityID, newData)
+	`, uuid.NewString(), companyID, userID, action, entityType, entityID, string(newDataBytes))
 	return err
 }
 

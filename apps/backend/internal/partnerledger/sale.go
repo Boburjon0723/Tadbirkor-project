@@ -237,7 +237,7 @@ func (s *Service) CreateSaleOrder(ctx context.Context, companyID, userID, contac
 
 	movementIDs := []string{}
 	for _, line := range lines {
-		movementID, err := stock.RecordOneOutInTx(ctx, tx, companyID, userID, "MANUAL", stock.Line{
+		movementID, err := stock.RecordOneOutInTx(ctx, tx, companyID, userID, "PARTNER_SALE", stock.Line{
 			WarehouseID:      input.WarehouseID,
 			ProductVariantID: line.ProductVariantID,
 			Quantity:         line.Quantity,
@@ -292,8 +292,17 @@ func (s *Service) CreateSaleOrder(ctx context.Context, companyID, userID, contac
 	}
 	_ = s.notify.NotifyCompanyRoles(ctx, companyID, []string{"OWNER", "MANAGER"},
 		"Hamkor sotuvi tasdiqlandi",
-		fmt.Sprintf("%s: %s · %s dona", contactName, totalsText, qtyText),
+		fmt.Sprintf("%s: %s · %s", contactName, totalsText, qtyText),
 		"SUCCESS", "PARTNER_LEDGER", "partner_ledger.sale_order.confirmed")
+
+	_ = s.repo.CreateAuditLog(ctx, companyID, userID, "partner_ledger.sale_order_create", "PARTNER_SALE_ORDER", batchID, map[string]any{
+		"contactId":   contactID,
+		"contactName": contactName,
+		"warehouseId": input.WarehouseID,
+		"lineCount":   len(lines),
+		"totalQty":    totalQty,
+		"totals":      amountsToMaps(ledgerAmounts),
+	})
 
 	return map[string]any{
 		"batchId": batchID, "movementIds": movementIDs, "operationIds": operationIDs,

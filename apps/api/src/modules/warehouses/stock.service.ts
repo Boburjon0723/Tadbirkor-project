@@ -204,6 +204,8 @@ export class StockService {
         return 'B2B qabul';
       case 'POS_SALE':
         return 'POS sotuv';
+      case 'PARTNER_SALE':
+        return 'Hamkor sotuvi';
       case 'STOCK_IN_MANUAL':
         return "Qo'lda kirim";
       case 'STOCK_OUT_MANUAL':

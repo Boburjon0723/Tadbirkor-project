@@ -191,14 +191,20 @@ export class AuditLogsService {
         where: { companyId, createdAt: { gte: today } }
       }),
       this.prisma.auditLog.count({
-        where: { companyId, action: 'product.price_updated' }
+        where: {
+          companyId,
+          action: { in: ['product.price_updated', 'pos.price_override'] },
+        },
       }),
       this.prisma.auditLog.count({
-        where: { 
-          companyId, 
-          action: { in: ['stock.in', 'stock.out'] } 
-        }
-      })
+        where: {
+          companyId,
+          OR: [
+            { action: { in: ['stock.in', 'stock.out', 'stock.adjusted'] } },
+            { entityType: { in: ['STOCK_MOVEMENT', 'STOCK_BALANCE'] } },
+          ],
+        },
+      }),
     ]);
 
     return { totalToday, priceUpdates, stockActions };

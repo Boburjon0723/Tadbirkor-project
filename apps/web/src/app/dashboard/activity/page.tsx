@@ -123,6 +123,7 @@ export default function ActivityPage() {
       'expense.approve': 'Xarajat tasdiqlandi',
       'expense.reject': 'Xarajat rad etildi',
       'expense.delete': 'Xarajat o‘chirildi',
+      'partner_ledger.sale_order_create': 'Hamkor sotuvi tasdiqlandi',
       'partner_ledger.operation_create': 'Hamkor daftariga operatsiya',
       'partner_ledger.operation_update': 'Hamkor operatsiyasi yangilandi',
       'partner_ledger.operation_delete': 'Hamkor operatsiyasi o‘chirildi',
