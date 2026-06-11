@@ -63,7 +63,7 @@ var rolePermissions = map[string][]string{
 		"income.view", "income.create", "income.manage",
 		"partner_ledger.view", "partner_ledger.manage",
 		"reports.view", "reports.export",
-		"tasks.view", "pos.view",
+		"tasks.view", "pos.view", "pos.credit",
 		"payroll.view", "payroll.manage",
 	),
 	"SALES": concat(

@@ -24,7 +24,12 @@ export function ReportsStatsCards({ stats, loading }: Props) {
               >
                 <s.icon size={20} />
               </div>
-              {s.key === 'profit' && s.margin && (
+              {s.key === 'profit' && s.hint && (
+                <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-amber-500/10 text-amber-300 max-w-[9rem] text-right leading-tight">
+                  Tannarx yo‘q
+                </span>
+              )}
+              {s.key === 'profit' && !s.hint && s.margin && (
                 <div className="flex flex-col items-end gap-1">
                   {s.margin.UZS !== 0 && (
                     <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 inline-flex items-center gap-1">
@@ -43,7 +48,7 @@ export function ReportsStatsCards({ stats, loading }: Props) {
             </div>
             <div>
               <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{s.label}</p>
-              <p className="text-[10px] text-gray-600 mt-1">{s.sub}</p>
+              <p className="text-[10px] text-gray-600 mt-1">{s.hint ?? s.sub}</p>
             </div>
             <div className="space-y-1">
               <p

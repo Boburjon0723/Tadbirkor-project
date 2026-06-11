@@ -71,6 +71,10 @@ export default function ActivityPage() {
       'item': 'qatori',
       'user': 'Foydalanuvchi',
       'role': 'Rol',
+      'adjusted': 'tuzatildi',
+      'completed': 'yakunlandi',
+      'voided': 'bekor qilindi',
+      'override': 'o‘zgartirildi',
     };
 
     const words = clean.split(/\s+/).map((word) => {
@@ -95,6 +99,12 @@ export default function ActivityPage() {
       'stock.in': 'Omborga kirim qilindi',
       'stock.out': 'Ombordan chiqim qilindi',
       'stock.updated': 'Ombor zaxirasi yangilandi',
+      'stock.adjusted': 'Ombor zaxirasi tuzatildi',
+      'pos.sale_completed': 'POS savdo yakunlandi',
+      'pos.sale_voided': 'POS chek bekor qilindi',
+      'pos.sale_deleted_draft': 'POS qoralama o‘chirildi',
+      'pos.price_override': 'POS narxi o‘zgartirildi',
+      'partner_ledger.linked_from_stock': 'Hamkor daftariga ombor bog‘landi',
       'product.price_updated': 'Mahsulot narxi yangilandi',
       'product.created': 'Yangi mahsulot yaratildi',
       'product.updated': 'Mahsulot tahrirlandi',
@@ -137,7 +147,9 @@ export default function ActivityPage() {
     if (e === 'PRODUCT') return 'Mahsulotlar';
     if (e === 'PRODUCT_IMPORT') return 'Mahsulotlar importi';
     if (e === 'WAREHOUSE') return 'Omborlar';
-    if (e === 'STOCK') return 'Ombor zaxirasi';
+    if (e === 'STOCK' || e === 'STOCK_MOVEMENT' || e === 'STOCK_BALANCE') return 'Ombor zaxirasi';
+    if (e === 'POS_SALE') return 'POS savdo';
+    if (e === 'PARTNER_LEDGER_OPERATION' || e === 'PARTNER_LEDGER_CONTACT') return 'Hamkor daftari';
     if (e === 'DISPATCH' || e === 'GOODS_RECEIPT') return 'Logistika';
     if (e === 'DEBT') return 'Moliya / Qarz';
     if (e === 'PAYMENT') return 'To‘lovlar';
@@ -270,8 +282,8 @@ export default function ActivityPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-5">
         {[
           { title: "Bugungi harakatlar", value: stats?.totalToday || 0, icon: TrendingUp, color: "blue" },
-          { title: "Narx o'zgarishlari", value: stats?.priceUpdates || 0, icon: Tag, color: "purple" },
-          { title: "Ombor harakatlari", value: stats?.stockActions || 0, icon: Box, color: "emerald" },
+          { title: "Narx o'zgarishlari (jami)", value: stats?.priceUpdates || 0, icon: Tag, color: "purple" },
+          { title: "Ombor harakatlari (jami)", value: stats?.stockActions || 0, icon: Box, color: "emerald" },
         ].map((stat, idx) => (
           <motion.div
             key={stat.title}
@@ -660,7 +672,8 @@ export default function ActivityPage() {
                                 price: "Narxi", purchasePrice: "Sotib olish narxi", salePrice: "Sotish narxi",
                                 stock: "Zaxira", barcode: "Barkod", sku: "SKU", role: "Rol",
                                 phone: "Telefon", fullName: "Ism sharif", login: "Login", warehouseId: "Ombor ID",
-                                email: "Email", address: "Manzil",
+                                productVariantId: "Variant ID", movementId: "Harakat ID", movementType: "Harakat turi",
+                                quantity: "Miqdor", email: "Email", address: "Manzil",
                               };
                               const label = translatedKey[key] || key;
 

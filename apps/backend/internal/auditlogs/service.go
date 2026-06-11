@@ -69,7 +69,7 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q ListQuery) ([
 		n++
 	}
 	if q.DateTo != "" {
-		sql += ` AND "createdAt" <= $` + itoa(n)
+		sql += ` AND "createdAt" < ($` + itoa(n) + `::date + interval '1 day')`
 		args = append(args, q.DateTo)
 		n++
 	}
@@ -114,8 +114,15 @@ func (s *Service) GetStats(ctx context.Context, companyID string) (map[string]an
 	err := s.pool.QueryRow(ctx, `
 		SELECT
 			(SELECT COUNT(*)::int FROM "AuditLog" WHERE "companyId" = $1 AND "createdAt" >= $2),
-			(SELECT COUNT(*)::int FROM "AuditLog" WHERE "companyId" = $1 AND action = 'product.price_updated'),
-			(SELECT COUNT(*)::int FROM "AuditLog" WHERE "companyId" = $1 AND action IN ('stock.in', 'stock.out'))
+			(SELECT COUNT(*)::int FROM "AuditLog" WHERE "companyId" = $1 AND (
+				action IN ('product.price_updated', 'pos.price_override')
+				OR (action = 'product.updated' AND "newData" ? 'salePrice')
+				OR (action = 'product.updated' AND "newData" ? 'purchasePrice')
+			)),
+			(SELECT COUNT(*)::int FROM "AuditLog" WHERE "companyId" = $1 AND (
+				action IN ('stock.in', 'stock.out', 'stock.adjusted')
+				OR "entityType" IN ('STOCK_MOVEMENT', 'STOCK_BALANCE')
+			))
 	`, companyID, today).Scan(&totalToday, &priceUpdates, &stockActions)
 	if err != nil {
 		return nil, err

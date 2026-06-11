@@ -45,24 +45,47 @@ func RecordPrepaidIn(ctx context.Context, tx pgx.Tx, companyID, customerID, user
 	if amount <= 0 {
 		return nil, errors.New("Summa 0 dan katta bo'lishi kerak")
 	}
-	col := prepaidCol(currency)
-	_, err := tx.Exec(ctx, fmt.Sprintf(`
-		UPDATE "RetailCustomer" SET %s = %s + $1, "updatedAt" = NOW() WHERE id = $2 AND "companyId" = $3
-	`, col, col), amount, customerID, companyID)
+
+	applied, err := ApplyCashToReceivablesFIFO(ctx, tx, companyID, customerID, userID, currency, amount, note)
 	if err != nil {
 		return nil, err
 	}
+	surplus := round2(amount - applied)
+
+	if surplus > 0 {
+		col := prepaidCol(currency)
+		_, err = tx.Exec(ctx, fmt.Sprintf(`
+			UPDATE "RetailCustomer" SET %s = %s + $1, "updatedAt" = NOW() WHERE id = $2 AND "companyId" = $3
+		`, col, col), surplus, customerID, companyID)
+		if err != nil {
+			return nil, err
+		}
+		bal, err := ComputeNetBalance(ctx, tx, companyID, customerID, currency)
+		if err != nil {
+			return nil, err
+		}
+		prepaidNote := note
+		if prepaidNote == "" {
+			prepaidNote = "Qo'lda avans kirim"
+		}
+		if applied > 0 {
+			prepaidNote = fmt.Sprintf("Avans qoldig'i (%s)", prepaidNote)
+		}
+		if err := AppendCredit(ctx, tx, companyID, customerID, OpPrepaidIn, surplus, currency, prepaidNote, "", "", "", userID, bal); err != nil {
+			return nil, err
+		}
+	}
+
 	bal, err := ComputeNetBalance(ctx, tx, companyID, customerID, currency)
 	if err != nil {
 		return nil, err
 	}
-	if note == "" {
-		note = "Qo'lda avans kirim"
-	}
-	if err := AppendCredit(ctx, tx, companyID, customerID, OpPrepaidIn, amount, currency, note, "", "", "", userID, bal); err != nil {
-		return nil, err
-	}
-	return map[string]any{"currency": currency, "netBalance": bal, "prepaidBalance": bal + round2(0)}, nil
+	return map[string]any{
+		"currency":       currency,
+		"netBalance":     bal,
+		"appliedToDebt":  applied,
+		"prepaidAdded":   surplus,
+	}, nil
 }
 
 func RecordPrepaidOut(ctx context.Context, tx pgx.Tx, companyID, customerID, userID, currency string, amount float64, note string) error {

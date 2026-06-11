@@ -47,6 +47,7 @@ func (s *Service) ExportSummaryToExcel(
 
 	purchase := bucketFromAny(summary["purchase"])
 	sales := bucketFromAny(summary["sales"])
+	cogs := bucketFromAny(summary["cogs"])
 	profit := bucketFromAny(summary["profit"])
 	margin := bucketFromAny(summary["margin"])
 	inventory := bucketFromAny(summary["inventoryValue"])
@@ -54,7 +55,8 @@ func (s *Service) ExportSummaryToExcel(
 	rows := [][]any{
 		{"Kirim summasi", purchase.UZS, purchase.USD},
 		{"Sotuv summasi", sales.UZS, sales.USD},
-		{"Foyda (sotuv - kirim)", profit.UZS, profit.USD},
+		{"Tannarx (COGS)", cogs.UZS, cogs.USD},
+		{"Yalpi foyda (sotuv - tannarx)", profit.UZS, profit.USD},
 		{"Marja %", margin.UZS, margin.USD},
 		{"Ombor qiymati (hozir)", inventory.UZS, inventory.USD},
 	}

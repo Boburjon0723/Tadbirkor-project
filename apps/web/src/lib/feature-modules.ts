@@ -53,6 +53,32 @@ export type MenuGuardItem = {
   moduleMatch?: ModuleMatchMode;
 };
 
+const WAREHOUSE_PAGE_PATH = '/dashboard/warehouse';
+const WAREHOUSE_BASIC_TABS = new Set(['balances', 'history', 'list']);
+
+/**
+ * Ombor sahifasi tablari bitta menyuda (`?tab=history`) himoyalangan;
+ * `?tab=balances` / `list` uchun ham WAREHOUSE_BASIC qo‘llanadi.
+ * `/dashboard/warehouse` (querysiz, WAREHOUSE_ATP) esa faqat ATP tab uchun.
+ */
+export function warehouseMenuQueryMatch(href: string, search = ''): boolean | null {
+  const [path, queryString] = href.split('?');
+  if (path !== WAREHOUSE_PAGE_PATH) return null;
+
+  const actual = new URLSearchParams(search.replace(/^\?/, ''));
+  const actualTab = actual.get('tab') || 'balances';
+
+  if (queryString) {
+    const expected = new URLSearchParams(queryString);
+    if (expected.get('tab') === 'history') {
+      return WAREHOUSE_BASIC_TABS.has(actualTab);
+    }
+    return null;
+  }
+
+  return !WAREHOUSE_BASIC_TABS.has(actualTab);
+}
+
 function menuHrefMatchesPathForGuard(
   pathname: string,
   href: string,
@@ -66,6 +92,12 @@ function menuHrefMatchesPathForGuard(
         ? pathname === '/pos' || pathname.startsWith('/pos/')
         : pathname === path || pathname.startsWith(`${path}/`);
   if (!pathMatches) return false;
+
+  if (pathname === WAREHOUSE_PAGE_PATH) {
+    const warehouseMatch = warehouseMenuQueryMatch(href, search);
+    if (warehouseMatch !== null) return warehouseMatch;
+  }
+
   if (!queryString) return true;
   const expected = new URLSearchParams(queryString);
   const actual = new URLSearchParams(search.replace(/^\?/, ''));

@@ -47,6 +47,7 @@ type Args = {
   formatMoney: (v: number, currency?: SaleCurrency) => string;
   quickCheckout: (input: QuickCheckoutInput) => Promise<QuickCheckoutResult>;
   onClearActiveCart: () => void;
+  onPaymentStarted?: () => void;
   onPaymentSuccess: () => void;
   onPaymentFailed: () => void;
 };
@@ -66,6 +67,7 @@ export function usePosCheckout({
   formatMoney,
   quickCheckout,
   onClearActiveCart,
+  onPaymentStarted,
   onPaymentSuccess,
   onPaymentFailed,
 }: Args) {
@@ -129,6 +131,7 @@ export function usePosCheckout({
 
     inFlightRef.current = true;
     setPaymentInFlight(true);
+    onPaymentStarted?.();
 
     void quickCheckout({
       warehouseId: selectedWarehouseId,
@@ -203,6 +206,7 @@ export function usePosCheckout({
     formatMoney,
     onClearActiveCart,
     onPaymentFailed,
+    onPaymentStarted,
     onPaymentSuccess,
     paymentMethod,
     quickCheckout,

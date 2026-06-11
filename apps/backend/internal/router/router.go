@@ -101,6 +101,8 @@ type Deps struct {
 }
 
 func New(d Deps) http.Handler {
+	middleware.ConfigurePermissions(d.Pool)
+
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)

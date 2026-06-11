@@ -96,22 +96,37 @@ func (s *Service) logPriceOverrides(ctx context.Context, tx pgx.Tx, companyID, u
 	return nil
 }
 
-func (s *Service) notifyPosInventory(ctx context.Context, companyID, warehouseID, reason string) {
+func (s *Service) notifyPosInventory(_ context.Context, companyID, warehouseID, reason string) {
+	if s.hub == nil && s.cache == nil {
+		return
+	}
 	payload := map[string]any{"reason": reason}
 	if strings.TrimSpace(warehouseID) != "" {
 		payload["warehouseId"] = warehouseID
 	}
-	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, payload)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+		pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, payload)
+	}()
 }
 
-func (s *Service) invalidateRetailCaches(ctx context.Context, companyID string, retailCustomerID *string) {
+func (s *Service) invalidateRetailCaches(_ context.Context, companyID string, retailCustomerID *string) {
 	if s.cache == nil {
 		return
 	}
-	s.cache.Del(ctx, cache.RetailSummaryKey(companyID))
-	if retailCustomerID != nil && strings.TrimSpace(*retailCustomerID) != "" {
-		s.cache.Del(ctx, cache.RetailLedgerKey(companyID, *retailCustomerID))
+	retailID := ""
+	if retailCustomerID != nil {
+		retailID = strings.TrimSpace(*retailCustomerID)
 	}
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		s.cache.Del(ctx, cache.RetailSummaryKey(companyID))
+		if retailID != "" {
+			s.cache.Del(ctx, cache.RetailLedgerKey(companyID, retailID))
+		}
+	}()
 }
 
 func (s *Service) Create(ctx context.Context, companyID, userID string, in CreateSaleInput) (map[string]any, error) {
@@ -301,8 +316,12 @@ func (s *Service) QuickCheckout(ctx context.Context, companyID, userID string, i
 	if err := s.assertWarehouseScope(ctx, companyID, userID, in.WarehouseID); err != nil {
 		return nil, err
 	}
+	pctx, err := s.loadPriceContext(ctx, companyID, userID, s.pool)
+	if err != nil {
+		return nil, err
+	}
 	if method == "CREDIT" {
-		if err := s.assertCreditAllowed(ctx, companyID, userID); err != nil {
+		if err := pctx.assertCreditAllowed(); err != nil {
 			return nil, err
 		}
 	}
@@ -320,10 +339,6 @@ func (s *Service) QuickCheckout(ctx context.Context, companyID, userID string, i
 	}
 	defer tx.Rollback(ctx)
 
-	pctx, err := s.loadPriceContext(ctx, companyID, userID, tx)
-	if err != nil {
-		return nil, err
-	}
 	resolved, err := s.resolveItems(ctx, tx, companyID, userID, in.Items, &pctx)
 	if err != nil {
 		return nil, err

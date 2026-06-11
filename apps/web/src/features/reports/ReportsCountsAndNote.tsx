@@ -38,23 +38,24 @@ export function ReportsCountsAndNote({ summary }: Props) {
 
       <div className="p-5 rounded-3xl bg-white/[0.01] border border-white/5 text-[12px] text-gray-500 leading-relaxed space-y-2">
         <p>
-          <strong className="text-gray-300">Kirim summasi</strong> — faqat hamkordan rasmiy qabul (
-          <em className="text-gray-300">GoodsReceipt</em>): miqdor × mahsulotning{' '}
-          <strong className="text-gray-300">kirim narxi</strong> (purchasePrice). Excel/qo‘lda kirim va
-          boshlang‘ich qoldiq bu yerga kirmaydi.
+          <strong className="text-gray-300">Kirim summasi</strong> — davrda omborga kirgan mahsulotlar: hamkor
+          qabuli, ombor kirimi, boshlang‘ich qoldiq va ijobiy tuzatishlar. Narx:{' '}
+          <strong className="text-gray-300">kirim narxi</strong>, bo‘sh bo‘lsa — sotuv narxi.
         </p>
         <p>
-          <strong className="text-gray-300">Sotuv summasi</strong> — davrdagi barcha ombor chiqimlari (OUT):
-          miqdor × <strong className="text-gray-300">katalog sotuv narxi</strong> (salePrice). POS chekdagi
-          chegirma yoki boshqa narx bu hisobotga alohida yozilmaydi.
+          <strong className="text-gray-300">Sotuv summasi</strong> — haqiqiy daromad: POS chekdagi qator
+          summasi (chegirma bilan), B2B jo‘natmada buyurtma narxi, qolgan chiqimlar — katalog narxi.
+          Bekor qilingan cheklar hisobga olinmaydi.
         </p>
         <p>
-          <strong className="text-gray-300">Foyda</strong> = sotuv − kirim (har valyuta alohida). Bu
-          buxgalteriya COGS emas — xarajatlar (Expenses) va naqd pul oqimi alohida.
+          <strong className="text-gray-300">Yalpi foyda</strong> = sotuv −{' '}
+          <strong className="text-gray-300">tannarx (COGS)</strong> — sotilgan miqdor ×{' '}
+          <strong className="text-gray-300">kirim narxi</strong>. Kirim narxi kiritilmagan mahsulotlar
+          tannarxga 0 deb olinadi — aniq foyda uchun katalogda kirim narxini to‘ldiring.
         </p>
         <p>
-          <strong className="text-gray-300">Ombor qiymati (hozir)</strong> — joriy qoldiq × kirim narxi;
-          sotuv narxi bo‘yicha emas.
+          <strong className="text-gray-300">Ombor qiymati (hozir)</strong> — joriy qoldiq × kirim narxi
+          (bo‘sh bo‘lsa sotuv narxi).
         </p>
         <p className="text-[11px] text-gray-600">
           Narxlar har doim variantning <strong className="text-gray-400">joriy</strong> narxidan olinadi;

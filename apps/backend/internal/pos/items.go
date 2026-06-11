@@ -29,8 +29,26 @@ type resolvedItem struct {
 }
 
 type priceContext struct {
-	perms  []string
-	maxPct float64
+	perms            []string
+	maxPct           float64
+	posCreditEnabled bool
+}
+
+func (ctx priceContext) assertCreditAllowed() error {
+	hasCredit := false
+	for _, p := range ctx.perms {
+		if p == "pos.credit" {
+			hasCredit = true
+			break
+		}
+	}
+	if !hasCredit {
+		return errors.New("Nasiya sotuv uchun ruxsat yo'q (Jamoa → rol sozlamalari)")
+	}
+	if !ctx.posCreditEnabled {
+		return errors.New("Nasiya sotuv kompaniyada yoqilmagan. Sozlamalar → Kompaniya")
+	}
+	return nil
 }
 
 func round2(n float64) float64 {
@@ -45,12 +63,13 @@ func (s *Service) loadPriceContext(ctx context.Context, companyID, userID string
 	var role string
 	var grant, deny []string
 	var maxPct *float64
+	var creditEnabled bool
 	err := q.QueryRow(ctx, `
-		SELECT cu.role, cu."grantPermissions", cu."denyPermissions", c."posMaxDiscountPercent"
+		SELECT cu.role, cu."grantPermissions", cu."denyPermissions", c."posMaxDiscountPercent", c."posCreditEnabled"
 		FROM "CompanyUser" cu
 		JOIN "Company" c ON c.id = cu."companyId"
 		WHERE cu."companyId" = $1 AND cu."userId" = $2 LIMIT 1
-	`, companyID, userID).Scan(&role, &grant, &deny, &maxPct)
+	`, companyID, userID).Scan(&role, &grant, &deny, &maxPct, &creditEnabled)
 	if err != nil {
 		return priceContext{perms: permissions.Effective("SALES", nil, nil), maxPct: 15}, nil
 	}
@@ -58,7 +77,11 @@ func (s *Service) loadPriceContext(ctx context.Context, companyID, userID string
 	if maxPct != nil {
 		max = *maxPct
 	}
-	return priceContext{perms: permissions.Effective(role, grant, deny), maxPct: max}, nil
+	return priceContext{
+		perms:            permissions.Effective(role, grant, deny),
+		maxPct:           max,
+		posCreditEnabled: creditEnabled,
+	}, nil
 }
 
 func (ctx priceContext) validatePrice(listPrice, unitPrice float64, label string) error {
@@ -105,35 +128,55 @@ func (s *Service) resolveItems(ctx context.Context, tx pgx.Tx, companyID, userID
 			return nil, err
 		}
 	}
-	out := make([]resolvedItem, 0, len(items))
-	for _, it := range items {
-		var id, name, currency string
-		var sku, barcode *string
-		var salePrice float64
-		var productName, status *string
-		err := tx.QueryRow(ctx, `
-			SELECT pv.id, pv.name, pv.sku, pv.barcode, pv."salePrice", pv.currency, pv.status, p.name
-			FROM "ProductVariant" pv
-			JOIN "Product" p ON p.id = pv."productId"
-			WHERE pv.id = $1 AND pv."companyId" = $2
-		`, it.ProductVariantID, companyID).Scan(&id, &name, &sku, &barcode, &salePrice, &currency, &status, &productName)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%w: %s", ErrVariantNotFound, it.ProductVariantID)
-		}
-		if err != nil {
+	ids := make([]string, len(items))
+	for i, it := range items {
+		ids[i] = it.ProductVariantID
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT pv.id, pv.name, pv.sku, pv.barcode, pv."salePrice", pv.currency, pv.status, p.name
+		FROM "ProductVariant" pv
+		JOIN "Product" p ON p.id = pv."productId"
+		WHERE pv."companyId" = $1 AND pv.id = ANY($2)
+	`, companyID, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type variantRow struct {
+		id, name, currency string
+		sku, barcode, status, productName *string
+		salePrice                         float64
+	}
+	byID := make(map[string]variantRow, len(items))
+	for rows.Next() {
+		var r variantRow
+		if err := rows.Scan(&r.id, &r.name, &r.sku, &r.barcode, &r.salePrice, &r.currency, &r.status, &r.productName); err != nil {
 			return nil, err
 		}
-		if status != nil && *status != "ACTIVE" {
-			return nil, fmt.Errorf("%w: %s", ErrVariantInactive, name)
+		byID[r.id] = r
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	out := make([]resolvedItem, 0, len(items))
+	for _, it := range items {
+		r, ok := byID[it.ProductVariantID]
+		if !ok {
+			return nil, fmt.Errorf("%w: %s", ErrVariantNotFound, it.ProductVariantID)
 		}
-		listPrice := salePrice
+		if r.status != nil && *r.status != "ACTIVE" {
+			return nil, fmt.Errorf("%w: %s", ErrVariantInactive, r.name)
+		}
+		listPrice := r.salePrice
 		unitPrice := listPrice
 		if it.UnitPrice != nil {
 			unitPrice = *it.UnitPrice
 		}
-		label := name
-		if productName != nil && *productName != "" {
-			label = *productName + " — " + name
+		label := r.name
+		if r.productName != nil && *r.productName != "" {
+			label = *r.productName + " — " + r.name
 		}
 		if err := ctxPrice.validatePrice(listPrice, unitPrice, label); err != nil {
 			return nil, err
@@ -142,12 +185,13 @@ func (s *Service) resolveItems(ctx context.Context, tx pgx.Tx, companyID, userID
 		if qty <= 0 {
 			return nil, errors.New("Miqdor 0 dan katta bo'lishi kerak")
 		}
+		currency := r.currency
 		if currency == "" {
 			currency = "UZS"
 		}
 		out = append(out, resolvedItem{
-			ProductVariantID: id, ProductNameSnapshot: label,
-			SkuSnapshot: sku, BarcodeSnapshot: barcode,
+			ProductVariantID: r.id, ProductNameSnapshot: label,
+			SkuSnapshot: r.sku, BarcodeSnapshot: r.barcode,
 			Quantity: qty, ListPrice: listPrice, UnitPrice: unitPrice,
 			LineTotal: round2(unitPrice * qty), Currency: currency,
 		})

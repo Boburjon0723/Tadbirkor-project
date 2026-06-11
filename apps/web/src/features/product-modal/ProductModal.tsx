@@ -453,12 +453,16 @@ export function ProductModal({
           barcode: visibleConfig.showBarcode
             ? String(variant.barcode || '').trim() || undefined
             : undefined,
-          purchasePrice: visibleConfig.showPurchasePrice ? Number(variant.purchasePrice || 0) : undefined,
-          salePrice: visibleConfig.showSalePrice ? Number(variant.salePrice || 0) : 0,
+          purchasePrice: visibleConfig.showPurchasePrice
+            ? Number(variant.purchasePrice ?? 0)
+            : undefined,
+          salePrice: visibleConfig.showSalePrice ? Number(variant.salePrice ?? 0) : 0,
           currency: (variant.currency || 'UZS') as 'UZS' | 'USD',
           attributes:
-            visibleConfig.showColor && variant.color
-              ? { color: String(variant.color).trim() }
+            visibleConfig.showColor
+              ? variant.color
+                ? { color: String(variant.color).trim() }
+                : {}
               : undefined,
           initialStock:
             showVariantStockInput && !variant.id
@@ -505,13 +509,15 @@ export function ProductModal({
           },
         });
 
-        if (stockAdjustments?.length && resolvedWarehouseId) {
-          const wh = resolvedWarehouseId;
-          await Promise.all([
+        const wh = resolvedWarehouseId || '';
+        const refreshQueries: Promise<unknown>[] = [
+          queryClient.invalidateQueries({ queryKey: ['product', product.id] }),
+        ];
+        if (stockAdjustments?.length && wh) {
+          refreshQueries.push(
             queryClient.invalidateQueries({
               queryKey: ['products', 'infinite'],
               predicate: (query) => {
-                if (!wh) return true;
                 const params = query.queryKey[2];
                 return (
                   !!params &&
@@ -521,13 +527,13 @@ export function ProductModal({
               },
             }),
             queryClient.invalidateQueries({
-              queryKey: ['stock-balances', wh ? { warehouseId: wh } : {}],
+              queryKey: ['stock-balances', { warehouseId: wh }],
             }),
             queryClient.invalidateQueries({ queryKey: ['stock-movements'] }),
             queryClient.invalidateQueries({ queryKey: ['partner-ledger'] }),
-            queryClient.invalidateQueries({ queryKey: ['product', product.id, wh] }),
-          ]);
+          );
         }
+        await Promise.all(refreshQueries);
       } else {
         await createProduct.mutateAsync(payload);
       }

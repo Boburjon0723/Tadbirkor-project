@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -50,11 +51,12 @@ func (s *Service) Update(ctx context.Context, id string, in UpdateCompanyInput) 
 	if err != nil {
 		return nil, err
 	}
-	if in.Tin != nil && *in.Tin != "" {
-		curTin, _ := existing["tin"].(string)
-		if *in.Tin != curTin {
+	if in.Tin != nil {
+		newTin := strings.TrimSpace(*in.Tin)
+		curTin := companyFieldString(existing, "tin")
+		if newTin != "" && newTin != curTin {
 			var otherID string
-			err := s.pool.QueryRow(ctx, `SELECT id FROM "Company" WHERE tin = $1 LIMIT 1`, *in.Tin).Scan(&otherID)
+			err := s.pool.QueryRow(ctx, `SELECT id FROM "Company" WHERE tin = $1 LIMIT 1`, newTin).Scan(&otherID)
 			if err == nil && otherID != id {
 				return nil, ErrTinTaken
 			}
@@ -124,6 +126,26 @@ func (s *Service) Update(ctx context.Context, id string, in UpdateCompanyInput) 
 	}
 	s.cache.Del(ctx, s.featuresKey(id))
 	return s.FindOne(ctx, id)
+}
+
+func (s *Service) InvalidateUserAuthCache(ctx context.Context, userID, companyID string) {
+	if s.cache != nil {
+		s.cache.InvalidateAuthMe(ctx, userID, companyID)
+	}
+}
+
+func companyFieldString(row map[string]any, key string) string {
+	if row == nil {
+		return ""
+	}
+	v, ok := row[key]
+	if !ok || v == nil {
+		return ""
+	}
+	if s, ok := v.(string); ok {
+		return strings.TrimSpace(s)
+	}
+	return strings.TrimSpace(fmt.Sprint(v))
 }
 
 func (s *Service) RegenerateStorefrontToken(ctx context.Context, companyID string) (map[string]any, error) {

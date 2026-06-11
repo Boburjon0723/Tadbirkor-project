@@ -27,6 +27,16 @@ import type {
 } from '@/services/partner-ledger.service';
 import { partnerLedgerService } from '@/services/partner-ledger.service';
 import { toast, formatApiError } from '@/lib/toast';
+import {
+  formatStockQuantity,
+  minSaleQuantity,
+  normalizeStockInput,
+  quantityStep,
+  stockInputStep,
+} from '@/lib/product-units';
+
+const fieldClass =
+  'w-full rounded-xl bg-white/5 border border-white/10 text-sm font-bold text-white placeholder:text-gray-500 [color-scheme:dark]';
 
 type CartLine = {
   variant: PartnerLedgerCatalogItem;
@@ -45,6 +55,28 @@ type Props = {
 
 function lineTotal(variant: PartnerLedgerCatalogItem, qty: number) {
   return qty * Number(variant.salePrice || 0);
+}
+
+function clampToStock(
+  qty: number,
+  stockQty: number,
+  unit?: string | null,
+): { quantity: number; capped: boolean } {
+  const normalized = normalizeStockInput(qty, unit);
+  const max = normalizeStockInput(stockQty, unit);
+  if (max <= 0) {
+    return { quantity: 0, capped: normalized > 0 };
+  }
+  if (normalized > max) {
+    return { quantity: max, capped: true };
+  }
+  return { quantity: normalized, capped: false };
+}
+
+function isAtStockLimit(qty: number, stockQty: number, unit?: string | null) {
+  const max = normalizeStockInput(stockQty, unit);
+  if (max <= 0) return true;
+  return normalizeStockInput(qty, unit) >= max - 1e-9;
 }
 
 export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, onSuccess }: Props) {
@@ -68,11 +100,8 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
   const warehouses: WarehouseOption[] = Array.isArray(warehousesData)
     ? (warehousesData as WarehouseOption[])
     : [];
-  const { data: catalog, isPending: catalogLoading } = usePartnerLedgerSaleCatalog(
-    warehouseId,
-    debouncedSearch,
-    open,
-  );
+  const { data: catalog, isPending: catalogLoading, isError: catalogError, error: catalogErrorRaw } =
+    usePartnerLedgerSaleCatalog(warehouseId, debouncedSearch, open);
   const mutations = usePartnerLedgerMutations();
 
   useEffect(() => {
@@ -108,24 +137,60 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
   }, [cart]);
 
   const addToCart = (variant: PartnerLedgerCatalogItem) => {
+    if (variant.stockQty <= 0) {
+      toast.error(`${variant.productName} — omborda qoldiq yo‘q`);
+      return;
+    }
+    const step = quantityStep(variant.unit);
     setCart((prev) => {
       const idx = prev.findIndex((l) => l.variant.id === variant.id);
       if (idx >= 0) {
+        const current = prev[idx];
+        const { quantity, capped } = clampToStock(
+          current.quantity + step,
+          variant.stockQty,
+          variant.unit,
+        );
+        if (capped) {
+          toast.error(
+            `Omborda ${formatStockQuantity(variant.stockQty, variant.unit)} — boshqa qo‘shib bo‘lmaydi`,
+          );
+        }
+        if (quantity <= 0) return prev;
         const next = [...prev];
-        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+        next[idx] = { ...next[idx], quantity };
         return next;
       }
-      return [...prev, { variant, quantity: 1 }];
+      const initial = clampToStock(minSaleQuantity(variant.unit), variant.stockQty, variant.unit);
+      return [...prev, { variant, quantity: initial.quantity }];
     });
   };
 
-  const setQty = (variantId: string, qty: number) => {
-    if (qty <= 0) {
+  const setQty = (
+    variantId: string,
+    qty: number,
+    unit?: string | null,
+    stockQty?: number,
+    productName?: string,
+  ) => {
+    const normalized = normalizeStockInput(qty, unit);
+    if (normalized <= 0) {
       setCart((prev) => prev.filter((l) => l.variant.id !== variantId));
       return;
     }
+    const capped =
+      stockQty != null
+        ? clampToStock(normalized, stockQty, unit)
+        : { quantity: normalized, capped: false };
+    if (capped.capped) {
+      toast.error(
+        `${productName || 'Mahsulot'} — omborda ${formatStockQuantity(stockQty ?? 0, unit)}`,
+      );
+    }
     setCart((prev) =>
-      prev.map((l) => (l.variant.id === variantId ? { ...l, quantity: qty } : l)),
+      prev.map((l) =>
+        l.variant.id === variantId ? { ...l, quantity: capped.quantity } : l,
+      ),
     );
   };
 
@@ -170,8 +235,8 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
         toast.error(`${blocking.length} ta qatorda omborda yetarli qoldiq yo‘q`);
       }
       setCart(
-        preview.lines.map((line) => ({
-          variant: {
+        preview.lines.map((line) => {
+          const variant: PartnerLedgerCatalogItem = {
             id: line.productVariantId,
             productId: '',
             productName: line.productName,
@@ -181,9 +246,11 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
             salePrice: line.salePrice,
             currency: line.currency,
             stockQty: line.stockQty,
-          },
-          quantity: line.quantity,
-        })),
+            unit: line.unit,
+          };
+          const { quantity } = clampToStock(line.quantity, line.stockQty, line.unit);
+          return { variant, quantity };
+        }),
       );
       toast.success(`${preview.lines.length} ta qator yuklandi`);
     } catch (e) {
@@ -197,9 +264,14 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
   const handleSubmit = async () => {
     if (!warehouseId || cart.length === 0) return;
     for (const line of cart) {
-      if (line.quantity > line.variant.stockQty) {
+      const { quantity, capped } = clampToStock(
+        line.quantity,
+        line.variant.stockQty,
+        line.variant.unit,
+      );
+      if (capped || quantity <= 0) {
         toast.error(
-          `${line.variant.productName} — omborda ${line.variant.stockQty} dona, ${line.quantity} so‘ralmoqda`,
+          `${line.variant.productName} — omborda ${formatStockQuantity(line.variant.stockQty, line.variant.unit)}, ${formatStockQuantity(line.quantity, line.variant.unit)} so‘ralmoqda`,
         );
         return;
       }
@@ -281,10 +353,10 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                       setSearch('');
                       setDebouncedSearch('');
                     }}
-                    className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-bold min-w-[160px]"
+                    className={`${fieldClass} px-3 py-2 min-w-[160px]`}
                   >
                     {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
+                      <option key={w.id} value={w.id} className="bg-gray-900 text-white">
                         {w.name}
                       </option>
                     ))}
@@ -295,7 +367,7 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Nomi, SKU, shtrix-kod…"
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-bold"
+                      className={`${fieldClass} pl-9 pr-3 py-2`}
                     />
                   </div>
                   <div className="flex flex-wrap gap-2 w-full">
@@ -356,16 +428,35 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                     <div className="flex justify-center py-16">
                       <Loader2 className="animate-spin text-gray-500" size={28} />
                     </div>
+                  ) : catalogError ? (
+                    <p className="text-center text-red-400 text-sm font-bold py-16 px-4">
+                      Katalog yuklanmadi: {formatApiError(catalogErrorRaw)}
+                    </p>
                   ) : !catalog?.items?.length ? (
-                    <p className="text-center text-gray-500 text-sm font-bold py-16">Mahsulot topilmadi</p>
+                    <p className="text-center text-gray-500 text-sm font-bold py-16">
+                      {debouncedSearch ? 'Qidiruv bo‘yicha mahsulot topilmadi' : 'Bu omborda mahsulot yo‘q'}
+                    </p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                      {catalog.items.map((v) => (
+                      {catalog.items.map((v) => {
+                        const outOfStock = v.stockQty <= 0;
+                        const inCart = cart.find((l) => l.variant.id === v.id);
+                        const atLimit =
+                          inCart != null &&
+                          isAtStockLimit(inCart.quantity, v.stockQty, v.unit);
+                        return (
                         <button
                           key={v.id}
                           type="button"
+                          disabled={outOfStock}
                           onClick={() => addToCart(v)}
-                          className="text-left p-3 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.06] hover:border-blue-500/30 transition-all"
+                          className={`text-left p-3 rounded-2xl border transition-all ${
+                            outOfStock
+                              ? 'border-white/5 bg-white/[0.01] opacity-50 cursor-not-allowed'
+                              : atLimit
+                                ? 'border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10'
+                                : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.06] hover:border-blue-500/30'
+                          }`}
                         >
                           <div className="flex gap-3">
                             <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -391,13 +482,14 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                                     v.stockQty > 0 ? 'text-gray-500' : 'text-red-400'
                                   }`}
                                 >
-                                  Qoldiq: {v.stockQty}
+                                  Qoldiq: {formatStockQuantity(v.stockQty, v.unit)}
                                 </span>
                               </div>
                             </div>
                           </div>
                         </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -410,10 +502,25 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                     <p className="text-sm text-gray-500 mt-3 font-bold">Katalogdan mahsulot tanlang</p>
                   ) : (
                     <ul className="mt-3 space-y-2 max-h-[200px] overflow-y-auto">
-                      {cart.map((line) => (
+                      {cart.map((line) => {
+                        const overStock =
+                          normalizeStockInput(line.quantity, line.variant.unit) >
+                          normalizeStockInput(line.variant.stockQty, line.variant.unit);
+                        const atLimit = isAtStockLimit(
+                          line.quantity,
+                          line.variant.stockQty,
+                          line.variant.unit,
+                        );
+                        return (
                         <li
                           key={line.variant.id}
-                          className="flex gap-2 items-start rounded-xl bg-white/5 p-2 border border-white/5"
+                          className={`flex gap-2 items-start rounded-xl p-2 border ${
+                            overStock
+                              ? 'bg-red-500/10 border-red-500/30'
+                              : atLimit
+                                ? 'bg-amber-500/5 border-amber-500/20'
+                                : 'bg-white/5 border-white/5'
+                          }`}
                         >
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold truncate">{line.variant.productName}</p>
@@ -431,37 +538,67 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                           <div className="flex items-center gap-1 shrink-0">
                             <button
                               type="button"
-                              onClick={() => setQty(line.variant.id, line.quantity - 1)}
+                              onClick={() =>
+                                setQty(
+                                  line.variant.id,
+                                  line.quantity - quantityStep(line.variant.unit),
+                                  line.variant.unit,
+                                  line.variant.stockQty,
+                                  line.variant.productName,
+                                )
+                              }
                               className="p-1 rounded-lg bg-white/10"
                             >
                               <Minus size={12} />
                             </button>
                             <input
                               type="number"
-                              min={1}
+                              min={minSaleQuantity(line.variant.unit)}
+                              max={line.variant.stockQty}
+                              step={stockInputStep(line.variant.unit)}
                               value={line.quantity}
                               onChange={(e) =>
-                                setQty(line.variant.id, parseFloat(e.target.value) || 0)
+                                setQty(
+                                  line.variant.id,
+                                  parseFloat(e.target.value) || 0,
+                                  line.variant.unit,
+                                  line.variant.stockQty,
+                                  line.variant.productName,
+                                )
                               }
-                              className="w-12 text-center text-xs font-bold bg-white/5 rounded-lg py-1"
+                              className={`w-14 text-center text-xs font-bold rounded-lg py-1 [color-scheme:dark] ${
+                                overStock
+                                  ? 'bg-red-500/20 text-red-200'
+                                  : 'bg-white/5 text-white'
+                              }`}
                             />
                             <button
                               type="button"
-                              onClick={() => setQty(line.variant.id, line.quantity + 1)}
-                              className="p-1 rounded-lg bg-white/10"
+                              disabled={atLimit}
+                              onClick={() =>
+                                setQty(
+                                  line.variant.id,
+                                  line.quantity + quantityStep(line.variant.unit),
+                                  line.variant.unit,
+                                  line.variant.stockQty,
+                                  line.variant.productName,
+                                )
+                              }
+                              className="p-1 rounded-lg bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed"
                             >
                               <Plus size={12} />
                             </button>
                             <button
                               type="button"
-                              onClick={() => setQty(line.variant.id, 0)}
+                              onClick={() => setQty(line.variant.id, 0, line.variant.unit)}
                               className="p-1 rounded-lg text-red-400 hover:bg-red-500/10"
                             >
                               <Trash2 size={12} />
                             </button>
                           </div>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </div>
@@ -489,16 +626,18 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                       onChange={(e) =>
                         setSettlementType(e.target.value as PartnerLedgerSettlementType)
                       }
-                      className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold"
+                      className={`mt-1 ${fieldClass} px-3 py-2.5`}
                     >
                       {SETTLEMENT_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
+                        <option key={o.value} value={o.value} className="bg-gray-900 text-white">
                           {o.label}
                         </option>
                       ))}
                     </select>
                     {settlementHint ? (
-                      <p className="text-[11px] text-gray-500 mt-1.5 leading-relaxed">{settlementHint}</p>
+                      <p className="text-[11px] text-gray-400 mt-1.5 leading-relaxed rounded-lg border border-white/10 bg-white/5 px-2.5 py-2">
+                        {settlementHint}
+                      </p>
                     ) : null}
                   </div>
 
@@ -510,7 +649,7 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                       value={settlementNote}
                       onChange={(e) => setSettlementNote(e.target.value)}
                       placeholder="Masalan: 15-iyunda 50% naqd, qolgani tovar almashinuvi"
-                      className="mt-1 w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 text-sm font-bold"
+                      className={`mt-1 ${fieldClass} px-3 py-2.5`}
                     />
                   </div>
 
@@ -521,7 +660,7 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                         type="date"
                         value={operationDate}
                         onChange={(e) => setOperationDate(e.target.value)}
-                        className="mt-1 w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-bold"
+                        className={`mt-1 ${fieldClass} px-3 py-2`}
                       />
                     </div>
                   </div>
@@ -532,7 +671,7 @@ export function PartnerLedgerSaleModal({ open, contactId, contactName, onClose, 
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={2}
-                      className="mt-1 w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm font-bold resize-none"
+                      className={`mt-1 ${fieldClass} px-3 py-2 resize-none`}
                     />
                   </div>
                 </div>

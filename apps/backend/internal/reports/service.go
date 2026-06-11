@@ -95,25 +95,9 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 		args = append(args, *warehouseID)
 	}
 
-	inCountSQL := `
-		SELECT COUNT(*)::int
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'IN'
-		  AND sm."sourceType" = 'GOODS_RECEIPT'` + whereTail
-	outCountSQL := `
-		SELECT COUNT(*)::int
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+	periodWhere := movementPeriodWhere(whereTail)
+	inCountSQL := `SELECT COUNT(*)::int ` + sqlMovementBaseFrom + periodWhere + sqlInboundFilter
+	outCountSQL := `SELECT COUNT(*)::int ` + sqlMovementBaseFrom + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 
 	if err := s.assertMovementCountWithinLimit(ctx, inCountSQL, args, "Kirim"); err != nil {
 		return nil, err
@@ -123,29 +107,18 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 	}
 
 	inSQL := `
-		SELECT COALESCE(pv.currency, 'UZS'), COALESCE(pv."purchasePrice", 0)::float8, ABS(sm.quantity)::float8
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'IN'
-		  AND sm."sourceType" = 'GOODS_RECEIPT'` + whereTail
+		SELECT COALESCE(pv.currency, 'UZS'),
+		       (ABS(sm.quantity)::float8 * (` + sqlUnitCostInbound + `))::float8
+		` + sqlMovementBaseFrom + periodWhere + sqlInboundFilter
 	outSQL := `
-		SELECT COALESCE(pv.currency, 'UZS'), COALESCE(pv."salePrice", 0)::float8, ABS(sm.quantity)::float8
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+		SELECT COALESCE(pv.currency, 'UZS'),
+		       (` + sqlLineRevenue + `)::float8,
+		       (ABS(sm.quantity)::float8 * (` + sqlUnitCostCOGS + `))::float8
+		` + sqlMovementBaseFrom + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 
 	purchase := newBucket()
 	sales := newBucket()
+	cogs := newBucket()
 
 	var purchaseMovements int
 	inRows, err := s.pool.Query(ctx, inSQL, args...)
@@ -154,12 +127,12 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 	}
 	for inRows.Next() {
 		var currency string
-		var price, qty float64
-		if err := inRows.Scan(&currency, &price, &qty); err != nil {
+		var amount float64
+		if err := inRows.Scan(&currency, &amount); err != nil {
 			inRows.Close()
 			return nil, err
 		}
-		bucketAdd(&purchase, currency, qty*price)
+		bucketAdd(&purchase, currency, amount)
 		purchaseMovements++
 	}
 	inRows.Close()
@@ -171,12 +144,13 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 	}
 	for outRows.Next() {
 		var currency string
-		var price, qty float64
-		if err := outRows.Scan(&currency, &price, &qty); err != nil {
+		var revenue, lineCogs float64
+		if err := outRows.Scan(&currency, &revenue, &lineCogs); err != nil {
 			outRows.Close()
 			return nil, err
 		}
-		bucketAdd(&sales, currency, qty*price)
+		bucketAdd(&sales, currency, revenue)
+		bucketAdd(&cogs, currency, lineCogs)
 		salesMovements++
 	}
 	outRows.Close()
@@ -188,7 +162,9 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 		balanceArgs = append(balanceArgs, *warehouseID)
 	}
 	balanceSQL := `
-		SELECT COALESCE(pv.currency, 'UZS'), COALESCE(pv."purchasePrice", 0)::float8, COALESCE(sb.quantity, 0)::float8
+		SELECT COALESCE(pv.currency, 'UZS'),
+		       (` + sqlUnitCostInbound + `)::float8,
+		       COALESCE(sb.quantity, 0)::float8
 		FROM "StockBalance" sb
 		JOIN "Warehouse" w ON w.id = sb."warehouseId"
 		JOIN "ProductVariant" pv ON pv.id = sb."productVariantId"
@@ -214,19 +190,20 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 
 	purchaseR := roundedBucket(purchase)
 	salesR := roundedBucket(sales)
+	cogsR := roundedBucket(cogs)
 	inventoryR := roundedBucket(inventory)
 	profit := currencyBucket{
-		UZS: round2(salesR.UZS - purchaseR.UZS),
-		USD: round2(salesR.USD - purchaseR.USD),
+		UZS: round2(salesR.UZS - cogsR.UZS),
+		USD: round2(salesR.USD - cogsR.USD),
 	}
 
 	marginUZS := 0.0
 	marginUSD := 0.0
 	if salesR.UZS > 0 {
-		marginUZS = round2((salesR.UZS - purchaseR.UZS) / salesR.UZS * 100)
+		marginUZS = round2((salesR.UZS - cogsR.UZS) / salesR.UZS * 100)
 	}
 	if salesR.USD > 0 {
-		marginUSD = round2((salesR.USD - purchaseR.USD) / salesR.USD * 100)
+		marginUSD = round2((salesR.USD - cogsR.USD) / salesR.USD * 100)
 	}
 
 	return map[string]any{
@@ -245,6 +222,7 @@ func (s *Service) GetCostSummary(ctx context.Context, companyID string, query Re
 		}(),
 		"purchase": purchaseR,
 		"sales":    salesR,
+		"cogs":     cogsR,
 		"profit":   profit,
 		"margin": currencyBucket{
 			UZS: marginUZS,
@@ -273,25 +251,9 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 		args = append(args, *warehouseID)
 	}
 
-	inCountSQL := `
-		SELECT COUNT(*)::int
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'IN'
-		  AND sm."sourceType" = 'GOODS_RECEIPT'` + whereTail
-	outCountSQL := `
-		SELECT COUNT(*)::int
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+	periodWhere := movementPeriodWhere(whereTail)
+	inCountSQL := `SELECT COUNT(*)::int ` + sqlMovementBaseFrom + periodWhere + sqlInboundFilter
+	outCountSQL := `SELECT COUNT(*)::int ` + sqlMovementBaseFrom + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 	if err := s.assertMovementCountWithinLimit(ctx, inCountSQL, args, "Kunlik kirim"); err != nil {
 		return nil, err
 	}
@@ -303,6 +265,7 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 		Date     string
 		Purchase currencyBucket
 		Sales    currencyBucket
+		Cogs     currencyBucket
 	}
 	dayMap := map[string]*dayRow{}
 	cursor := startOfUTCDay(rng.GTE)
@@ -313,31 +276,20 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 			Date:     key,
 			Purchase: newBucket(),
 			Sales:    newBucket(),
+			Cogs:     newBucket(),
 		}
 		cursor = cursor.AddDate(0, 0, 1)
 	}
 
 	inSQL := `
-		SELECT DATE(sm."createdAt"), COALESCE(pv.currency, 'UZS'), COALESCE(pv."purchasePrice", 0)::float8, ABS(sm.quantity)::float8
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'IN'
-		  AND sm."sourceType" = 'GOODS_RECEIPT'` + whereTail
+		SELECT DATE(sm."createdAt"), COALESCE(pv.currency, 'UZS'),
+		       (ABS(sm.quantity)::float8 * (` + sqlUnitCostInbound + `))::float8
+		` + sqlMovementBaseFrom + periodWhere + sqlInboundFilter
 	outSQL := `
-		SELECT DATE(sm."createdAt"), COALESCE(pv.currency, 'UZS'), COALESCE(pv."salePrice", 0)::float8, ABS(sm.quantity)::float8
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+		SELECT DATE(sm."createdAt"), COALESCE(pv.currency, 'UZS'),
+		       (` + sqlLineRevenue + `)::float8,
+		       (ABS(sm.quantity)::float8 * (` + sqlUnitCostCOGS + `))::float8
+		` + sqlMovementBaseFrom + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 
 	inRows, err := s.pool.Query(ctx, inSQL, args...)
 	if err != nil {
@@ -346,16 +298,16 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 	for inRows.Next() {
 		var day time.Time
 		var currency string
-		var price, qty float64
-		if err := inRows.Scan(&day, &currency, &price, &qty); err != nil {
+		var amount float64
+		if err := inRows.Scan(&day, &currency, &amount); err != nil {
 			inRows.Close()
 			return nil, err
 		}
 		key := day.UTC().Format("2006-01-02")
 		if _, ok := dayMap[key]; !ok {
-			dayMap[key] = &dayRow{Date: key, Purchase: newBucket(), Sales: newBucket()}
+			dayMap[key] = &dayRow{Date: key, Purchase: newBucket(), Sales: newBucket(), Cogs: newBucket()}
 		}
-		bucketAdd(&dayMap[key].Purchase, currency, qty*price)
+		bucketAdd(&dayMap[key].Purchase, currency, amount)
 	}
 	inRows.Close()
 
@@ -366,16 +318,17 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 	for outRows.Next() {
 		var day time.Time
 		var currency string
-		var price, qty float64
-		if err := outRows.Scan(&day, &currency, &price, &qty); err != nil {
+		var revenue, lineCogs float64
+		if err := outRows.Scan(&day, &currency, &revenue, &lineCogs); err != nil {
 			outRows.Close()
 			return nil, err
 		}
 		key := day.UTC().Format("2006-01-02")
 		if _, ok := dayMap[key]; !ok {
-			dayMap[key] = &dayRow{Date: key, Purchase: newBucket(), Sales: newBucket()}
+			dayMap[key] = &dayRow{Date: key, Purchase: newBucket(), Sales: newBucket(), Cogs: newBucket()}
 		}
-		bucketAdd(&dayMap[key].Sales, currency, qty*price)
+		bucketAdd(&dayMap[key].Sales, currency, revenue)
+		bucketAdd(&dayMap[key].Cogs, currency, lineCogs)
 	}
 	outRows.Close()
 
@@ -390,13 +343,15 @@ func (s *Service) GetDailyBreakdown(ctx context.Context, companyID string, query
 		row := dayMap[key]
 		purchase := roundedBucket(row.Purchase)
 		sales := roundedBucket(row.Sales)
+		cogsDay := roundedBucket(row.Cogs)
 		result = append(result, map[string]any{
 			"date":     row.Date,
 			"purchase": purchase,
 			"sales":    sales,
+			"cogs":     cogsDay,
 			"profit": currencyBucket{
-				UZS: round2(sales.UZS - purchase.UZS),
-				USD: round2(sales.USD - purchase.USD),
+				UZS: round2(sales.UZS - cogsDay.UZS),
+				USD: round2(sales.USD - cogsDay.USD),
 			},
 		})
 	}
@@ -417,15 +372,8 @@ func (s *Service) GetTopProducts(ctx context.Context, companyID string, query Re
 		args = append(args, *warehouseID)
 	}
 
-	countSQL := `
-		SELECT COUNT(*)::int
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+	periodWhere := movementPeriodWhere(whereTail)
+	countSQL := `SELECT COUNT(*)::int ` + sqlMovementBaseFrom + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 	if err := s.assertMovementCountWithinLimit(ctx, countSQL, args, "Top mahsulotlar"); err != nil {
 		return nil, err
 	}
@@ -436,17 +384,11 @@ func (s *Service) GetTopProducts(ctx context.Context, companyID string, query Re
 		       COALESCE(pv.name, ''),
 		       pv.sku,
 		       COALESCE(pv.currency, 'UZS'),
-		       COALESCE(pv."salePrice", 0)::float8,
+		       (` + sqlLineRevenue + `)::float8,
 		       ABS(sm.quantity)::float8
-		FROM "StockMovement" sm
-		JOIN "Warehouse" w ON w.id = sm."warehouseId"
-		JOIN "ProductVariant" pv ON pv.id = sm."productVariantId"
+		` + sqlMovementBaseFrom + `
 		JOIN "Product" p ON p.id = pv."productId"
-		WHERE sm."companyId" = $1
-		  AND sm."createdAt" >= $2
-		  AND sm."createdAt" <= $3
-		  AND w.status <> 'ARCHIVED'
-		  AND sm.type = 'OUT'` + whereTail
+		` + periodWhere + sqlOutboundFilter + sqlExcludeVoidedPOS
 
 	type agg struct {
 		ProductVariantID string
@@ -465,8 +407,8 @@ func (s *Service) GetTopProducts(ctx context.Context, companyID string, query Re
 	for rows.Next() {
 		var variantID, productName, variantName, currency string
 		var sku *string
-		var salePrice, qty float64
-		if err := rows.Scan(&variantID, &productName, &variantName, &sku, &currency, &salePrice, &qty); err != nil {
+		var revenue, qty float64
+		if err := rows.Scan(&variantID, &productName, &variantName, &sku, &currency, &revenue, &qty); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -482,7 +424,7 @@ func (s *Service) GetTopProducts(ctx context.Context, companyID string, query Re
 			aggMap[variantID] = item
 		}
 		item.Quantity += qty
-		item.Revenue += qty * salePrice
+		item.Revenue += revenue
 	}
 	rows.Close()
 

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, FileDown, RefreshCw, Loader2 } from 'lucide-react';
+import { ArrowLeft, FileDown, RefreshCw, Loader2, BookOpen } from 'lucide-react';
+import { ReportsGuideModal } from '@/features/reports/ReportsGuideModal';
 
 type Props = {
   exporting: boolean;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function ReportsPageHeader({ exporting, isFetching, onExport, onRefresh }: Props) {
+  const [guideOpen, setGuideOpen] = useState(false);
   return (
     <>
       <Link
@@ -30,6 +32,14 @@ export function ReportsPageHeader({ exporting, isFetching, onExport, onRefresh }
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setGuideOpen(true)}
+            className="btn-dash bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10"
+          >
+            <BookOpen size={16} />
+            Qo‘llanma
+          </button>
           <Link
             href="/dashboard/reports/monthly"
             className="btn-dash bg-violet-600 hover:bg-violet-500 text-white"
@@ -56,6 +66,8 @@ export function ReportsPageHeader({ exporting, isFetching, onExport, onRefresh }
           </button>
         </div>
       </div>
+
+      <ReportsGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </>
   );
 }

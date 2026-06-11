@@ -37,10 +37,10 @@ func (r *Repository) ListSaleCatalog(ctx context.Context, companyID, warehouseID
 	args = append(args, limit, skip)
 	rows, err := r.pool.Query(ctx, fmt.Sprintf(`
 		SELECT v.id, v."productId", p.name, v.name, v.sku, v.barcode, v."salePrice", v.currency,
-		       p."imageUrl", c.id, c.name, sb.quantity
+		       p."imageUrl", c.id, c.name, sb.quantity, COALESCE(p.unit, 'dona')
 		FROM "ProductVariant" v
 		JOIN "Product" p ON p.id = v."productId"
-		LEFT JOIN "Category" c ON c.id = p."categoryId"
+		LEFT JOIN "ProductCategory" c ON c.id = p."categoryId"
 		JOIN "StockBalance" sb ON sb."productVariantId" = v.id AND sb."warehouseId" = $2
 		WHERE %s
 		ORDER BY v."updatedAt" DESC
@@ -55,14 +55,14 @@ func (r *Repository) ListSaleCatalog(ctx context.Context, companyID, warehouseID
 		var v variantRow
 		var sku, barcode, imageURL, catID, catName *string
 		if err := rows.Scan(&v.ID, &v.ProductID, &v.ProductName, &v.Name, &sku, &barcode,
-			&v.SalePrice, &v.Currency, &imageURL, &catID, &catName, &v.StockQty); err != nil {
+			&v.SalePrice, &v.Currency, &imageURL, &catID, &catName, &v.StockQty, &v.Unit); err != nil {
 			return nil, err
 		}
 		out = append(out, map[string]any{
 			"id": v.ID, "productId": v.ProductID, "productName": v.ProductName, "name": v.Name,
 			"sku": sku, "barcode": barcode, "salePrice": v.SalePrice,
 			"currency": normalizeCurrencyPtr(v.Currency), "image": imageURL,
-			"categoryId": catID, "categoryName": catName, "stockQty": v.StockQty,
+			"categoryId": catID, "categoryName": catName, "stockQty": v.StockQty, "unit": v.Unit,
 		})
 	}
 	return out, rows.Err()

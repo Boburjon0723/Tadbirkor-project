@@ -102,28 +102,14 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 }
 
 func (s *Service) FindOne(ctx context.Context, id, companyID string) (map[string]any, error) {
-	row := s.pool.QueryRow(ctx, `
-		SELECT id, "saleNumber", status, subtotal, "discountAmount", "totalAmount", currency,
-		       "warehouseId", "cashierId", "completedAt", "createdAt"
-		FROM "PosSale" WHERE id = $1 AND "companyId" = $2
-	`, id, companyID)
-	var saleID, saleNumber, status, currency string
-	var subtotal, discount, total float64
-	var warehouseID, cashierID string
-	var completedAt *time.Time
-	var createdAt time.Time
-	if err := row.Scan(&saleID, &saleNumber, &status, &subtotal, &discount, &total, &currency, &warehouseID, &cashierID, &completedAt, &createdAt); err != nil {
+	detail, err := s.fetchSaleDetail(ctx, id, companyID)
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	return map[string]any{
-		"id": saleID, "saleNumber": saleNumber, "status": status,
-		"subtotal": subtotal, "discountAmount": discount, "totalAmount": total,
-		"currency": currency, "warehouseId": warehouseID, "cashierId": cashierID,
-		"completedAt": completedAt, "createdAt": createdAt,
-	}, nil
+	return detail, nil
 }
 
 func (s *Service) QuickSearch(ctx context.Context, companyID, userID, query, warehouseID string) ([]map[string]any, error) {

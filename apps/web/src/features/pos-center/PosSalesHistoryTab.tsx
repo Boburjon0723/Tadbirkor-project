@@ -207,28 +207,47 @@ export function PosSalesHistoryTab() {
                 <Loader2 className="animate-spin mx-auto text-blue-500" />
               ) : saleDetail ? (
                 <div className="space-y-4 text-sm">
-                  {saleDetail.items?.map((item: {
-                    id: string;
-                    quantity: number;
-                    unitPrice: number;
-                    lineTotal?: number;
-                    productVariant?: { name?: string; product?: { name?: string } };
-                  }) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between p-3 bg-white/5 rounded-xl"
-                    >
-                      <span>
-                        {item.productVariant?.product?.name} — {item.productVariant?.name}
-                      </span>
-                      <span className="font-black">
-                        {formatMoney(
-                          Number(item.lineTotal ?? item.quantity * item.unitPrice),
-                          saleDetail.currency,
-                        )}
-                      </span>
-                    </div>
-                  ))}
+                  {(saleDetail.items?.length ?? 0) === 0 ? (
+                    <p className="text-gray-500 font-bold text-center py-4">
+                      Chek qatorlari topilmadi
+                    </p>
+                  ) : (
+                    saleDetail.items?.map((item: {
+                      id: string;
+                      quantity: number;
+                      unitPrice: number;
+                      lineTotal?: number;
+                      productNameSnapshot?: string;
+                      productVariant?: { name?: string; product?: { name?: string } };
+                    }) => {
+                      const name =
+                        item.productNameSnapshot ||
+                        [item.productVariant?.product?.name, item.productVariant?.name]
+                          .filter(Boolean)
+                          .join(' — ') ||
+                        'Mahsulot';
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex justify-between gap-3 p-3 bg-white/5 rounded-xl"
+                        >
+                          <span className="min-w-0">
+                            <span className="font-bold block truncate">{name}</span>
+                            <span className="text-xs text-gray-500">
+                              {item.quantity} ×{' '}
+                              {formatMoney(Number(item.unitPrice), saleDetail.currency)}
+                            </span>
+                          </span>
+                          <span className="font-black shrink-0">
+                            {formatMoney(
+                              Number(item.lineTotal ?? item.quantity * item.unitPrice),
+                              saleDetail.currency,
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                   {saleDetail.payments?.length > 0 && (
                     <div className="p-4 bg-white/5 rounded-xl space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">

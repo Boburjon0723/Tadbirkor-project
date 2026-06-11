@@ -139,7 +139,7 @@ func (s *Service) GetPosSummary(
 
 		paymentRows, err := s.pool.Query(ctx, `
 			SELECT "saleId", method, COALESCE(amount, 0)::float8
-			FROM "PosSalePayment"
+			FROM "PosPayment"
 			WHERE "saleId" = ANY($1)
 		`, saleIDs)
 		if err == nil {

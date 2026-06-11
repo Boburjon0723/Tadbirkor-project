@@ -34,6 +34,7 @@ export type PartnerLedgerCatalogItem = {
   categoryId?: string | null;
   categoryName?: string | null;
   stockQty: number;
+  unit?: string | null;
 };
 
 export type PartnerLedgerSettlementType =
@@ -231,6 +232,7 @@ export const partnerLedgerService = {
         salePrice: number;
         currency: string;
         stockQty: number;
+        unit?: string | null;
         quantity: number;
         lineTotal: number;
       }>;

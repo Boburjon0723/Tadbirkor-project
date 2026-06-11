@@ -119,7 +119,7 @@ func (s *Service) PreviewSaleOrderExcel(ctx context.Context, companyID, warehous
 			"productName": v.ProductName, "name": v.Name,
 			"sku": v.SKU, "barcode": v.Barcode,
 			"salePrice": v.SalePrice, "currency": NormalizeCurrency(v.Currency),
-			"stockQty": v.StockQty, "quantity": row.Quantity,
+			"stockQty": v.StockQty, "unit": v.Unit, "quantity": row.Quantity,
 			"lineTotal": row.Quantity * v.SalePrice,
 		}
 		lines = append(lines, line)

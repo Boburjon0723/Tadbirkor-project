@@ -68,20 +68,5 @@ func (s *Service) assertCreditAllowed(ctx context.Context, companyID, userID str
 	if err != nil {
 		return err
 	}
-	hasCredit := false
-	for _, p := range pctx.perms {
-		if p == "pos.credit" {
-			hasCredit = true
-			break
-		}
-	}
-	if !hasCredit {
-		return errors.New("Nasiya sotuv uchun ruxsat yo'q (Jamoa → rol sozlamalari)")
-	}
-	var enabled bool
-	err = s.pool.QueryRow(ctx, `SELECT "posCreditEnabled" FROM "Company" WHERE id = $1`, companyID).Scan(&enabled)
-	if err != nil || !enabled {
-		return errors.New("Nasiya sotuv kompaniyada yoqilmagan. Sozlamalar → Kompaniya")
-	}
-	return nil
+	return pctx.assertCreditAllowed()
 }

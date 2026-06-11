@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Check, Copy } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader2, Check, Copy } from 'lucide-react';
 import { api } from '@/lib/api';
 import { companiesService } from '@/services/companies.service';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,6 +13,42 @@ type Props = {
   onUpdate: (company: any) => void;
   canWrite?: boolean;
 };
+
+type FieldKey =
+  | 'name'
+  | 'tin'
+  | 'posCreditEnabled'
+  | 'posMaxDiscountPercent'
+  | 'inventoryVarianceTolerancePct'
+  | 'storefrontUrl';
+
+function FieldSaveHint({
+  field,
+  saving,
+  saved,
+}: {
+  field: FieldKey;
+  saving: FieldKey | null;
+  saved: FieldKey | null;
+}) {
+  if (saving === field) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-400 ml-2">
+        <Loader2 className="animate-spin" size={12} />
+        Saqlanmoqda
+      </span>
+    );
+  }
+  if (saved === field) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 ml-2">
+        <Check size={12} />
+        Saqlandi
+      </span>
+    );
+  }
+  return null;
+}
 
 export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Props) {
   const queryClient = useQueryClient();
@@ -32,8 +68,9 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
         ? Number(company.inventoryVarianceTolerancePct)
         : 1,
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [savingField, setSavingField] = useState<FieldKey | null>(null);
+  const [savedField, setSavedField] = useState<FieldKey | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [snippetCopied, setSnippetCopied] = useState(false);
 
@@ -82,32 +119,100 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
     loadBindings();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!canWrite) {
-      toast.error('Sinov muddati tugagan. Saqlash uchun obunani faollashtiring (Sozlamalar → Obuna).');
+  const flashSaved = useCallback((field: FieldKey) => {
+    setSavedField(field);
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    savedTimerRef.current = setTimeout(() => setSavedField(null), 2000);
+  }, []);
+
+  const patchField = useCallback(
+    async (field: FieldKey, body: Record<string, unknown>, revert?: () => void) => {
+      if (!canWrite) {
+        toast.error('Sinov muddati tugagan. Saqlash uchun obunani faollashtiring (Sozlamalar → Obuna).');
+        revert?.();
+        return;
+      }
+      setSavingField(field);
+      try {
+        const res = await api.patch('/companies/me', body);
+        onUpdate(res.data);
+        void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
+        flashSaved(field);
+      } catch (err) {
+        revert?.();
+        toast.error(formatApiError(err, 'Saqlashda xatolik'));
+      } finally {
+        setSavingField(null);
+      }
+    },
+    [canWrite, flashSaved, onUpdate, queryClient],
+  );
+
+  const saveName = () => {
+    const name = form.name.trim();
+    if (!name || name === (company?.name || '').trim()) return;
+    void patchField('name', { name });
+  };
+
+  const saveTin = () => {
+    const tin = form.tin.replace(/\D/g, '');
+    const saved = String(company?.tin || '').replace(/\D/g, '');
+    if (tin === saved) return;
+    if (tin.length !== 9) {
+      toast.error('STIR aynan 9 ta raqamdan iborat bo‘lishi kerak');
+      setForm((prev) => ({ ...prev, tin: saved }));
       return;
     }
-    setIsSubmitting(true);
-    try {
-      const res = await api.patch('/companies/me', {
-        name: form.name,
-        tin: form.tin,
-        storefrontUrl: form.storefrontUrl?.trim() || undefined,
-        posCreditEnabled: form.posCreditEnabled,
-        posMaxDiscountPercent: Number(form.posMaxDiscountPercent),
-        inventoryVarianceTolerancePct: Number(form.inventoryVarianceTolerancePct),
-      });
-      onUpdate(res.data);
-      void queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
-      setSuccess(true);
-      toast.success('Kompaniya ma’lumotlari saqlandi');
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      toast.error(formatApiError(err, 'Saqlashda xato. Internet yoki ruxsatni tekshiring.'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    void patchField('tin', { tin });
+  };
+
+  const savePosCredit = (enabled: boolean) => {
+    const prev = !!company?.posCreditEnabled;
+    if (enabled === prev) return;
+    void patchField(
+      'posCreditEnabled',
+      { posCreditEnabled: enabled },
+      () => setForm((f) => ({ ...f, posCreditEnabled: prev })),
+    );
+  };
+
+  const saveDiscount = () => {
+    const val = Number(form.posMaxDiscountPercent);
+    const saved =
+      company?.posMaxDiscountPercent != null
+        ? Number(company.posMaxDiscountPercent)
+        : 15;
+    if (val === saved) return;
+    void patchField(
+      'posMaxDiscountPercent',
+      { posMaxDiscountPercent: val },
+      () => setForm((f) => ({ ...f, posMaxDiscountPercent: saved })),
+    );
+  };
+
+  const saveInventoryTolerance = () => {
+    const val = Number(form.inventoryVarianceTolerancePct);
+    const saved =
+      company?.inventoryVarianceTolerancePct != null
+        ? Number(company.inventoryVarianceTolerancePct)
+        : 1;
+    if (val === saved) return;
+    void patchField(
+      'inventoryVarianceTolerancePct',
+      { inventoryVarianceTolerancePct: val },
+      () => setForm((f) => ({ ...f, inventoryVarianceTolerancePct: saved })),
+    );
+  };
+
+  const saveStorefrontUrl = () => {
+    const url = form.storefrontUrl.trim();
+    const saved = (company?.storefrontUrl || '').trim();
+    if (url === saved) return;
+    void patchField(
+      'storefrontUrl',
+      { storefrontUrl: url || undefined },
+      () => setForm((f) => ({ ...f, storefrontUrl: saved })),
+    );
   };
 
   const handleRegenerateToken = async () => {
@@ -115,8 +220,9 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
       setTokenLoading(true);
       const res = await api.patch('/companies/me/storefront-token');
       onUpdate({ ...company, storefrontToken: res.data.storefrontToken });
+      toast.success('Storefront token yangilandi');
     } catch (err) {
-      console.error(err);
+      toast.error(formatApiError(err, 'Token yaratib bo‘lmadi'));
     } finally {
       setTokenLoading(false);
     }
@@ -175,81 +281,105 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
   };
 
   return (
-    <form onSubmit={handleSubmit} className="glass-card p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-white/[0.01] border border-white/5 space-y-6">
+    <div className="glass-card p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] bg-white/[0.01] border border-white/5 space-y-6">
+      <p className="text-xs text-neutral-500 font-bold">
+        Har bir maydon alohida saqlanadi — o‘zgartiring va maydondan chiqing (blur) yoki checkboxni bosing.
+      </p>
+
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Kompaniya Nomi</label>
-          <input 
-            required
-            type="text" 
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white"
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center">
+            Kompaniya Nomi
+            <FieldSaveHint field="name" saving={savingField} saved={savedField} />
+          </label>
+          <input
+            type="text"
+            disabled={!canWrite}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white disabled:opacity-60"
             value={form.name}
-            onChange={(e) => setForm({...form, name: e.target.value})}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onBlur={saveName}
           />
         </div>
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">STIR (TIN)</label>
-          <input 
-            required
-            type="text" 
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center">
+            STIR (TIN)
+            <FieldSaveHint field="tin" saving={savingField} saved={savedField} />
+          </label>
+          <input
+            type="text"
             maxLength={9}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white"
+            disabled={!canWrite}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white disabled:opacity-60"
             value={form.tin}
-            onChange={(e) => setForm({...form, tin: e.target.value.replace(/\D/g, '')})}
+            onChange={(e) => setForm({ ...form, tin: e.target.value.replace(/\D/g, '') })}
+            onBlur={saveTin}
           />
+          {form.tin && form.tin.length !== 9 && (
+            <p className="text-[10px] text-amber-500 ml-1 font-bold">9 ta raqam kerak</p>
+          )}
         </div>
+
         <label
           className={`flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl ${
             canWrite ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'
           }`}
         >
           <div>
-            <p className="font-black text-sm">POS nasiya (mijozlar qarzi)</p>
+            <p className="font-black text-sm flex items-center flex-wrap gap-1">
+              POS nasiya (mijozlar qarzi)
+              <FieldSaveHint field="posCreditEnabled" saving={savingField} saved={savedField} />
+            </p>
             <p className="text-xs text-gray-500 font-bold mt-1">
               Yoqilganda kassada «Nasiya» to&apos;lovi va Mijozlar qarzi bo&apos;limi ishlaydi.
             </p>
             {!canWrite && (
               <p className="text-xs text-amber-400 font-bold mt-2">
-                Sinov tugagan — yoqish uchun «Obuna» tabida faollashtiring yoki administrator bilan bog&apos;laning.
+                Sinov tugagan — yoqish uchun «Obuna» tabida faollashtiring.
               </p>
             )}
           </div>
           <input
             type="checkbox"
             checked={form.posCreditEnabled}
-            disabled={!canWrite}
-            onChange={(e) => setForm({ ...form, posCreditEnabled: e.target.checked })}
+            disabled={!canWrite || savingField === 'posCreditEnabled'}
+            onChange={(e) => {
+              const enabled = e.target.checked;
+              setForm({ ...form, posCreditEnabled: enabled });
+              savePosCredit(enabled);
+            }}
             className="w-5 h-5 accent-blue-500 disabled:cursor-not-allowed"
           />
         </label>
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center">
             POS maks. chegirma (%)
+            <FieldSaveHint field="posMaxDiscountPercent" saving={savingField} saved={savedField} />
           </label>
           <input
             type="number"
             min={0}
             max={100}
             step={0.5}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white"
+            disabled={!canWrite}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white disabled:opacity-60"
             value={form.posMaxDiscountPercent}
             onChange={(e) =>
               setForm({
                 ...form,
-                posMaxDiscountPercent: Math.min(
-                  100,
-                  Math.max(0, Number(e.target.value) || 0),
-                ),
+                posMaxDiscountPercent: Math.min(100, Math.max(0, Number(e.target.value) || 0)),
               })
             }
+            onBlur={saveDiscount}
           />
-          <p className="text-xs text-gray-500 font-bold ml-1">
-            Kassirlar ushbu foizdan ortiq chegirma qila olmaydi (MANAGER/OWNER chekirmasiz o&apos;zgartirishi mumkin).
-          </p>
         </div>
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center">
             Inventarizatsiya farq chegarasi (%)
+            <FieldSaveHint field="inventoryVarianceTolerancePct" saving={savingField} saved={savedField} />
           </label>
           <input
             type="number"
@@ -257,7 +387,7 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             max={100}
             step={0.1}
             disabled={!canWrite}
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-teal-500/50 transition-all text-white"
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-teal-500/50 transition-all text-white disabled:opacity-60"
             value={form.inventoryVarianceTolerancePct}
             onChange={(e) =>
               setForm({
@@ -268,23 +398,30 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
                 ),
               })
             }
+            onBlur={saveInventoryTolerance}
           />
-          <p className="text-xs text-gray-500 font-bold ml-1">
-            Sanashda shu foizdan katta farq manager tasdiqlashini talab qiladi (standart: 1%).
-          </p>
         </div>
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Web sayt URL</label>
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 flex items-center">
+            Web sayt URL
+            <FieldSaveHint field="storefrontUrl" saving={savingField} saved={savedField} />
+          </label>
           <input
             type="url"
             placeholder="https://yourshop.uz"
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white"
+            disabled={!canWrite}
+            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 font-bold outline-none focus:border-emerald-500/50 transition-all text-white disabled:opacity-60"
             value={form.storefrontUrl}
             onChange={(e) => setForm({ ...form, storefrontUrl: e.target.value })}
+            onBlur={saveStorefrontUrl}
           />
         </div>
+
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Storefront token</label>
+          <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+            Storefront token
+          </label>
           <div className="flex flex-col sm:flex-row gap-2">
             <input
               readOnly
@@ -295,13 +432,14 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             <button
               type="button"
               onClick={handleRegenerateToken}
-              disabled={tokenLoading}
+              disabled={tokenLoading || !canWrite}
               className="px-4 py-4 sm:py-2 bg-blue-600 hover:bg-blue-500 rounded-2xl text-xs font-black disabled:opacity-50 shrink-0"
             >
               {tokenLoading ? '...' : 'Token yaratish'}
             </button>
           </div>
         </div>
+
         <div className="p-4 rounded-2xl bg-black/20 border border-white/10 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-xs font-black text-gray-300">Ulash uchun snippet</p>
@@ -317,9 +455,6 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
           <code className="block text-[11px] text-gray-400 break-all">
             {`GET ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4003/api'}/storefront/${company?.id}/products`}
           </code>
-          <p className="text-[11px] text-gray-500">
-            Header: <span className="text-gray-300">x-storefront-token: {company?.storefrontToken || 'TOKEN_YARATING'}</span>
-          </p>
         </div>
 
         <div className="p-4 rounded-2xl bg-black/20 border border-white/10 space-y-3">
@@ -347,18 +482,6 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             </div>
           </div>
 
-          <div className="text-[11px] text-gray-500 font-bold space-y-1">
-            <p>
-              Tizimdagi telefon:{' '}
-              <span className="text-gray-300">
-                {sessionUser?.phone || company?.phone || '— kiritilmagan'}
-              </span>
-            </p>
-            <p>
-              Xodimlar botda faqat «Telefon raqamni ulashish» tugmasini bosadi (qo‘lda yozmaydi) — rol avtomatik taniladi.
-            </p>
-          </div>
-
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
@@ -368,33 +491,30 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
             >
               {telegramInitLoading ? '...' : 'Botni ochish'}
             </button>
-
             {telegramStartUrl && (
               <>
                 <a
                   href={telegramStartUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-2xl text-xs font-black text-gray-300 hover:text-white transition-all"
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-xs font-black text-gray-300"
                 >
                   Telegramda ochish
                 </a>
-
                 <button
                   type="button"
                   onClick={handleCopyTelegramLink}
-                  className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-2xl text-xs font-black text-gray-300 hover:text-white transition-all"
+                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-xs font-black text-gray-300"
                 >
                   {telegramCopied ? 'COPIED' : 'LINK COPY'}
                 </button>
-
                 <button
                   type="button"
                   onClick={async () => {
                     await refreshCompany();
                     await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY });
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-2xl text-xs font-black disabled:opacity-50"
+                  className="px-4 py-2 bg-emerald-600 rounded-2xl text-xs font-black"
                 >
                   Tekshirish
                 </button>
@@ -407,52 +527,38 @@ export function SettingsCompanyForm({ company, onUpdate, canWrite = true }: Prop
               Botda ulash uchun raqam: {telegramLinkInfo.registeredPhone}
             </p>
           )}
-
           {telegramStatusMessage && (
             <p className="text-[11px] font-bold text-blue-300">{telegramStatusMessage}</p>
           )}
 
           <div className="pt-2 border-t border-white/10 space-y-2">
             <p className="text-[11px] font-black text-gray-300">Avtomatik rol bog‘lanishlari</p>
-            <div className="space-y-2">
-              {telegramBindingLoading ? (
-                <p className="text-[11px] text-gray-500">Yuklanmoqda...</p>
-              ) : telegramBindings.length === 0 ? (
-                <p className="text-[11px] text-gray-500">
-                  Hali ulanish yo‘q. Botda telefon ulangach, rollar shu yerda paydo bo‘ladi.
-                </p>
-              ) : (
-                telegramBindings.map((binding) => (
-                  <div
-                    key={binding.id}
-                    className="flex items-center justify-between gap-2 text-[11px] bg-white/5 border border-white/10 rounded-xl px-3 py-2"
+            {telegramBindingLoading ? (
+              <p className="text-[11px] text-gray-500">Yuklanmoqda...</p>
+            ) : telegramBindings.length === 0 ? (
+              <p className="text-[11px] text-gray-500">Hali ulanish yo‘q.</p>
+            ) : (
+              telegramBindings.map((binding) => (
+                <div
+                  key={binding.id}
+                  className="flex items-center justify-between gap-2 text-[11px] bg-white/5 border border-white/10 rounded-xl px-3 py-2"
+                >
+                  <span className="font-bold text-gray-300">
+                    {binding.role} / {binding.moduleKey}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBinding(binding.role, binding.moduleKey)}
+                    className="text-red-300 font-black"
                   >
-                    <span className="font-bold text-gray-300">
-                      {binding.role} / {binding.moduleKey}
-                      {binding.enabled ? '' : ' (o‘chirilgan)'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveBinding(binding.role, binding.moduleKey)}
-                      className="text-red-300 hover:text-red-200 font-black"
-                    >
-                      O&apos;CHIRISH
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
+                    O&apos;CHIRISH
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
-
-      <button 
-        type="submit"
-        disabled={isSubmitting || !canWrite}
-        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-      >
-        {isSubmitting ? <Loader2 className="animate-spin" /> : (success ? 'Yangilandi!' : <><Save size={20} /> Saqlash</>)}
-      </button>
-    </form>
+    </div>
   );
 }

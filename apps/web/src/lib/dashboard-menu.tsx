@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { HelpCircle } from 'lucide-react';
-import type { ModuleMatchMode } from '@/lib/feature-modules';
+import { warehouseMenuQueryMatch, type ModuleMatchMode } from '@/lib/feature-modules';
 import type { SessionRole } from '@/hooks/use-session';
 import { GROUP, SECTION } from '@/lib/dashboard-labels';
 
@@ -420,6 +420,12 @@ export function menuHrefMatchesLocation(
         : pathname === path || pathname.startsWith(`${path}/`);
 
   if (!pathMatches) return false;
+
+  if (pathname === '/dashboard/warehouse') {
+    const warehouseMatch = warehouseMenuQueryMatch(href, search);
+    if (warehouseMatch !== null) return warehouseMatch;
+  }
+
   if (!queryString) return true;
 
   const expected = new URLSearchParams(queryString);

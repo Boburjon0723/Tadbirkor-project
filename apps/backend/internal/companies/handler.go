@@ -80,6 +80,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "Server xatosi")
 		return
 	}
+	h.svc.InvalidateUserAuthCache(r.Context(), claims.Sub, claims.CompanyID)
 	httpx.JSON(w, http.StatusOK, data)
 }
 

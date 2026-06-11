@@ -180,6 +180,93 @@ func nullIfEmpty(s string) any {
 	return s
 }
 
+// updateExistingVariantTx — yuborilmagan maydonlarni (nil) bazadagi qiymatda qoldiradi.
+func (s *Service) updateExistingVariantTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	companyID, productID string,
+	v VariantInput,
+	index int,
+	canonicalSKU string,
+) error {
+	vid := strings.TrimSpace(*v.ID)
+	sets := []string{`name = $1`, `"updatedAt" = NOW()`}
+	args := []any{v.Name}
+	n := 2
+
+	if index == 0 {
+		if canonicalSKU != "" {
+			if err := s.assertSKUFree(ctx, tx, companyID, canonicalSKU, vid); err != nil {
+				return err
+			}
+			sets = append(sets, fmt.Sprintf(`sku = $%d`, n))
+			args = append(args, canonicalSKU)
+			n++
+		} else if v.SKU != nil {
+			skuVal := strings.TrimSpace(*v.SKU)
+			if skuVal != "" {
+				if err := s.assertSKUFree(ctx, tx, companyID, skuVal, vid); err != nil {
+					return err
+				}
+			}
+			sets = append(sets, fmt.Sprintf(`sku = $%d`, n))
+			args = append(args, nullIfEmpty(skuVal))
+			n++
+		}
+	}
+
+	if v.Barcode != nil {
+		barcode := strings.TrimSpace(*v.Barcode)
+		if err := s.assertBarcodeFree(ctx, tx, companyID, barcode, vid); err != nil {
+			return err
+		}
+		sets = append(sets, fmt.Sprintf(`barcode = $%d`, n))
+		args = append(args, nullIfEmpty(barcode))
+		n++
+	}
+
+	sets = append(sets, fmt.Sprintf(`"salePrice" = $%d`, n))
+	args = append(args, v.SalePrice)
+	n++
+
+	if v.PurchasePrice != nil {
+		sets = append(sets, fmt.Sprintf(`"purchasePrice" = $%d`, n))
+		args = append(args, *v.PurchasePrice)
+		n++
+	}
+
+	if v.Currency != nil && strings.TrimSpace(*v.Currency) != "" {
+		sets = append(sets, fmt.Sprintf(`currency = $%d`, n))
+		args = append(args, strings.TrimSpace(*v.Currency))
+		n++
+	}
+
+	if v.Attributes != nil {
+		sets = append(sets, fmt.Sprintf(`"attributesJson" = $%d`, n))
+		args = append(args, attrsJSON(v.Attributes))
+		n++
+	}
+
+	status := "ACTIVE"
+	if v.Status != nil && strings.TrimSpace(*v.Status) != "" {
+		status = strings.TrimSpace(*v.Status)
+	}
+	sets = append(sets, fmt.Sprintf(`status = $%d`, n))
+	args = append(args, status)
+	n++
+
+	args = append(args, vid, companyID, productID)
+	sql := fmt.Sprintf(
+		`UPDATE "ProductVariant" SET %s WHERE id = $%d AND "companyId" = $%d AND "productId" = $%d`,
+		strings.Join(sets, ", "),
+		n,
+		n+1,
+		n+2,
+	)
+	_, err := tx.Exec(ctx, sql, args...)
+	return err
+}
+
 func (s *Service) Create(ctx context.Context, companyID, userID string, in CreateInput) (map[string]any, error) {
 	if strings.TrimSpace(in.Name) == "" || strings.TrimSpace(in.CategoryID) == "" || strings.TrimSpace(in.Unit) == "" {
 		return nil, ErrBadInput
@@ -326,37 +413,7 @@ func (s *Service) Update(ctx context.Context, id, companyID, userID string, in U
 		}
 		for i, v := range in.Variants {
 			if v.ID != nil && strings.TrimSpace(*v.ID) != "" {
-				vid := strings.TrimSpace(*v.ID)
-				barcode := ""
-				if v.Barcode != nil {
-					barcode = strings.TrimSpace(*v.Barcode)
-				}
-				if err := s.assertBarcodeFree(ctx, tx, companyID, barcode, vid); err != nil {
-					return nil, err
-				}
-				var sku any
-				if i == 0 {
-					sku = nullIfEmpty(canonicalSKU)
-				}
-				currency := "UZS"
-				if v.Currency != nil {
-					currency = *v.Currency
-				}
-				purchase := 0.0
-				if v.PurchasePrice != nil {
-					purchase = *v.PurchasePrice
-				}
-				status := "ACTIVE"
-				if v.Status != nil {
-					status = *v.Status
-				}
-				_, err = tx.Exec(ctx, `
-					UPDATE "ProductVariant" SET name = $1, sku = COALESCE($2, sku), barcode = $3,
-					       "salePrice" = $4, "purchasePrice" = $5, currency = $6, "attributesJson" = $7,
-					       status = $8, "updatedAt" = NOW()
-					WHERE id = $9 AND "companyId" = $10 AND "productId" = $11
-				`, v.Name, sku, nullIfEmpty(barcode), v.SalePrice, purchase, currency, attrsJSON(v.Attributes), status, vid, companyID, id)
-				if err != nil {
+				if err := s.updateExistingVariantTx(ctx, tx, companyID, id, v, i, canonicalSKU); err != nil {
 					return nil, err
 				}
 				continue

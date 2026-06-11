@@ -12,6 +12,7 @@ export interface CostSummary {
   warehouseId: string | null;
   purchase: { UZS: number; USD: number };
   sales: { UZS: number; USD: number };
+  cogs?: { UZS: number; USD: number };
   profit: { UZS: number; USD: number };
   margin: { UZS: number; USD: number };
   inventoryValue: { UZS: number; USD: number };
@@ -60,6 +61,8 @@ export type ReportStatCard = {
   bg: string;
   ring: string;
   margin?: { UZS: number; USD: number };
+  /** Foyda kartasi — tannarx kiritilmaganda */
+  hint?: string;
 };
 
 export const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -79,12 +82,19 @@ export const compactNumber = (n: number) => {
 
 export function buildReportStats(summary: CostSummary): ReportStatCard[] {
   const fmt = (n: number, c: 'UZS' | 'USD') => formatSaleAmount(n, c);
+  const cogsUZS = summary.cogs?.UZS ?? 0;
+  const cogsUSD = summary.cogs?.USD ?? 0;
+  const hasSales = summary.sales.UZS > 0 || summary.sales.USD > 0;
+  const cogsMissing = hasSales && cogsUZS < 1 && cogsUSD < 0.01;
+  const profitHint = cogsMissing
+    ? 'Tannarx ≈ 0 — kirim narxi kiritilmagan. Foyda vaqtincha sotuv bilan bir xil.'
+    : undefined;
 
   return [
     {
       key: 'purchase',
       label: 'Kirim summasi',
-      sub: 'Hamkorlardan rasmiy qabul (GoodsReceipt)',
+      sub: 'Omborga kirgan mahsulotlar (qabul, ombor kirimi, boshlang‘ich qoldiq)',
       value: summary.purchase,
       format: fmt,
       icon: ArrowDownToLine,
@@ -95,7 +105,7 @@ export function buildReportStats(summary: CostSummary): ReportStatCard[] {
     {
       key: 'sales',
       label: 'Sotuv summasi',
-      sub: 'Chiqimlar × katalog sotuv narxi (chek narxi emas)',
+      sub: 'Haqiqiy daromad: POS chek narxi, B2B jo‘natma, boshqa chiqimlar',
       value: summary.sales,
       format: fmt,
       icon: ArrowUpFromLine,
@@ -105,20 +115,21 @@ export function buildReportStats(summary: CostSummary): ReportStatCard[] {
     },
     {
       key: 'profit',
-      label: 'Foyda',
-      sub: 'Sotuv − Kirim (COGS / xarajatlar emas)',
+      label: 'Yalpi foyda',
+      sub: 'Sotuv − tannarx (COGS). Ichki xarajatlar kirmaydi',
       value: summary.profit,
       format: fmt,
       icon: TrendingUp,
       color: 'text-blue-400',
       bg: 'bg-blue-500/10',
       ring: 'ring-blue-500/20',
-      margin: summary.margin,
+      margin: cogsMissing ? undefined : summary.margin,
+      hint: profitHint,
     },
     {
       key: 'inventory',
       label: 'Ombor qiymati (hozir)',
-      sub: 'Joriy qoldiq × kirim narxi',
+      sub: 'Joriy qoldiq × kirim narxi (bo‘sh bo‘lsa — sotuv narxi)',
       value: summary.inventoryValue,
       format: fmt,
       icon: WarehouseIcon,

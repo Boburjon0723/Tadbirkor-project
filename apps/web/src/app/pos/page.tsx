@@ -240,8 +240,8 @@ export default function POSPage() {
     formatMoney,
     quickCheckout: (dto) => quickCheckout.mutateAsync(dto),
     onClearActiveCart: clearCart,
+    onPaymentStarted: () => setIsCheckoutModalOpen(false),
     onPaymentSuccess: () => {
-      setIsCheckoutModalOpen(false);
       setCashReceivedInput('');
       setPaymentMethod('cash');
     },

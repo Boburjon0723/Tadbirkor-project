@@ -25,14 +25,14 @@ import {
 } from '@/services/retail-customers.service';
 import { retailReceivablesService } from '@/services/retail-receivables.service';
 import { usePosCreditEnabled } from '@/hooks/use-pos-credit';
-import { usePermissions } from '@/hooks/use-permissions';
+import { useSession } from '@/hooks/use-session';
 import {
   useRetailCustomersSummary,
   useRetailCustomerLedger,
   useInvalidateRetailCustomers,
 } from '@/hooks/retail/use-retail-customers';
 import { formatCustomerBalance } from '@/lib/retail-customer-balance';
-import { toast } from '@/lib/toast';
+import { toast, formatApiError } from '@/lib/toast';
 
 function BalanceBadge({
   totalDebt,
@@ -75,8 +75,12 @@ function BalanceBadge({
 
 export function PosCustomersTab() {
   const { enabled: creditEnabled, loading: creditLoading } = usePosCreditEnabled();
-  const { can } = usePermissions();
-  const canRecordCredit = can('pos.credit');
+  const { data: session } = useSession();
+  const sessionRole = (session?.me?.role || session?.role || '').toUpperCase();
+  const sessionPerms = session?.me?.permissions ?? [];
+  const canWrite = session?.me?.company?.canWrite !== false;
+  const canRecordCredit =
+    sessionRole === 'OWNER' || sessionPerms.includes('pos.credit');
   const invalidateRetail = useInvalidateRetailCustomers();
   const {
     data: rows = [],
@@ -104,14 +108,40 @@ export function PosCustomersTab() {
   const [opSaving, setOpSaving] = useState(false);
   const [opCurrency, setOpCurrency] = useState<'UZS' | 'USD'>('UZS');
   const [selectedEntry, setSelectedEntry] = useState<RetailLedgerEntry | null>(null);
+  const [clientReady, setClientReady] = useState(false);
+
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
   const pickBalances = (
-    row?: { balances?: { UZS: CurrencyBalance; USD: CurrencyBalance } } | null,
-  ) =>
-    row?.balances ?? {
-      UZS: { totalDebt: 0, prepaidBalance: 0, netBalance: 0 },
-      USD: { totalDebt: 0, prepaidBalance: 0, netBalance: 0 },
+    row?: {
+      balances?: { UZS: CurrencyBalance; USD: CurrencyBalance };
+      prepaidBalance?: number;
+      prepaidBalanceUsd?: number;
+      debtUZS?: number;
+      debtUSD?: number;
+      totalDebt?: number;
+    } | null,
+  ) => {
+    if (row?.balances?.UZS) return row.balances;
+    const prepaidUZS = Number(row?.prepaidBalance ?? 0);
+    const prepaidUSD = Number(row?.prepaidBalanceUsd ?? 0);
+    const debtUZS = Number(row?.debtUZS ?? row?.totalDebt ?? 0);
+    const debtUSD = Number(row?.debtUSD ?? 0);
+    return {
+      UZS: {
+        totalDebt: debtUZS,
+        prepaidBalance: prepaidUZS,
+        netBalance: prepaidUZS - debtUZS,
+      },
+      USD: {
+        totalDebt: debtUSD,
+        prepaidBalance: prepaidUSD,
+        netBalance: prepaidUSD - debtUSD,
+      },
     };
+  };
 
   const [saleItemsLoading, setSaleItemsLoading] = useState(false);
 
@@ -135,7 +165,10 @@ export function PosCustomersTab() {
 
   const submitPayment = async (receivableId: string) => {
     const amount = Number(payAmount);
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0) {
+      toast.error('To‘lov summasini kiriting');
+      return;
+    }
     try {
       await retailReceivablesService.recordPayment(receivableId, { amount });
       toast.success('To‘lov qayd etildi');
@@ -147,15 +180,35 @@ export function PosCustomersTab() {
       }
       await refetchSummary();
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'To‘lovda xato');
+      toast.error(formatApiError(e, 'To‘lovda xato'));
     }
   };
 
+  const selectedBalances = pickBalances(ledger ?? selectedPreview);
+  const selectedPrepaidForOp = selectedBalances[opCurrency].prepaidBalance;
+  const selectedDebtForOp = selectedBalances[opCurrency].totalDebt;
+  const selectedDebtRemaining = Math.max(
+    0,
+    selectedDebtForOp - selectedPrepaidForOp,
+  );
+
   const submitOperation = async () => {
     if (!selectedId) return;
+    if (!canWrite) {
+      toast.error('Sinov tugagan — operatsiya uchun obunani faollashtiring');
+      return;
+    }
     const amount = Number(opAmount);
-    if (!amount || amount <= 0) return;
+    if (!amount || amount <= 0) {
+      toast.error('Summani kiriting');
+      return;
+    }
+    if (opType === 'debit_out' && selectedPrepaidForOp < amount - 0.001) {
+      toast.error(
+        `Avans yetarli emas (${selectedPrepaidForOp.toLocaleString()} ${opCurrency}). Qarz to'lovi uchun «Ochiq nasiya cheklari» bo'limidan foydalaning.`,
+      );
+      return;
+    }
     setOpSaving(true);
     try {
       const payload = {
@@ -164,8 +217,18 @@ export function PosCustomersTab() {
         notes: opNote.trim() || undefined,
       };
       if (opType === 'credit_in') {
-        await retailCustomersService.recordPrepaid(selectedId, payload);
-        toast.success('Kredit — avans qabul qilindi');
+        const res = await retailCustomersService.recordPrepaid(selectedId, payload);
+        const applied = Number((res as { appliedToDebt?: number }).appliedToDebt ?? 0);
+        const prepaid = Number((res as { prepaidAdded?: number }).prepaidAdded ?? 0);
+        if (applied > 0 && prepaid > 0) {
+          toast.success(
+            `Qarzga ${applied.toLocaleString()} yozildi, ${prepaid.toLocaleString()} avansga qoldi`,
+          );
+        } else if (applied > 0) {
+          toast.success(`Qarzga ${applied.toLocaleString()} to'lov qabul qilindi`);
+        } else {
+          toast.success('Avans qabul qilindi');
+        }
       } else {
         await retailCustomersService.recordWithdraw(selectedId, payload);
         toast.success('Debet — pul qaytarildi');
@@ -175,8 +238,7 @@ export function PosCustomersTab() {
       invalidateRetail(selectedId);
       await Promise.all([refetchLedger(), refetchSummary()]);
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Operatsiyada xato');
+      toast.error(formatApiError(e, 'Operatsiyada xato'));
     } finally {
       setOpSaving(false);
     }
@@ -220,7 +282,7 @@ export function PosCustomersTab() {
     };
   }, [selectedEntry?.id, selectedId, selectedEntry?.posSaleId]);
 
-  if (creditLoading) {
+  if (!clientReady || creditLoading) {
     return (
       <div className="flex justify-center py-20">
         <Loader2 className="animate-spin text-blue-500" size={36} />
@@ -414,6 +476,10 @@ export function PosCustomersTab() {
               <div className="grid sm:grid-cols-2 gap-3">
                 {(['UZS', 'USD'] as const).map((cur) => {
                   const b = pickBalances(ledger ?? selectedPreview)[cur];
+                  const debtRemaining = Math.max(
+                    0,
+                    b.totalDebt - b.prepaidBalance,
+                  );
                   return (
                     <div
                       key={cur}
@@ -422,11 +488,17 @@ export function PosCustomersTab() {
                       <p className="text-[9px] font-black text-gray-500 uppercase mb-2">
                         {cur}
                       </p>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                         <div>
-                          <p className="text-gray-500 font-bold">Qarz</p>
-                          <p className="font-black text-amber-400">
+                          <p className="text-gray-500 font-bold">Qarz (ochiq)</p>
+                          <p className="font-black text-amber-400/80">
                             {b.totalDebt.toLocaleString()}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 font-bold">Qarz qoldi</p>
+                          <p className="font-black text-amber-400">
+                            {debtRemaining.toLocaleString()}
                           </p>
                         </div>
                         <div>
@@ -461,9 +533,17 @@ export function PosCustomersTab() {
                     Bugalteriya — operatsiya
                   </p>
                 </div>
-                {!creditEnabled || !canRecordCredit ? (
+                {!creditEnabled ? (
                   <p className="text-xs text-gray-500 font-bold">
-                    Qo‘lda operatsiya uchun nasiyani yoqing va «Nasiya» ruxsatini bering.
+                    Qo‘lda operatsiya uchun Sozlamalar → Kompaniyada POS nasiyani yoqing.
+                  </p>
+                ) : !canRecordCredit ? (
+                  <p className="text-xs text-gray-500 font-bold">
+                    Sizda «Nasiya» ruxsati yo‘q. Jamoa → xodim rolida «POS nasiya» ni yoqing.
+                  </p>
+                ) : !canWrite ? (
+                  <p className="text-xs text-amber-400 font-bold">
+                    Sinov muddati tugagan — avans va to‘lov operatsiyalari bloklangan.
                   </p>
                 ) : (
                   <>
@@ -482,7 +562,9 @@ export function PosCustomersTab() {
                           Kredit
                         </p>
                         <p className="text-xs font-bold text-emerald-300 mt-1">
-                          Avans kirim
+                          {selectedDebtForOp > 0
+                            ? 'To‘lov (qarzga)'
+                            : 'Avans kirim'}
                         </p>
                       </button>
                       <button
@@ -499,10 +581,16 @@ export function PosCustomersTab() {
                           Debet
                         </p>
                         <p className="text-xs font-bold text-amber-300 mt-1">
-                          Pul qaytarish
+                          Avans qaytarish
                         </p>
                       </button>
                     </div>
+                    {opType === 'debit_out' && selectedPrepaidForOp <= 0 && (
+                      <p className="text-[10px] text-amber-400/90 font-bold">
+                        Mijozda avans yo‘q — bu tugma faqat oldin qabul qilingan avansni qaytarish uchun.
+                        Qarz yopish: pastdagi «Ochiq nasiya cheklari» → To‘lov qilish.
+                      </p>
+                    )}
                     <div className="flex flex-col gap-2">
                       <div className="flex gap-2">
                         {(['UZS', 'USD'] as const).map((cur) => (
@@ -536,9 +624,9 @@ export function PosCustomersTab() {
                       />
                       <button
                         type="button"
-                        disabled={opSaving}
+                        disabled={opSaving || !opAmount || Number(opAmount) <= 0}
                         onClick={() => void submitOperation()}
-                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm disabled:opacity-50 ${
+                        className={`flex items-center justify-center gap-2 py-3 rounded-xl font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed ${
                           opType === 'credit_in'
                             ? 'bg-emerald-600'
                             : 'bg-amber-600'
@@ -552,13 +640,28 @@ export function PosCustomersTab() {
                           <MinusCircle size={16} />
                         )}
                         {opType === 'credit_in'
-                          ? 'Kredit — avans qabul qilish'
-                          : 'Debet — pul qaytarish'}
+                          ? selectedDebtForOp > 0
+                            ? 'To‘lov qabul qilish (qarzga)'
+                            : 'Kredit — avans qabul qilish'
+                          : 'Debet — avans qaytarish'}
                       </button>
                     </div>
                     <p className="text-[10px] text-gray-600 font-bold leading-relaxed">
-                      POS nasiya sotuvi avtomatik <span className="text-amber-400">Debet</span>{' '}
-                      qatorida chiqadi. Avans bo‘lsa avval hisobdan yechiladi.
+                      {selectedDebtForOp > 0 ? (
+                        <>
+                          Mijoz bergan summa avval{' '}
+                          <span className="text-amber-400">ochiq qarzga</span> yoziladi
+                          {selectedDebtRemaining > 0
+                            ? ` (qoldi: ${selectedDebtRemaining.toLocaleString()} ${opCurrency})`
+                            : ''}
+                          . Ortiqcha qismi avansga tushadi.
+                        </>
+                      ) : (
+                        <>
+                          POS nasiya sotuvi avtomatik{' '}
+                          <span className="text-amber-400">Debet</span> qatorida chiqadi.
+                        </>
+                      )}
                     </p>
                   </>
                 )}
@@ -815,6 +918,7 @@ export function PosCustomersTab() {
                       )}
                       {creditEnabled &&
                         canRecordCredit &&
+                        canWrite &&
                         (r.status === 'OPEN' || r.status === 'PARTIAL') &&
                         (payReceivableId === r.id ? (
                           <div className="flex gap-2">

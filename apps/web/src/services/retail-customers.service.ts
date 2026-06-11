@@ -144,9 +144,11 @@ export const retailCustomersService = {
   ) => {
     const { data } = await api.post(`/retail-customers/${id}/prepaid`, payload);
     return data as {
-      prepaidBalance: number;
-      totalDebt: number;
+      prepaidBalance?: number;
+      totalDebt?: number;
       netBalance: number;
+      appliedToDebt?: number;
+      prepaidAdded?: number;
     };
   },
 

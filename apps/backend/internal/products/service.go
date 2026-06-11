@@ -2,6 +2,7 @@ package products
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -100,13 +101,23 @@ func (s *Service) countActiveWarehouses(ctx context.Context, companyID string) (
 
 func (s *Service) effectiveWarehouseID(ctx context.Context, companyID, warehouseID string) string {
 	warehouseID = strings.TrimSpace(warehouseID)
-	if warehouseID == "" {
-		return ""
+	if warehouseID != "" {
+		return warehouseID
 	}
+	// Bitta ombor bo‘lsa va ID berilmagan — avtomatik shu omborni tanlash (qoldiq uchun).
 	if count, err := s.countActiveWarehouses(ctx, companyID); err == nil && count == 1 {
-		return ""
+		var id string
+		err := s.pool.QueryRow(ctx, `
+			SELECT id FROM "Warehouse"
+			WHERE "companyId" = $1 AND status <> 'ARCHIVED'
+			ORDER BY "createdAt" ASC
+			LIMIT 1
+		`, companyID).Scan(&id)
+		if err == nil {
+			return id
+		}
 	}
-	return warehouseID
+	return ""
 }
 
 func (s *Service) bumpCatalogCaches(ctx context.Context, companyID string) {
@@ -150,7 +161,8 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 	}
 
 	sql := `
-		SELECT p.id, p.name, p.unit, p.status, p."imageUrl", p."categoryId", p."createdAt", p."updatedAt"
+		SELECT p.id, p.name, p.unit, p.type, p.status, p."imageUrl", p."categoryId", p.description,
+		       p."createdAt", p."updatedAt"
 		FROM "Product" p WHERE ` + where + ` ORDER BY p."updatedAt" DESC LIMIT ` + strconv.Itoa(limit) + ` OFFSET ` + strconv.Itoa(skip)
 
 	rows, err := s.pool.Query(ctx, sql, args...)
@@ -162,16 +174,16 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 	productIDs := []string{}
 	items := []map[string]any{}
 	for rows.Next() {
-		var id, name, unit, status string
-		var image, categoryID *string
+		var id, name, unit, pType, status string
+		var image, categoryID, description *string
 		var createdAt, updatedAt time.Time
-		if err := rows.Scan(&id, &name, &unit, &status, &image, &categoryID, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&id, &name, &unit, &pType, &status, &image, &categoryID, &description, &createdAt, &updatedAt); err != nil {
 			return nil, err
 		}
 		productIDs = append(productIDs, id)
 		items = append(items, map[string]any{
-			"id": id, "name": name, "unit": unit, "status": status,
-			"imageUrl": image, "categoryId": categoryID,
+			"id": id, "name": name, "unit": unit, "type": pType, "status": status,
+			"imageUrl": image, "categoryId": categoryID, "description": description,
 			"createdAt": createdAt, "updatedAt": updatedAt, "variants": []map[string]any{},
 		})
 	}
@@ -195,7 +207,8 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 
 func (s *Service) attachVariants(ctx context.Context, items []map[string]any, productIDs []string, companyID, warehouseID string) error {
 	rows, err := s.pool.Query(ctx, `
-		SELECT pv.id, pv."productId", pv.name, pv.sku, pv.barcode, pv."salePrice", pv.currency, pv.status
+		SELECT pv.id, pv."productId", pv.name, pv.sku, pv.barcode,
+		       pv."salePrice", pv."purchasePrice", pv.currency, pv.status, pv."attributesJson"
 		FROM "ProductVariant" pv
 		WHERE pv."companyId" = $1 AND pv."productId" = ANY($2) AND pv.status <> 'ARCHIVED'
 		ORDER BY pv."createdAt" ASC
@@ -210,15 +223,21 @@ func (s *Service) attachVariants(ctx context.Context, items []map[string]any, pr
 	for rows.Next() {
 		var id, productID, name, currency, status string
 		var sku, barcode *string
-		var salePrice float64
-		if err := rows.Scan(&id, &productID, &name, &sku, &barcode, &salePrice, &currency, &status); err != nil {
+		var salePrice, purchasePrice float64
+		var attributesJSON []byte
+		if err := rows.Scan(&id, &productID, &name, &sku, &barcode, &salePrice, &purchasePrice, &currency, &status, &attributesJSON); err != nil {
 			return err
 		}
 		variantIDs = append(variantIDs, id)
-		byProduct[productID] = append(byProduct[productID], map[string]any{
+		variant := map[string]any{
 			"id": id, "name": name, "sku": sku, "barcode": barcode,
-			"salePrice": salePrice, "currency": currency, "status": status,
-		})
+			"salePrice": salePrice, "purchasePrice": purchasePrice,
+			"currency": currency, "status": status,
+		}
+		if attrs := decodeVariantAttributes(attributesJSON); attrs != nil {
+			variant["attributesJson"] = attrs
+		}
+		byProduct[productID] = append(byProduct[productID], variant)
 	}
 	stockMap := map[string]float64{}
 	if warehouseID != "" && len(variantIDs) > 0 {
@@ -255,13 +274,13 @@ func (s *Service) attachVariants(ctx context.Context, items []map[string]any, pr
 }
 
 func (s *Service) FindOne(ctx context.Context, id, companyID, warehouseID string) (map[string]any, error) {
-	var name, unit, status string
+	var name, unit, pType, status string
 	var image, categoryID, description *string
 	var createdAt, updatedAt time.Time
 	err := s.pool.QueryRow(ctx, `
-		SELECT name, unit, status, "imageUrl", "categoryId", description, "createdAt", "updatedAt"
+		SELECT name, unit, type, status, "imageUrl", "categoryId", description, "createdAt", "updatedAt"
 		FROM "Product" WHERE id = $1 AND "companyId" = $2
-	`, id, companyID).Scan(&name, &unit, &status, &image, &categoryID, &description, &createdAt, &updatedAt)
+	`, id, companyID).Scan(&name, &unit, &pType, &status, &image, &categoryID, &description, &createdAt, &updatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -269,13 +288,25 @@ func (s *Service) FindOne(ctx context.Context, id, companyID, warehouseID string
 		return nil, err
 	}
 	item := map[string]any{
-		"id": id, "name": name, "unit": unit, "status": status,
+		"id": id, "name": name, "unit": unit, "type": pType, "status": status,
 		"imageUrl": image, "categoryId": categoryID, "description": description,
 		"createdAt": createdAt, "updatedAt": updatedAt, "variants": []map[string]any{},
 	}
 	items := []map[string]any{item}
-	if err := s.attachVariants(ctx, items, []string{id}, companyID, warehouseID); err != nil {
+	effectiveWH := s.effectiveWarehouseID(ctx, companyID, warehouseID)
+	if err := s.attachVariants(ctx, items, []string{id}, companyID, effectiveWH); err != nil {
 		return nil, err
 	}
 	return items[0], nil
+}
+
+func decodeVariantAttributes(raw []byte) map[string]any {
+	if len(raw) == 0 {
+		return nil
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
 }

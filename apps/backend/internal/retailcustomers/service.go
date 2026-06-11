@@ -169,13 +169,52 @@ func (s *Service) Summary(ctx context.Context, companyID string) ([]map[string]a
 	}
 	for i, c := range customers {
 		id := c["id"].(string)
+		prepaidUZS, _ := c["prepaidBalance"].(float64)
+		prepaidUSD, _ := c["prepaidBalanceUsd"].(float64)
 		debtUZS, debtUSD, openCount := s.customerDebt(ctx, companyID, id)
-		customers[i]["debtUZS"] = debtUZS
-		customers[i]["debtUSD"] = debtUSD
+		balances := map[string]any{
+			"UZS": currencyBalance(prepaidUZS, debtUZS),
+			"USD": currencyBalance(prepaidUSD, debtUSD),
+		}
+		netUZS := balances["UZS"].(map[string]any)["netBalance"].(float64)
+		customers[i]["balances"] = balances
+		customers[i]["totalDebt"] = debtUZS
+		customers[i]["prepaidBalance"] = prepaidUZS
+		customers[i]["netBalance"] = netUZS
+		customers[i]["totalPaid"] = 0
+		customers[i]["totalCredited"] = 0
 		customers[i]["openReceivablesCount"] = openCount
+		customers[i]["lastSaleAt"] = nil
 	}
 	_ = s.cache.SetJSON(ctx, key, customers, 25*time.Second)
 	return customers, nil
+}
+
+func currencyBalance(prepaid, debt float64) map[string]any {
+	return map[string]any{
+		"totalDebt":      debt,
+		"prepaidBalance": prepaid,
+		"netBalance":     math.Round((prepaid-debt)*100) / 100,
+	}
+}
+
+func ledgerOperationLabel(op string) string {
+	switch op {
+	case retailcredit.OpPrepaidIn:
+		return "Avans (kirim)"
+	case retailcredit.OpPrepaidOut:
+		return "Pul qaytarish"
+	case retailcredit.OpPrepaidUse:
+		return "Avansdan sotuv"
+	case retailcredit.OpCreditSale:
+		return "Nasiya sotuv"
+	case retailcredit.OpDebtPayment:
+		return "Qarz to'lovi"
+	case retailcredit.OpPOSVoid:
+		return "Bekor qilingan POS"
+	default:
+		return op
+	}
 }
 
 func (s *Service) customerDebt(ctx context.Context, companyID, customerID string) (uzs, usd float64, count int) {
@@ -354,11 +393,20 @@ func (s *Service) FindLedger(ctx context.Context, id, companyID string) (map[str
 	prepaidUZS := customer["prepaidBalance"].(float64)
 	prepaidUSD := customer["prepaidBalanceUsd"].(float64)
 
+	receivables, err := s.loadCustomerReceivables(ctx, companyID, id)
+	if err != nil {
+		return nil, err
+	}
+
 	rows, err := s.pool.Query(ctx, `
 		SELECT e.id, e.operation, e.debit, e.credit, e."balanceAfter", e.currency, e.note, e."createdAt",
-		       u.id, u."fullName"
+		       e."posSaleId", e."receivableId", e."paymentId",
+		       u.id, u."fullName",
+		       ps.id, ps."saleNumber", ps.currency, ps."completedAt", ps."totalAmount",
+		       (SELECT COUNT(*)::int FROM "PosSaleItem" si WHERE si."saleId" = ps.id) AS item_count
 		FROM "RetailCustomerLedgerEntry" e
 		LEFT JOIN "User" u ON u.id = e."createdById"
+		LEFT JOIN "PosSale" ps ON ps.id = e."posSaleId"
 		WHERE e."companyId" = $1 AND e."retailCustomerId" = $2
 		ORDER BY e."createdAt" DESC LIMIT 200
 	`, companyID, id)
@@ -372,27 +420,56 @@ func (s *Service) FindLedger(ctx context.Context, id, companyID string) (map[str
 		var debit, credit, bal float64
 		var note *string
 		var createdAt time.Time
+		var posSaleID, receivableID, paymentID *string
 		var uid, uname *string
-		if err := rows.Scan(&eid, &op, &debit, &credit, &bal, &currency, &note, &createdAt, &uid, &uname); err != nil {
+		var psID, psNumber, psCurrency *string
+		var psCompleted *time.Time
+		var psTotal *float64
+		var itemCount int
+		if err := rows.Scan(&eid, &op, &debit, &credit, &bal, &currency, &note, &createdAt,
+			&posSaleID, &receivableID, &paymentID,
+			&uid, &uname,
+			&psID, &psNumber, &psCurrency, &psCompleted, &psTotal, &itemCount); err != nil {
 			return nil, err
 		}
 		var by any = nil
 		if uid != nil {
 			by = map[string]any{"id": *uid, "fullName": *uname}
 		}
-		entries = append(entries, map[string]any{
-			"id": eid, "operation": op, "debit": debit, "credit": credit,
+		entry := map[string]any{
+			"id": eid, "operation": op, "operationLabel": ledgerOperationLabel(op),
+			"debit": debit, "credit": credit,
 			"balanceAfter": bal, "currency": currency, "note": note, "createdAt": createdAt, "createdBy": by,
-		})
+			"posSaleId": posSaleID, "receivableId": receivableID, "paymentId": paymentID,
+		}
+		if psID != nil && *psID != "" {
+			entry["posSaleItemCount"] = itemCount
+			entry["posSale"] = map[string]any{
+				"id": *psID, "saleNumber": derefStr(psNumber), "currency": derefStr(psCurrency),
+				"completedAt": psCompleted, "totalAmount": derefFloat(psTotal),
+			}
+		}
+		entries = append(entries, entry)
 	}
 
+	balances := map[string]any{
+		"UZS": currencyBalance(prepaidUZS, uzsDebt),
+		"USD": currencyBalance(prepaidUSD, usdDebt),
+	}
+	netUZS := balances["UZS"].(map[string]any)["netBalance"].(float64)
+
 	result := map[string]any{
-		"customer": customer,
-		"balances": map[string]any{
-			"UZS": map[string]any{"prepaidBalance": prepaidUZS, "totalDebt": uzsDebt, "netBalance": math.Round((prepaidUZS-uzsDebt)*100) / 100},
-			"USD": map[string]any{"prepaidBalance": prepaidUSD, "totalDebt": usdDebt, "netBalance": math.Round((prepaidUSD-usdDebt)*100) / 100},
+		"customer": map[string]any{
+			"id": customer["id"], "name": customer["name"],
+			"phone": customer["phone"], "notes": customer["notes"],
 		},
-		"entries": entries,
+		"balances":        balances,
+		"totalDebt":       uzsDebt,
+		"prepaidBalance":  prepaidUZS,
+		"netBalance":      netUZS,
+		"totalPaid":       0,
+		"entries":         entries,
+		"receivables":     receivables,
 	}
 	if s.cache != nil {
 		_ = s.cache.SetJSON(ctx, key, result, 20*time.Second)
@@ -429,4 +506,91 @@ func (s *Service) LedgerSaleItems(ctx context.Context, customerID, entryID, comp
 		})
 	}
 	return map[string]any{"items": items}, rows.Err()
+}
+
+func (s *Service) loadCustomerReceivables(ctx context.Context, companyID, customerID string) ([]map[string]any, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT r.id, r.amount, r."remainingAmount", r.currency, r.status, r."createdAt",
+		       ps."saleNumber", ps."completedAt", ps."totalAmount"
+		FROM "RetailReceivable" r
+		LEFT JOIN "PosSale" ps ON ps.id = r."posSaleId"
+		WHERE r."companyId" = $1 AND r."retailCustomerId" = $2 AND r.status IN ('OPEN', 'PARTIAL')
+		ORDER BY r."createdAt" DESC
+	`, companyID, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []map[string]any{}
+	for rows.Next() {
+		var id, currency, status string
+		var amount, remaining float64
+		var createdAt time.Time
+		var saleNumber *string
+		var completedAt *time.Time
+		var totalAmount *float64
+		if err := rows.Scan(&id, &amount, &remaining, &currency, &status, &createdAt,
+			&saleNumber, &completedAt, &totalAmount); err != nil {
+			return nil, err
+		}
+		payments, err := s.receivablePayments(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		var posSale any = nil
+		if saleNumber != nil {
+			posSale = map[string]any{
+				"saleNumber": *saleNumber, "completedAt": completedAt, "totalAmount": totalAmount,
+			}
+		}
+		out = append(out, map[string]any{
+			"id": id, "amount": amount, "remainingAmount": remaining,
+			"currency": currency, "status": status, "createdAt": createdAt,
+			"posSale": posSale, "payments": payments,
+		})
+	}
+	return out, rows.Err()
+}
+
+func (s *Service) receivablePayments(ctx context.Context, receivableID string) ([]map[string]any, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT p.id, p.amount, p.notes, p."createdAt", u."fullName"
+		FROM "RetailReceivablePayment" p
+		LEFT JOIN "User" u ON u.id = p."createdById"
+		WHERE p."receivableId" = $1
+		ORDER BY p."createdAt" DESC LIMIT 20
+	`, receivableID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []map[string]any{}
+	for rows.Next() {
+		var id string
+		var amount float64
+		var notes, uname *string
+		var createdAt time.Time
+		if err := rows.Scan(&id, &amount, &notes, &createdAt, &uname); err != nil {
+			return nil, err
+		}
+		out = append(out, map[string]any{
+			"id": id, "amount": amount, "notes": notes, "createdAt": createdAt,
+			"createdBy": map[string]any{"fullName": uname},
+		})
+	}
+	return out, rows.Err()
+}
+
+func derefStr(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+func derefFloat(p *float64) float64 {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
