@@ -44,6 +44,29 @@ export type PlatformCompanyRow = {
   };
 };
 
+export type PlatformUserRow = {
+  id: string;
+  fullName: string;
+  login: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+  companyCount: number;
+  companiesPreview: string;
+  createdAt: string;
+};
+
+export type PlatformScheduledJob = {
+  id: string;
+  kind: 'broadcast' | 'subscription';
+  status: string;
+  runAt: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  processedAt?: string | null;
+  errorMessage?: string | null;
+};
+
 export const platformService = {
   async getAccess() {
     const { data } = await api.get<{ isPlatformAdmin: boolean; pinRequired: boolean }>(
@@ -86,9 +109,77 @@ export const platformService = {
       subscriptionStatus?: 'TRIAL' | 'ACTIVE' | 'EXPIRED';
       extendTrialDays?: number;
       subscriptionNote?: string;
+      trialEndsAt?: string;
+      companyStatus?: 'active' | 'suspended';
+      scheduleAt?: string;
     },
   ) {
     const { data } = await api.patch(`/platform/companies/${companyId}`, body, {
+      headers: platformHeaders(),
+    });
+    return data;
+  },
+
+  async listUsers(params?: { search?: string; status?: string; page?: number; limit?: number }) {
+    const { data } = await api.get('/platform/users', {
+      params,
+      headers: platformHeaders(),
+    });
+    return data as {
+      items: PlatformUserRow[];
+      page: number;
+      total: number;
+      hasMore: boolean;
+    };
+  },
+
+  async updateUser(userId: string, body: { status: 'active' | 'inactive' }) {
+    const { data } = await api.patch(`/platform/users/${userId}`, body, {
+      headers: platformHeaders(),
+    });
+    return data;
+  },
+
+  async getRedisHealth() {
+    const { data } = await api.get<{ cache: Record<string, unknown>; ping: string }>(
+      '/platform/redis-health',
+      { headers: platformHeaders() },
+    );
+    return data;
+  },
+
+  async broadcast(body: {
+    title: string;
+    message: string;
+    target: string;
+    type?: string;
+    companyIds?: string[];
+    userIds?: string[];
+    scheduledAt?: string;
+  }) {
+    const { data } = await api.post<{ sent?: number; scheduled?: boolean; job?: PlatformScheduledJob; message?: string }>(
+      '/platform/broadcast',
+      body,
+      { headers: platformHeaders() },
+    );
+    return data;
+  },
+
+  async listScheduledJobs(params?: { status?: string; page?: number; limit?: number }) {
+    const { data } = await api.get('/platform/scheduled-jobs', {
+      params,
+      headers: platformHeaders(),
+    });
+    return data as {
+      items: PlatformScheduledJob[];
+      page: number;
+      total: number;
+      hasMore: boolean;
+    };
+  },
+
+  async cancelScheduledJob(jobId: string) {
+    const { data } = await api.delete(`/platform/scheduled-jobs/${jobId}`, {
       headers: platformHeaders(),
     });
     return data;

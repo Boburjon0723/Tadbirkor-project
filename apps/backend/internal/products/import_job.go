@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 func importSyncMaxRows() int {
@@ -301,6 +303,7 @@ func (s *Service) processImportJob(ctx context.Context, jobID string) error {
 	failed := 0
 	var lastErr string
 	importErrors := []map[string]any{}
+	catCache := map[string]string{}
 
 	for i, row := range workRows {
 		if s.isImportJobCancelled(ctx, jobID) {
@@ -310,7 +313,7 @@ func (s *Service) processImportJob(ctx context.Context, jobID string) error {
 		if wh == "" {
 			wh = defaultWH
 		}
-		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc)
+		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc, catCache)
 		if err != nil {
 			failed++
 			lastErr = err.Error()
@@ -381,8 +384,7 @@ func (s *Service) emitImportProgress(companyID, jobID, status string, processed,
 func (s *Service) emitImportDone(companyID, jobID, status string, total, success, failed int, errMsg *string) {
 	s.emitImportProgress(companyID, jobID, status, total, total, success, failed, errMsg)
 	if s.hub != nil {
-		s.hub.EmitInventoryChanged(companyID, map[string]any{"reason": "PRODUCT_IMPORT"})
-		s.hub.EmitDashboardRefresh(companyID)
+		pkgrealtime.NotifyInventory(context.Background(), s.hub, s.cache, companyID, map[string]any{"reason": "PRODUCT_IMPORT"})
 	}
 }
 

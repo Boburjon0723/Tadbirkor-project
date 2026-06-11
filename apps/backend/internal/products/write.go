@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
 var (
@@ -251,12 +252,13 @@ func (s *Service) Create(ctx context.Context, companyID, userID string, in Creat
 		return nil, err
 	}
 	if initialWarehouse != "" {
-		s.hub.EmitInventoryChanged(companyID, map[string]any{
+		pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 			"productId":   productID,
 			"warehouseId": initialWarehouse,
 			"reason":      "product.created",
 		})
-		s.hub.EmitDashboardRefresh(companyID)
+	} else {
+		s.bumpCatalogCaches(ctx, companyID)
 	}
 	return s.FindOne(ctx, productID, companyID, initialWarehouse)
 }
@@ -387,8 +389,9 @@ func (s *Service) Update(ctx context.Context, id, companyID, userID string, in U
 		if primaryWarehouse != "" {
 			payload["warehouseId"] = primaryWarehouse
 		}
-		s.hub.EmitInventoryChanged(companyID, payload)
-		s.hub.EmitDashboardRefresh(companyID)
+		pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, payload)
+	} else {
+		s.bumpCatalogCaches(ctx, companyID)
 	}
 
 	warehouseID := ""

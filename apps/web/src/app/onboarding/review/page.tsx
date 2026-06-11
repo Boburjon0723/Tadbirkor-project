@@ -36,6 +36,7 @@ import {
 } from '@/lib/onboarding';
 import { patchSessionCompanyActive } from '@/lib/session-cache';
 import { refreshOnboardingSession } from '@/lib/onboarding-session';
+import { moduleKeysToDisplay } from '@/lib/onboarding-modules';
 import { toast, formatApiError } from '@/lib/toast';
 
 export default function FinalReviewPage() {
@@ -45,6 +46,13 @@ export default function FinalReviewPage() {
   const [loading, setLoading] = React.useState(false);
 
   const me = session?.me;
+  const enabledModuleCards = React.useMemo(
+    () => moduleKeysToDisplay(session?.features?.enabledModules || []),
+    [session?.features?.enabledModules],
+  );
+  const employeesEnabled = (session?.features?.enabledModules || [])
+    .map((m) => m.toUpperCase())
+    .includes('EMPLOYEES');
 
   React.useEffect(() => {
     if (sessionPending || !session?.me) return;
@@ -174,10 +182,13 @@ export default function FinalReviewPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              {['Mahsulotlar', 'Ombor', 'B2B buyurtmalar', 'Qarz daftari', 'Rollar', 'Hisobotlar'].map((m) => (
-                <div key={m} className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-sm flex items-center gap-2">
+              {enabledModuleCards.map((m) => (
+                <div
+                  key={m.id}
+                  className="px-4 py-2 bg-white/5 border border-white/5 rounded-xl text-sm flex items-center gap-2"
+                >
                   <CheckCircle2 size={14} className="text-emerald-500" />
-                  {m}
+                  {m.title}
                 </div>
               ))}
             </div>
@@ -194,18 +205,17 @@ export default function FinalReviewPage() {
                 <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">Xodimlar ruxsati</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { role: 'Owner', count: 'Siz' },
-                { role: 'Omborchi', count: 'Faollashtirildi' },
-                { role: 'Buxgalter', count: 'Faollashtirildi' },
-                { role: 'Menejer', count: 'Faollashtirildi' },
-              ].map((r, i) => (
-                <div key={i} className="p-4 bg-white/5 border border-white/5 rounded-2xl">
-                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">{r.role}</p>
-                  <p className="font-bold text-sm">{r.count}</p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Egasi</p>
+                <p className="font-bold text-sm">{me?.user?.fullName || 'Siz'}</p>
+              </div>
+              <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Xodimlar moduli</p>
+                <p className="font-bold text-sm">
+                  {employeesEnabled ? 'Yoqilgan — jamoa qo‘shishingiz mumkin' : 'Hozircha o‘chiq'}
+                </p>
+              </div>
             </div>
           </div>
 

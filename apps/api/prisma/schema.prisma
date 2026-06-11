@@ -1004,6 +1004,21 @@ model Notification {
   @@index([userId, moduleKey, createdAt(sort: Desc)])
 }
 
+/// Platforma admin: rejalashtirilgan xabar yoki obuna o'zgarishi
+model PlatformScheduledJob {
+  id           String    @id @default(uuid())
+  kind         String    // broadcast | subscription
+  status       String    @default("pending") // pending | done | cancelled | failed
+  runAt        DateTime
+  payload      Json
+  createdById  String?
+  createdAt    DateTime  @default(now())
+  processedAt  DateTime?
+  errorMessage String?
+
+  @@index([status, runAt])
+}
+
 /// Bildirishnoma yetkazish holati (Telegram, keyinchalik boshqa kanallar)
 model NotificationDelivery {
   id             String    @id @default(uuid())

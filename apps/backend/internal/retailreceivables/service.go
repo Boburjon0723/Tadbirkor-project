@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/retailcredit"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 var (
@@ -21,11 +22,12 @@ var (
 )
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
+	return &Service{pool: pool, cache: c}
 }
 
 type PaymentInput struct {
@@ -225,6 +227,10 @@ func (s *Service) RecordPayment(ctx context.Context, id, companyID, userID strin
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
+	}
+	if s.cache != nil {
+		s.cache.Del(ctx, cache.RetailSummaryKey(companyID))
+		s.cache.Del(ctx, cache.RetailLedgerKey(companyID, customerID))
 	}
 	_ = fromCash
 	return s.FindOne(ctx, id, companyID)

@@ -15,6 +15,7 @@ import (
 	"github.com/jung-kurt/gofpdf"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/xuri/excelize/v2"
 )
@@ -26,9 +27,10 @@ type Service struct {
 	repo   *Repository
 	notify *notifications.Service
 	hub    pkgrealtime.Hub
+	cache  *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, notify *notifications.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
@@ -37,6 +39,7 @@ func NewService(pool *pgxpool.Pool, repo *Repository, notify *notifications.Serv
 		repo:   repo,
 		notify: notify,
 		hub:    hub,
+		cache:  c,
 	}
 }
 
@@ -965,7 +968,7 @@ func (s *Service) Accept(ctx context.Context, id, companyID, userID string, inpu
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": warehouseID,
 		"reason":      "GOODS_RECEIPT",
 	})
@@ -1032,7 +1035,7 @@ func (s *Service) PartialAccept(ctx context.Context, id, companyID, userID strin
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": warehouseID,
 		"reason":      "GOODS_RECEIPT",
 	})

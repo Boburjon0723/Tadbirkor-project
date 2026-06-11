@@ -12,6 +12,7 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/companies"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
@@ -21,13 +22,14 @@ type Service struct {
 	companies *companies.Service
 	notify    *notifications.Service
 	hub       pkgrealtime.Hub
+	cache     *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, notify *notifications.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, repo: repo, companies: companiesSvc, notify: notify, hub: hub}
+	return &Service{pool: pool, repo: repo, companies: companiesSvc, notify: notify, hub: hub, cache: c}
 }
 
 func (s *Service) assertFieldModule(ctx context.Context, companyID string) error {
@@ -117,7 +119,7 @@ func (s *Service) CreateAndAssign(ctx context.Context, companyID, userID string,
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": input.SourceWarehouseID,
 		"reason":      "FIELD_TASK",
 	})
@@ -383,7 +385,7 @@ func (s *Service) ApproveTask(ctx context.Context, companyID, userID, id string)
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": warehouseID,
 		"reason":      "FIELD_TASK",
 	})

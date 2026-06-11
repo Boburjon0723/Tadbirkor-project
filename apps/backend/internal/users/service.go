@@ -4,14 +4,39 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
+	return &Service{pool: pool, cache: c}
+}
+
+func (s *Service) invalidateUserMe(ctx context.Context, userID, companyID string) {
+	if s.cache != nil {
+		s.cache.InvalidateAuthMe(ctx, userID, companyID)
+	}
+}
+
+func (s *Service) invalidateUserMeAllCompanies(ctx context.Context, userID string) {
+	if s.cache == nil {
+		return
+	}
+	rows, err := s.pool.Query(ctx, `SELECT "companyId" FROM "CompanyUser" WHERE "userId" = $1`, userID)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var companyID string
+		if err := rows.Scan(&companyID); err == nil {
+			s.cache.InvalidateAuthMe(ctx, userID, companyID)
+		}
+	}
 }
 
 func (s *Service) FindByCompany(ctx context.Context, companyID string) ([]map[string]any, error) {

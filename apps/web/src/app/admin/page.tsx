@@ -1,6 +1,7 @@
-import { redirect } from 'next/navigation';
+'use client';
 
-/** Eski /admin URL — haqiqiy panel /dashboard/platform-admin da */
+import { PlatformCompaniesPanel } from '@/components/platform/PlatformCompaniesPanel';
+
 export default function AdminDashboardPage() {
-  redirect('/dashboard/platform-admin');
+  return <PlatformCompaniesPanel />;
 }

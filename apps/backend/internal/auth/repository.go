@@ -28,6 +28,7 @@ type UserRow struct {
 	Email        *string
 	Phone        *string
 	PasswordHash *string
+	Status       string
 	TelegramChat *string
 	TelegramAt   *time.Time
 }
@@ -69,7 +70,7 @@ type CompanyRow struct {
 }
 
 func (r *Repository) FindUserByLogin(ctx context.Context, login string) (*UserRow, []MembershipRow, error) {
-	user, err := r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", "telegramChatId", "telegramLinkedAt" FROM "User" WHERE login = $1`, login)
+	user, err := r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", status, "telegramChatId", "telegramLinkedAt" FROM "User" WHERE login = $1`, login)
 	if err != nil || user == nil {
 		return nil, nil, err
 	}
@@ -78,13 +79,13 @@ func (r *Repository) FindUserByLogin(ctx context.Context, login string) (*UserRo
 }
 
 func (r *Repository) FindUserByID(ctx context.Context, userID string) (*UserRow, error) {
-	return r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", "telegramChatId", "telegramLinkedAt" FROM "User" WHERE id = $1`, userID)
+	return r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", status, "telegramChatId", "telegramLinkedAt" FROM "User" WHERE id = $1`, userID)
 }
 
 func (r *Repository) findUser(ctx context.Context, q string, arg string) (*UserRow, error) {
 	row := r.pool.QueryRow(ctx, q, arg)
 	var u UserRow
-	err := row.Scan(&u.ID, &u.FullName, &u.Login, &u.Email, &u.Phone, &u.PasswordHash, &u.TelegramChat, &u.TelegramAt)
+	err := row.Scan(&u.ID, &u.FullName, &u.Login, &u.Email, &u.Phone, &u.PasswordHash, &u.Status, &u.TelegramChat, &u.TelegramAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

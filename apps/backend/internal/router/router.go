@@ -19,6 +19,7 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/expenses"
 	"github.com/tadbirkor/axis-erp/backend/internal/field"
 	"github.com/tadbirkor/axis-erp/backend/internal/goodsreceipts"
+	"github.com/tadbirkor/axis-erp/backend/internal/health"
 	"github.com/tadbirkor/axis-erp/backend/internal/income"
 	"github.com/tadbirkor/axis-erp/backend/internal/inventorycounts"
 	"github.com/tadbirkor/axis-erp/backend/internal/invoices"
@@ -96,6 +97,7 @@ type Deps struct {
 	TelegramHandler          *telegram.Handler
 	InvoicesHandler          *invoices.Handler
 	StorefrontHandler        *storefront.Handler
+	HealthHandler            *health.Handler
 }
 
 func New(d Deps) http.Handler {
@@ -120,6 +122,7 @@ func New(d Deps) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"ok":true,"service":"backend-go","version":"1.0.0","mode":"standalone"}`))
 		})
+		api.Get("/health/deep", d.HealthHandler.Deep)
 		api.Get("/ping", func(w http.ResponseWriter, _ *http.Request) {
 			_, _ = w.Write([]byte("pong"))
 		})
@@ -633,7 +636,11 @@ func New(d Deps) http.Handler {
 			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Get("/redis-health", d.PlatformHandler.RedisHealth)
 			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Get("/companies", d.PlatformHandler.ListCompanies)
 			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Patch("/companies/{companyId}", d.PlatformHandler.UpdateCompany)
+			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Get("/users", d.PlatformHandler.ListUsers)
+			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Patch("/users/{userId}", d.PlatformHandler.UpdateUser)
 			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Post("/broadcast", d.PlatformHandler.Broadcast)
+			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Get("/scheduled-jobs", d.PlatformHandler.ListScheduledJobs)
+			pl.With(jwt, middleware.RequirePlatformAdmin(d.Pool)).Delete("/scheduled-jobs/{jobId}", d.PlatformHandler.CancelScheduledJob)
 			pl.NotFound(apiNotFound)
 			pl.MethodNotAllowed(apiNotFound)
 		})

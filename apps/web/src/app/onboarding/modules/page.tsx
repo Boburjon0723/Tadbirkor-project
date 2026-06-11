@@ -2,41 +2,34 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Package, 
-  Warehouse, 
-  ShoppingCart, 
-  FileText, 
-  Wallet, 
-  Users,
+import {
   CheckCircle2,
   Zap,
   ArrowRight,
   ChevronLeft,
   Clock,
-  LayoutGrid
+  LayoutGrid,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { companiesService } from '@/services/companies.service';
 import { refreshOnboardingSession } from '@/lib/onboarding-session';
+import { moduleKeysToDisplay } from '@/lib/onboarding-modules';
 
 const steps = [
-  { id: 1, name: "Hisob" },
-  { id: 2, name: "Kompaniya" },
-  { id: 3, name: "Biznes" },
-  { id: 4, name: "Modullar" },
-  { id: 5, name: "Jamoa" },
-  { id: 6, name: "Yakunlash" }
+  { id: 1, name: 'Hisob' },
+  { id: 2, name: 'Kompaniya' },
+  { id: 3, name: 'Biznes' },
+  { id: 4, name: 'Modullar' },
+  { id: 5, name: 'Jamoa' },
+  { id: 6, name: 'Yakunlash' },
 ];
 
-const moduleCatalog: Record<string, { id: string; title: string; desc: string; icon: React.ReactNode }> = {
-  WAREHOUSE: { id: 'warehouse', title: 'Ombor', desc: 'Kirim, chiqim, qoldiq va qabul qilish.', icon: <Warehouse /> },
-  B2B: { id: 'b2b', title: 'B2B buyurtmalar', desc: 'Hamkorlar bilan buyurtma almashish.', icon: <ShoppingCart /> },
-  PARTNERS: { id: 'partners', title: 'Hamkorlar', desc: 'Kompaniyalar bilan hamkorlikni boshqarish.', icon: <Users /> },
-  PRODUCT_MAPPING: { id: 'mapping', title: 'Mahsulot mapping', desc: 'Hamkor mahsulotlarini moslashtirish.', icon: <FileText /> },
-  DEBT: { id: 'debt', title: 'Qarz daftari', desc: 'Debitorlik va kreditorlikni nazorat qilish.', icon: <Wallet /> },
-};
+const laterModules = [
+  { title: 'Ishlab chiqarish Pro', icon: <Zap /> },
+  { title: 'Click/Payme', icon: <LayoutGrid /> },
+  { title: 'AI analitika', icon: <Zap /> },
+];
 
 type EnabledModuleCard = {
   id: string;
@@ -45,45 +38,35 @@ type EnabledModuleCard = {
   icon: React.ReactNode;
 };
 
-const laterModules = [
-  { title: 'POS / Kassa', icon: <LayoutGrid /> },
-  { title: 'Ishlab chiqarish Pro', icon: <Zap /> },
-  { title: 'Click/Payme', icon: <Wallet /> },
-  { title: 'AI analitika', icon: <Zap /> },
-];
-
 export default function ModulesResultPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [enabledModules, setEnabledModules] = React.useState<EnabledModuleCard[]>([
-    { id: 'products', title: 'Mahsulotlar', desc: 'Mahsulot va variantlarni boshqarish.', icon: <Package /> },
-  ]);
+  const [enabledModules, setEnabledModules] = React.useState<EnabledModuleCard[]>(
+    moduleKeysToDisplay([]),
+  );
 
   React.useEffect(() => {
     const loadModules = async () => {
       try {
         const localModulesRaw = localStorage.getItem('onboarding_enabled_modules');
-        const localModules = localModulesRaw ? JSON.parse(localModulesRaw) as string[] : [];
+        const localModules = localModulesRaw ? (JSON.parse(localModulesRaw) as string[]) : [];
 
         const remoteConfig = await companiesService.getFeatures();
         const remoteModules = remoteConfig?.enabledModules || [];
 
-        const merged = Array.from(new Set([...localModules, ...remoteModules].map((m) => m.toUpperCase())));
-        const normalized = merged
-          .map((key) => moduleCatalog[key])
-          .filter(Boolean);
-
-        setEnabledModules([
-          { id: 'products', title: 'Mahsulotlar', desc: 'Mahsulot va variantlarni boshqarish.', icon: <Package /> },
-          ...normalized,
-        ]);
+        const merged = Array.from(
+          new Set([...localModules, ...remoteModules].map((m) => m.toUpperCase())),
+        );
+        setEnabledModules(moduleKeysToDisplay(merged));
       } catch (error) {
         console.error('Enabled modules fetch failed:', error);
       }
     };
 
-    loadModules();
+    void loadModules();
   }, []);
+
+  const hasPos = enabledModules.some((m) => m.id === 'pos');
 
   const handleSetupTeam = async () => {
     await refreshOnboardingSession(queryClient);
@@ -97,7 +80,6 @@ export default function ModulesResultPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col">
-      {/* Top Progress Stepper */}
       <div className="w-full bg-[#080808] border-b border-white/5 py-6 px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -107,13 +89,20 @@ export default function ModulesResultPage() {
           <div className="hidden md:flex items-center gap-12">
             {steps.map((step) => (
               <div key={step.id} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                  step.id === 4 ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 
-                  step.id < 4 ? 'bg-emerald-500' : 'bg-white/5 text-gray-500'
-                }`}>
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                    step.id === 4
+                      ? 'bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                      : step.id < 4
+                        ? 'bg-emerald-500'
+                        : 'bg-white/5 text-gray-500'
+                  }`}
+                >
                   {step.id < 4 ? <CheckCircle2 size={16} /> : step.id}
                 </div>
-                <span className={`text-sm font-medium ${step.id === 4 ? 'text-white' : 'text-gray-500'}`}>
+                <span
+                  className={`text-sm font-medium ${step.id === 4 ? 'text-white' : 'text-gray-500'}`}
+                >
                   {step.name}
                 </span>
               </div>
@@ -137,8 +126,7 @@ export default function ModulesResultPage() {
           </p>
           <h1 className="text-3xl md:text-5xl font-bold mb-4">Modullar tanlandi</h1>
           <p className="text-gray-500 text-lg max-w-2xl mx-auto">
-            Savollaringiz asosida quyidagi bo‘limlar yoqiladi. Tizim to‘liq ishga tushishi uchun jamoa va
-            yakunlash bosqichlarini ham tugating.
+            Savollaringiz va biznes turiga qarab quyidagi bo‘limlar yoqiladi.
           </p>
         </div>
 
@@ -156,33 +144,42 @@ export default function ModulesResultPage() {
               </div>
               <h3 className="font-bold mb-2 text-lg">{module.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-6">{module.desc}</p>
-              
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-600/10 text-blue-400 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit">
                 <CheckCircle2 size={12} />
-                Tanlandi
+                Yoqilgan
               </div>
             </motion.div>
           ))}
         </div>
 
-        <div className="pt-12 border-t border-white/5">
-          <h4 className="text-gray-500 font-bold uppercase tracking-widest text-xs mb-8 text-center">Keyingi bosqich uchun</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-50 grayscale">
-            {laterModules.map((module, idx) => (
-              <div key={idx} className="p-6 bg-white/5 border border-white/5 rounded-3xl flex flex-col items-center gap-3">
-                <div className="text-gray-400">{module.icon}</div>
-                <span className="text-xs font-bold">{module.title}</span>
-                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 text-gray-400 rounded-full text-[9px] font-bold uppercase">
-                  <Clock size={10} />
-                  Keyinroq
-                </div>
-              </div>
-            ))}
+        {!hasPos && (
+          <div className="pt-12 border-t border-white/5">
+            <h4 className="text-gray-500 font-bold uppercase tracking-widest text-xs mb-8 text-center">
+              Keyinroq yoqish mumkin
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 opacity-50 grayscale">
+              {[{ title: 'POS / Kassa', icon: <LayoutGrid /> }, ...laterModules].map(
+                (module, idx) => (
+                  <div
+                    key={idx}
+                    className="p-6 bg-white/5 border border-white/5 rounded-3xl flex flex-col items-center gap-3"
+                  >
+                    <div className="text-gray-400">{module.icon}</div>
+                    <span className="text-xs font-bold">{module.title}</span>
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 text-gray-400 rounded-full text-[9px] font-bold uppercase">
+                      <Clock size={10} />
+                      Keyinroq
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-20 flex items-center justify-between">
-          <button 
+          <button
+            type="button"
             onClick={() => router.push('/onboarding/questions')}
             className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
           >
@@ -190,14 +187,14 @@ export default function ModulesResultPage() {
             Orqaga
           </button>
           <div className="flex gap-4">
-             <button 
+            <button
               type="button"
               onClick={() => void handleSkipTeam()}
               className="px-6 py-4 text-gray-400 font-bold hover:text-white transition-all"
             >
               Jamoani keyinroq sozlayman
             </button>
-            <button 
+            <button
               type="button"
               onClick={() => void handleSetupTeam()}
               className="px-10 py-5 bg-white text-black font-bold rounded-2xl hover:bg-gray-200 transition-all flex items-center gap-2 shadow-xl shadow-white/5"

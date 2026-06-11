@@ -265,7 +265,7 @@ func (s *Service) CreateSaleOrder(ctx context.Context, companyID, userID, contac
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": input.WarehouseID,
 		"reason":      "PARTNER_SALE_ORDER",
 	})

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 var (
@@ -15,7 +16,8 @@ var (
 )
 
 func (s *Service) invalidate(ctx context.Context, companyID string) {
-	s.cache.DelByPrefix(ctx, fmt.Sprintf("categories:%s:", companyID))
+	s.cache.DelByPrefix(ctx, cache.CategoriesPrefix(companyID))
+	s.cache.InvalidateProductsList(ctx, companyID)
 }
 
 func (s *Service) Create(ctx context.Context, companyID string, in CreateInput) (map[string]any, error) {

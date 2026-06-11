@@ -3,7 +3,6 @@ package categories
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -28,7 +27,7 @@ func (s *Service) cacheKey(companyID, warehouseID string) string {
 	if wh == "" {
 		wh = "*"
 	}
-	return fmt.Sprintf("categories:%s:%s", companyID, wh)
+	return cache.CategoriesPrefix(companyID) + wh
 }
 
 func (s *Service) FindAll(ctx context.Context, companyID, warehouseID string) ([]map[string]any, error) {

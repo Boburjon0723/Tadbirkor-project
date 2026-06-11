@@ -37,9 +37,12 @@ func (s *Service) posWhereSQL() string {
 }
 
 func (s *Service) invalidate(ctx context.Context, companyID, customerID string) {
-	s.cache.Del(ctx, fmt.Sprintf("retail-summary:%s", companyID))
+	if s.cache == nil {
+		return
+	}
+	s.cache.Del(ctx, cache.RetailSummaryKey(companyID))
 	if customerID != "" {
-		s.cache.Del(ctx, fmt.Sprintf("retail-ledger:%s:%s", companyID, customerID))
+		s.cache.Del(ctx, cache.RetailLedgerKey(companyID, customerID))
 	}
 }
 
@@ -155,7 +158,7 @@ func (s *Service) PosPicker(ctx context.Context, companyID string, limit int) ([
 }
 
 func (s *Service) Summary(ctx context.Context, companyID string) ([]map[string]any, error) {
-	key := fmt.Sprintf("retail-summary:%s", companyID)
+	key := cache.RetailSummaryKey(companyID)
 	var cached []map[string]any
 	if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
 		return cached, nil
@@ -335,6 +338,14 @@ func (s *Service) RecordWithdraw(ctx context.Context, id, companyID, userID stri
 }
 
 func (s *Service) FindLedger(ctx context.Context, id, companyID string) (map[string]any, error) {
+	key := cache.RetailLedgerKey(companyID, id)
+	if s.cache != nil {
+		var cached map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
+			return cached, nil
+		}
+	}
+
 	customer, err := s.FindOne(ctx, id, companyID)
 	if err != nil {
 		return nil, err
@@ -375,14 +386,18 @@ func (s *Service) FindLedger(ctx context.Context, id, companyID string) (map[str
 		})
 	}
 
-	return map[string]any{
+	result := map[string]any{
 		"customer": customer,
 		"balances": map[string]any{
 			"UZS": map[string]any{"prepaidBalance": prepaidUZS, "totalDebt": uzsDebt, "netBalance": math.Round((prepaidUZS-uzsDebt)*100) / 100},
 			"USD": map[string]any{"prepaidBalance": prepaidUSD, "totalDebt": usdDebt, "netBalance": math.Round((prepaidUSD-usdDebt)*100) / 100},
 		},
 		"entries": entries,
-	}, nil
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, key, result, 20*time.Second)
+	}
+	return result, nil
 }
 
 func (s *Service) LedgerSaleItems(ctx context.Context, customerID, entryID, companyID string) (map[string]any, error) {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/tadbirkor/axis-erp/backend/pkg/scope"
 )
@@ -22,19 +23,20 @@ var (
 )
 
 type Service struct {
-	pool *pgxpool.Pool
-	hub  pkgrealtime.Hub
+	pool  *pgxpool.Pool
+	hub   pkgrealtime.Hub
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, hub: hub}
+	return &Service{pool: pool, hub: hub, cache: c}
 }
 
-func (s *Service) emitInventoryChanged(companyID, warehouseID, variantID, reason string) {
-	if s == nil || s.hub == nil {
+func (s *Service) emitInventoryChanged(ctx context.Context, companyID, warehouseID, variantID, reason string) {
+	if s == nil {
 		return
 	}
 	payload := map[string]any{"reason": reason}
@@ -44,8 +46,7 @@ func (s *Service) emitInventoryChanged(companyID, warehouseID, variantID, reason
 	if variantID != "" {
 		payload["productVariantId"] = variantID
 	}
-	s.hub.EmitInventoryChanged(companyID, payload)
-	s.hub.EmitDashboardRefresh(companyID)
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, payload)
 }
 
 type MovementInput struct {
@@ -257,7 +258,7 @@ func (s *Service) RecordIn(ctx context.Context, companyID, userID string, in Mov
 	if err != nil {
 		return nil, err
 	}
-	s.emitInventoryChanged(companyID, in.WarehouseID, in.ProductVariantID, "MANUAL")
+	s.emitInventoryChanged(ctx, companyID, in.WarehouseID, in.ProductVariantID, "MANUAL")
 	return s.movementByID(ctx, id)
 }
 
@@ -276,7 +277,7 @@ func (s *Service) RecordOut(ctx context.Context, companyID, userID string, in Mo
 	if err != nil {
 		return nil, err
 	}
-	s.emitInventoryChanged(companyID, in.WarehouseID, in.ProductVariantID, "MANUAL")
+	s.emitInventoryChanged(ctx, companyID, in.WarehouseID, in.ProductVariantID, "MANUAL")
 	return s.movementByID(ctx, id)
 }
 
@@ -298,7 +299,7 @@ func (s *Service) Adjust(ctx context.Context, companyID, userID string, in Adjus
 	if err != nil {
 		return nil, err
 	}
-	s.emitInventoryChanged(companyID, in.WarehouseID, in.ProductVariantID, "ADJUSTMENT")
+	s.emitInventoryChanged(ctx, companyID, in.WarehouseID, in.ProductVariantID, "ADJUSTMENT")
 	return s.movementByID(ctx, id)
 }
 
@@ -339,7 +340,7 @@ func (s *Service) Transfer(ctx context.Context, companyID, userID string, in Tra
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	s.emitInventoryChanged(companyID, in.FromWarehouseID, in.ProductVariantID, "TRANSFER")
+	s.emitInventoryChanged(ctx, companyID, in.FromWarehouseID, in.ProductVariantID, "TRANSFER")
 	return s.movementByID(ctx, destID)
 }
 

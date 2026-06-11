@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 func (s *Service) ImportPreview(ctx context.Context, companyID string, file []byte, warehouseID, importMode string) (map[string]any, error) {
@@ -171,6 +172,7 @@ func matchWarehouse(warehouses []map[string]string, name string) string {
 }
 
 func (s *Service) executeImportRows(ctx context.Context, companyID, userID, jobID string, rows []ImportRow, mode, defaultWH string, acc *importLedgerAccumulator) (success, failed int, errs []map[string]any) {
+	catCache := map[string]string{}
 	for i, row := range rows {
 		wh := strings.TrimSpace(row.WarehouseID)
 		if wh == "" {
@@ -183,7 +185,7 @@ func (s *Service) executeImportRows(ctx context.Context, companyID, userID, jobI
 		if strings.EqualFold(strings.TrimSpace(row.RowAction), "skip") && !strings.EqualFold(strings.TrimSpace(row.StockAction), "apply") {
 			continue
 		}
-		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc)
+		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc, catCache)
 		if err != nil {
 			failed++
 			errs = append(errs, map[string]any{"rowNumber": i + 1, "message": err.Error(), "name": row.Name})
@@ -229,18 +231,18 @@ func importRowExcelQty(row ImportRow) *float64 {
 	return nil
 }
 
-func (s *Service) importOneRowWithLedger(ctx context.Context, companyID, userID string, row ImportRow, warehouseID, mode string, acc *importLedgerAccumulator) error {
-	return s.importOneRow(ctx, companyID, userID, row, warehouseID, mode, acc)
+func (s *Service) importOneRowWithLedger(ctx context.Context, companyID, userID string, row ImportRow, warehouseID, mode string, acc *importLedgerAccumulator, catCache map[string]string) error {
+	return s.importOneRow(ctx, companyID, userID, row, warehouseID, mode, acc, catCache)
 }
 
-func (s *Service) importOneRow(ctx context.Context, companyID, userID string, row ImportRow, warehouseID, mode string, acc *importLedgerAccumulator) error {
+func (s *Service) importOneRow(ctx context.Context, companyID, userID string, row ImportRow, warehouseID, mode string, acc *importLedgerAccumulator, catCache map[string]string) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	categoryID, err := s.ensureCategory(ctx, tx, companyID, row.Category)
+	categoryID, err := s.ensureCategory(ctx, tx, companyID, row.Category, catCache)
 	if err != nil {
 		return err
 	}
@@ -359,14 +361,23 @@ func (s *Service) importOneRow(ctx context.Context, companyID, userID string, ro
 	return tx.Commit(ctx)
 }
 
-func (s *Service) ensureCategory(ctx context.Context, tx pgx.Tx, companyID, name string) (string, error) {
+func (s *Service) ensureCategory(ctx context.Context, tx pgx.Tx, companyID, name string, catCache map[string]string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		name = "Boshqa"
 	}
+	cacheKey := strings.ToLower(name)
+	if catCache != nil {
+		if id, ok := catCache[cacheKey]; ok {
+			return id, nil
+		}
+	}
 	var id string
 	err := tx.QueryRow(ctx, `SELECT id FROM "ProductCategory" WHERE "companyId" = $1 AND lower(name) = lower($2) LIMIT 1`, companyID, name).Scan(&id)
 	if err == nil {
+		if catCache != nil {
+			catCache[cacheKey] = id
+		}
 		return id, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -376,6 +387,15 @@ func (s *Service) ensureCategory(ctx context.Context, tx pgx.Tx, companyID, name
 		INSERT INTO "ProductCategory" (id, "companyId", name, "createdAt", "updatedAt")
 		VALUES (gen_random_uuid(), $1, $2, NOW(), NOW()) RETURNING id
 	`, companyID, name).Scan(&id)
+	if err == nil {
+		if catCache != nil {
+			catCache[cacheKey] = id
+		}
+		if s.cache != nil {
+			s.cache.DelByPrefix(ctx, cache.CategoriesPrefix(companyID))
+			s.cache.InvalidateProductsList(ctx, companyID)
+		}
+	}
 	return id, err
 }
 

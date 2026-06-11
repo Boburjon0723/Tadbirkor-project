@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/xuri/excelize/v2"
 )
@@ -29,9 +30,10 @@ type Service struct {
 	maxLineItems int
 	hub          pkgrealtime.Hub
 	notify       *notifications.Service
+	cache        *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, hub pkgrealtime.Hub, notify *notifications.Service) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, hub pkgrealtime.Hub, notify *notifications.Service, c *cache.Cache) *Service {
 	maxLines := 500
 	if raw := strings.TrimSpace(getEnv("B2B_ORDER_MAX_LINE_ITEMS")); raw != "" {
 		if v, err := strconv.Atoi(raw); err == nil && v > 0 {
@@ -50,6 +52,7 @@ func NewService(pool *pgxpool.Pool, repo *Repository, hub pkgrealtime.Hub, notif
 		maxLineItems: maxLines,
 		hub:          hub,
 		notify:       notify,
+		cache:        c,
 	}
 }
 
@@ -88,7 +91,7 @@ func (s *Service) notifyOrderAccepted(ctx context.Context, head *orderHeadRecord
 }
 
 func (s *Service) notifyOrderMutation(companyIDs []string, meta map[string]any) {
-	if s == nil || s.hub == nil {
+	if s == nil {
 		return
 	}
 	seen := map[string]struct{}{}
@@ -101,8 +104,13 @@ func (s *Service) notifyOrderMutation(companyIDs []string, meta map[string]any) 
 			continue
 		}
 		seen[id] = struct{}{}
-		s.hub.EmitOrdersChanged(id, meta)
-		s.hub.EmitDashboardRefresh(id)
+		if s.cache != nil {
+			s.cache.InvalidateOrderCaches(context.Background(), id)
+		}
+		if s.hub != nil {
+			s.hub.EmitOrdersChanged(id, meta)
+			s.hub.EmitDashboardRefresh(id)
+		}
 	}
 }
 
@@ -444,6 +452,15 @@ func (s *Service) FindAll(ctx context.Context, companyID, role string, query map
 	status := strings.TrimSpace(strings.ToUpper(query["status"]))
 	full := wantsFullList(query)
 
+	page, limit, skip := parsePageLimit(query, 30, 100)
+	if !full && s.cache != nil {
+		cacheKey := fmt.Sprintf("%s%s:%d:%d:%s:%s", cache.OrdersListPrefix(companyID), role, page, limit, search, status)
+		var cached map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, cacheKey, &cached); ok {
+			return cached, nil
+		}
+	}
+
 	baseWhere := ""
 	args := []any{companyID}
 	if role == "SELLER" {
@@ -489,7 +506,6 @@ func (s *Service) FindAll(ctx context.Context, companyID, role string, query map
 		ORDER BY o."createdAt" DESC
 	`
 
-	page, limit, skip := parsePageLimit(query, 30, 100)
 	if !full {
 		sql += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(args)+1, len(args)+2)
 		args = append(args, limit, skip)
@@ -559,13 +575,18 @@ func (s *Service) FindAll(ctx context.Context, companyID, role string, query map
 			"total": total,
 		}, nil
 	}
-	return map[string]any{
+	result := map[string]any{
 		"items":   items,
 		"page":    page,
 		"limit":   limit,
 		"total":   total,
 		"hasMore": skip+len(items) < total,
-	}, nil
+	}
+	if s.cache != nil {
+		cacheKey := fmt.Sprintf("%s%s:%d:%d:%s:%s", cache.OrdersListPrefix(companyID), role, page, limit, search, status)
+		_ = s.cache.SetJSON(ctx, cacheKey, result, 20*time.Second)
+	}
+	return result, nil
 }
 
 func (s *Service) GetListStats(ctx context.Context, companyID, role string) (map[string]any, error) {
@@ -626,6 +647,13 @@ func (s *Service) GetListStats(ctx context.Context, companyID, role string) (map
 }
 
 func (s *Service) GetOrdersHubStats(ctx context.Context, companyID string) (map[string]any, error) {
+	key := cache.OrdersHubStatsKey(companyID)
+	if s.cache != nil {
+		var cached map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
+			return cached, nil
+		}
+	}
 	my, err := s.GetListStats(ctx, companyID, "BUYER")
 	if err != nil {
 		return nil, err
@@ -634,7 +662,11 @@ func (s *Service) GetOrdersHubStats(ctx context.Context, companyID string) (map[
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"my": my, "incoming": incoming}, nil
+	result := map[string]any{"my": my, "incoming": incoming}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, key, result, 45*time.Second)
+	}
+	return result, nil
 }
 
 func parseBool(v string) bool {

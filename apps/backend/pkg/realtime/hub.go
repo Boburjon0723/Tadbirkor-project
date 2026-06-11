@@ -1,5 +1,12 @@
 package realtime
 
+import (
+	"context"
+	"strings"
+
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
+)
+
 // Hub — real-time Socket.IO emit interfeysi (NestJS gateway bilan 1:1).
 type Hub interface {
 	EmitInventoryChanged(companyID string, payload map[string]any)
@@ -22,8 +29,17 @@ func (noopHub) EmitToUser(string, string, map[string]any)    {}
 // Noop — websocket o‘chirilgan yoki test uchun.
 var Noop Hub = noopHub{}
 
-// NotifyInventory — ombor o‘zgarganda frontend keshini yangilash uchun.
-func NotifyInventory(h Hub, companyID string, payload map[string]any) {
+// NotifyInventory — ombor o‘zgarganda Redis kesh + websocket yangilash.
+func NotifyInventory(ctx context.Context, h Hub, c *cache.Cache, companyID string, payload map[string]any) {
+	warehouseID := ""
+	if payload != nil {
+		if v, ok := payload["warehouseId"].(string); ok {
+			warehouseID = strings.TrimSpace(v)
+		}
+	}
+	if c != nil {
+		c.InvalidateStockCaches(ctx, companyID, warehouseID)
+	}
 	if h == nil {
 		return
 	}
@@ -32,4 +48,14 @@ func NotifyInventory(h Hub, companyID string, payload map[string]any) {
 	}
 	h.EmitInventoryChanged(companyID, payload)
 	h.EmitDashboardRefresh(companyID)
+}
+
+// NotifyDashboardChange — dashboard stats keshi + websocket.
+func NotifyDashboardChange(ctx context.Context, h Hub, c *cache.Cache, companyID string) {
+	if c != nil {
+		c.InvalidateDashboardStats(ctx, companyID)
+	}
+	if h != nil {
+		h.EmitDashboardRefresh(companyID)
+	}
 }

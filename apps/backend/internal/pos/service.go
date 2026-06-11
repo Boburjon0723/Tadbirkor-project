@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -23,16 +24,21 @@ var (
 )
 
 type Service struct {
-	pool  *pgxpool.Pool
-	cache *cache.Cache
-	hub   pkgrealtime.Hub
+	pool       *pgxpool.Pool
+	cache      *cache.Cache
+	hub        pkgrealtime.Hub
+	catalogTTL time.Duration
 }
 
 func NewService(pool *pgxpool.Pool, c *cache.Cache, hub pkgrealtime.Hub) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, cache: c, hub: hub}
+	ttlMs, _ := strconv.Atoi(strings.TrimSpace(os.Getenv("POS_CATALOG_CACHE_TTL_MS")))
+	if ttlMs <= 0 {
+		ttlMs = 30_000
+	}
+	return &Service{pool: pool, cache: c, hub: hub, catalogTTL: time.Duration(ttlMs) * time.Millisecond}
 }
 
 func (s *Service) assertWarehouseScope(ctx context.Context, companyID, userID, warehouseID string) error {
@@ -166,7 +172,7 @@ func (s *Service) GetCatalog(ctx context.Context, companyID, userID string, q ma
 		page = 1
 	}
 	skip := (page - 1) * limit
-	cacheKey := fmt.Sprintf("pos:catalog:%s:%s:%s:%d:%d", companyID, warehouseID, search, page, limit)
+	cacheKey := cache.PosCatalogPrefix(companyID, warehouseID) + fmt.Sprintf("%s:%d:%d", search, page, limit)
 	var cached map[string]any
 	if ok, _ := s.cache.GetJSON(ctx, cacheKey, &cached); ok {
 		return cached, nil
@@ -224,7 +230,7 @@ func (s *Service) GetCatalog(ctx context.Context, companyID, userID string, q ma
 		"items": items, "page": page, "limit": limit, "total": total,
 		"hasMore": skip+len(items) < total,
 	}
-	_ = s.cache.SetJSON(ctx, cacheKey, result, 30*time.Second)
+	_ = s.cache.SetJSON(ctx, cacheKey, result, s.catalogTTL)
 	return result, nil
 }
 

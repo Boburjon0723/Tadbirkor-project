@@ -5,23 +5,55 @@ import (
 	"encoding/json"
 	"errors"
 
+	"fmt"
+	"strings"
+	"time"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	"github.com/tadbirkor/axis-erp/backend/pkg/scope"
 )
 
 var ErrNotFound = errors.New("Ombor topilmadi")
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
+	return &Service{pool: pool, cache: c}
+}
+
+func (s *Service) bumpWarehouseCaches(ctx context.Context, companyID string) {
+	if s.cache == nil {
+		return
+	}
+	s.cache.InvalidateActiveWarehouseCount(ctx, companyID)
+	s.cache.InvalidateWarehousesList(ctx, companyID)
+}
+
+func (s *Service) warehousesListKey(companyID string, whScope scope.Warehouse) string {
+	scopeKey := "all"
+	if !whScope.All {
+		scopeKey = strings.Join(whScope.WarehouseIDs, ",")
+		if scopeKey == "" {
+			scopeKey = "_none_"
+		}
+	}
+	return fmt.Sprintf("%s%s", cache.WarehousesListPrefix(companyID), scopeKey)
 }
 
 func (s *Service) FindAll(ctx context.Context, companyID, userID string) ([]map[string]any, error) {
 	whScope, _ := scope.ForUser(ctx, s.pool, companyID, userID)
+	if s.cache != nil {
+		key := s.warehousesListKey(companyID, whScope)
+		var cached []map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
+			return cached, nil
+		}
+	}
 	base := `
 		SELECT id, "companyId", name, address, "fieldConfig", status, "createdAt", "updatedAt"
 		FROM "Warehouse"
@@ -41,7 +73,14 @@ func (s *Service) FindAll(ctx context.Context, companyID, userID string) ([]map[
 		return nil, err
 	}
 	defer rows.Close()
-	return scanWarehouses(rows)
+	out, err := scanWarehouses(rows)
+	if err != nil {
+		return nil, err
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, s.warehousesListKey(companyID, whScope), out, 60*time.Second)
+	}
+	return out, nil
 }
 
 func (s *Service) FindOne(ctx context.Context, id, companyID string) (map[string]any, error) {

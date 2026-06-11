@@ -24,6 +24,9 @@ var (
 	ErrNoCompany     = errors.New("Kompaniya topilmadi. Chiqib qayta kiring (login).")
 )
 
+// Har bir kompaniya uchun minimal boshlang‘ich to‘plam (mahsulot + ombor asoslari).
+var baseFeatureKeys = []string{"WAREHOUSE_BASIC", "STOCK_ADJUSTMENT"}
+
 var defaultFeatureKeys = []string{
 	"WAREHOUSE_BASIC", "STOCK_ADJUSTMENT", "B2B_ORDERS", "GOODS_RECEIPTS_MAIN", "DEBT_TRACKING",
 }
@@ -279,23 +282,34 @@ func (s *Service) ApplyModules(ctx context.Context, companyID, userID string, in
 		answers = map[string]string{}
 	}
 
-	hasWarehouse := isTruthyAnswer(answers["hasWarehouse"]) || isTruthyAnswer(answers["q1"])
-	hasPartners := isTruthyAnswer(answers["hasPartners"]) || isTruthyAnswer(answers["q2"])
-	hasDebt := isTruthyAnswer(answers["hasDebt"]) || isTruthyAnswer(answers["q3"])
+	var businessType string
+	_ = s.pool.QueryRow(ctx, `SELECT COALESCE("businessType", '') FROM "Company" WHERE id = $1`, resolved).Scan(&businessType)
 
-	enabledKeys := []string{}
-	if hasWarehouse {
-		enabledKeys = append(enabledKeys, "WAREHOUSE_BASIC", "STOCK_ADJUSTMENT")
-	}
+	hasWarehouse := isWarehouseAnswer(answers["hasWarehouse"]) || isWarehouseAnswer(answers["q1"])
+	hasPartners := isPartnersAnswer(answers["hasPartners"]) || isPartnersAnswer(answers["q2"])
+	hasDebt := isDebtAnswer(answers["hasDebt"]) || isDebtAnswer(answers["q3"])
+	needsEmployees := isEmployeesAnswer(answers["q5"]) || isEmployeesAnswer(answers["needsEmployees"])
+	needsPos := isPosAnswer(answers["q6"]) || isPosAnswer(answers["needsPos"])
+
+	applyBusinessTypeHints(businessType, answers, &hasWarehouse, &hasPartners, &hasDebt)
+
+	enabledKeys := append([]string{}, baseFeatureKeys...)
 	if hasPartners {
-		enabledKeys = append(enabledKeys, "B2B_ORDERS", "GOODS_RECEIPTS_MAIN", "PARTIAL_RECEIPT", "PRODUCT_MAPPING")
+		enabledKeys = append(enabledKeys,
+			"B2B_ORDERS", "GOODS_RECEIPTS_MAIN", "PARTIAL_RECEIPT",
+			"PRODUCT_MAPPING", "PARTNER_NETWORK",
+		)
 	}
 	if hasDebt {
 		enabledKeys = append(enabledKeys, "DEBT_TRACKING", "PAYMENT_RECORDS")
 	}
-	if len(enabledKeys) == 0 {
-		enabledKeys = append(enabledKeys, defaultFeatureKeys...)
+	if needsEmployees {
+		enabledKeys = append(enabledKeys, "TEAM_MANAGEMENT")
 	}
+	if needsPos {
+		enabledKeys = append(enabledKeys, "POS_TERMINAL")
+	}
+	_ = hasWarehouse // ombor «yo‘q» bo‘lsa ham mahsulot/qoldiq bazasi qoladi
 
 	features, err := s.loadFeatures(ctx)
 	if err != nil {
@@ -516,13 +530,66 @@ func (s *Service) companyWithWarehouses(ctx context.Context, companyID string) (
 	return out, nil
 }
 
-func isTruthyAnswer(value string) bool {
-	v := strings.ToLower(strings.TrimSpace(value))
-	switch v {
-	case "yes", "true", "always", "sometimes", "one", "many", "now", "later":
+func isWarehouseAnswer(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "yes", "many", "one", "true":
 		return true
 	default:
 		return false
+	}
+}
+
+func isPartnersAnswer(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "always", "sometimes", "yes", "true":
+		return true
+	default:
+		return false
+	}
+}
+
+func isDebtAnswer(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "yes", "sometimes", "true":
+		return true
+	default:
+		return false
+	}
+}
+
+func isEmployeesAnswer(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "now", "later":
+		return true
+	default:
+		return false
+	}
+}
+
+func isPosAnswer(value string) bool {
+	return strings.ToLower(strings.TrimSpace(value)) == "yes"
+}
+
+// Biznes turiga qarab savollarga qo‘shimcha yo‘naltirish (foydalanuvchi aniq «yo‘q» demagan bo‘lsa).
+func applyBusinessTypeHints(businessType string, answers map[string]string, hasWarehouse, hasPartners, hasDebt *bool) {
+	bt := strings.ToLower(strings.TrimSpace(businessType))
+	if bt == "" {
+		return
+	}
+	if !*hasWarehouse && answers["hasWarehouse"] != "no" {
+		if strings.Contains(bt, "ombor") || strings.Contains(bt, "distribyutor") || strings.Contains(bt, "ishlab chiqarish") || strings.Contains(bt, "chakana") {
+			*hasWarehouse = true
+		}
+	}
+	if !*hasPartners && answers["hasPartners"] != "no" {
+		if strings.Contains(bt, "ulgurji") || strings.Contains(bt, "ombor") || strings.Contains(bt, "aralash") {
+			*hasPartners = true
+		}
+	}
+	if !*hasDebt && answers["hasDebt"] != "no" {
+		if strings.Contains(bt, "xizmat") || strings.Contains(bt, "ulgurji") {
+			*hasDebt = true
+		}
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 var (
@@ -24,11 +25,20 @@ var (
 )
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
+	return &Service{pool: pool, cache: c}
+}
+
+func (s *Service) bumpCatalogCaches(ctx context.Context, companyID string) {
+	if s.cache == nil {
+		return
+	}
+	s.cache.InvalidateProductsList(ctx, companyID)
+	s.cache.InvalidateVariantsSearch(ctx, companyID)
 }
 
 func attrsJSON(attrs map[string]any) any {
@@ -63,6 +73,13 @@ func (s *Service) Search(ctx context.Context, companyID string, q map[string]str
 	query := strings.TrimSpace(q["query"])
 	sku := strings.TrimSpace(q["sku"])
 	barcode := strings.TrimSpace(q["barcode"])
+	searchKey := fmt.Sprintf("%s%s:%s:%s", cache.VariantsSearchPrefix(companyID), query, sku, barcode)
+	if s.cache != nil {
+		var cached []map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, searchKey, &cached); ok {
+			return cached, nil
+		}
+	}
 	sql := `
 		SELECT pv.id, pv."productId", pv.name, pv.sku, pv.barcode, pv."salePrice", pv."purchasePrice",
 		       pv.currency, pv.status, pv."createdAt", p.id, p.name
@@ -92,7 +109,14 @@ func (s *Service) Search(ctx context.Context, companyID string, q map[string]str
 		return nil, err
 	}
 	defer rows.Close()
-	return scanVariantRows(rows, true)
+	out, err := scanVariantRows(rows, true)
+	if err != nil {
+		return nil, err
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, searchKey, out, 15*time.Second)
+	}
+	return out, nil
 }
 
 func scanVariantRows(rows pgx.Rows, withProduct bool) ([]map[string]any, error) {
@@ -276,6 +300,7 @@ func (s *Service) Create(ctx context.Context, companyID, productID, userID strin
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.bumpCatalogCaches(ctx, companyID)
 	return s.FindOne(ctx, variantID, companyID)
 }
 
@@ -345,6 +370,7 @@ func (s *Service) Update(ctx context.Context, id, companyID, _ string, in Update
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.bumpCatalogCaches(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -364,6 +390,7 @@ func (s *Service) UpdatePrice(ctx context.Context, id, companyID, _ string, in U
 	if err != nil {
 		return nil, err
 	}
+	s.bumpCatalogCaches(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -389,6 +416,7 @@ func (s *Service) Publish(ctx context.Context, id, companyID string, in PublishI
 	if err != nil {
 		return nil, err
 	}
+	s.bumpCatalogCaches(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -403,12 +431,14 @@ func (s *Service) Remove(ctx context.Context, id, companyID, _ string) (map[stri
 		if err != nil {
 			return nil, err
 		}
+		s.bumpCatalogCaches(ctx, companyID)
 		return s.FindOne(ctx, id, companyID)
 	}
 	_, err := s.pool.Exec(ctx, `DELETE FROM "ProductVariant" WHERE id = $1 AND "companyId" = $2`, id, companyID)
 	if err != nil {
 		return nil, err
 	}
+	s.bumpCatalogCaches(ctx, companyID)
 	return map[string]any{"id": id, "deleted": true}, nil
 }
 

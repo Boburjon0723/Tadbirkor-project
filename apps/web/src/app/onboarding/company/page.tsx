@@ -6,11 +6,9 @@ import {
   Building2, 
   MapPin, 
   Phone, 
-  Users, 
   Hash, 
   ArrowRight, 
   ChevronLeft,
-  Briefcase,
   CheckCircle2,
   Zap,
   Loader2
@@ -46,8 +44,6 @@ export default function CompanySetupPage() {
     tin: '',
     phone: '',
     address: '',
-    category: 'Ulgurji savdo',
-    employees: '2–5 kishi'
   });
 
   useEffect(() => {
@@ -59,7 +55,6 @@ export default function CompanySetupPage() {
           tin: data.company.tin || '',
           phone: data.user.phone || '',
           address: data.company.address || '',
-          category: data.company.businessType || 'Ulgurji savdo',
         }));
       }
       setFetching(false);
@@ -223,42 +218,9 @@ export default function CompanySetupPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Faoliyat turi</label>
-                  <div className="relative">
-                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <select 
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none"
-                      value={formData.category}
-                      onChange={(e) => setFormData({...formData, category: e.target.value})}
-                    >
-                      <option className="bg-[#080808]">Ulgurji savdo</option>
-                      <option className="bg-[#080808]">Chakana savdo</option>
-                      <option className="bg-[#080808]">Ombor / distribyutor</option>
-                      <option className="bg-[#080808]">Ishlab chiqarish</option>
-                      <option className="bg-[#080808]">Xizmat ko'rsatish</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Xodimlar soni</label>
-                  <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <select 
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-sm focus:outline-none focus:border-blue-500 transition-all appearance-none"
-                      value={formData.employees}
-                      onChange={(e) => setFormData({...formData, employees: e.target.value})}
-                    >
-                      <option className="bg-[#080808]">1 kishi</option>
-                      <option className="bg-[#080808]">2–5 kishi</option>
-                      <option className="bg-[#080808]">6–20 kishi</option>
-                      <option className="bg-[#080808]">21–50 kishi</option>
-                      <option className="bg-[#080808]">50+ kishi</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm text-gray-500 pt-2">
+                Biznes turini keyingi bosqichda tanlaysiz — bu yerda faqat kompaniya rekvizitlari kerak.
+              </p>
             </form>
 
             <div className="mt-12 flex items-center justify-between">

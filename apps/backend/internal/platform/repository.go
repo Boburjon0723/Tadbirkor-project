@@ -160,6 +160,23 @@ func (r *Repository) ResolveBroadcastUserIDs(ctx context.Context, target string,
 			out = append(out, id)
 		}
 		return out, rows.Err()
+	case "owners":
+		rows, err := r.pool.Query(ctx, `
+			SELECT DISTINCT "userId" FROM "CompanyUser" WHERE role = 'OWNER'
+		`)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+		out := []string{}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				return nil, err
+			}
+			out = append(out, id)
+		}
+		return out, rows.Err()
 	case "company":
 		if len(companyIDs) == 0 {
 			return nil, nil

@@ -11,6 +11,7 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/picktasks"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
@@ -20,13 +21,14 @@ type Service struct {
 	picking *picktasks.Service
 	notify  *notifications.Service
 	hub     pkgrealtime.Hub
+	cache   *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, picking *picktasks.Service, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, picking *picktasks.Service, notify *notifications.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, repo: repo, picking: picking, notify: notify, hub: hub}
+	return &Service{pool: pool, repo: repo, picking: picking, notify: notify, hub: hub, cache: c}
 }
 
 var allowedOrderStatuses = map[string]bool{
@@ -254,10 +256,18 @@ func (s *Service) Send(ctx context.Context, id, companyID, userID string) (map[s
 		return nil, err
 	}
 
-	pkgrealtime.NotifyInventory(s.hub, companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": head.WarehouseID,
 		"reason":      "DISPATCH",
 	})
+	for _, cid := range []string{head.BuyerCompanyID, head.SellerCompanyID} {
+		if s.cache != nil {
+			s.cache.InvalidateOrderCaches(ctx, cid)
+		}
+		if s.hub != nil {
+			s.hub.EmitOrdersChanged(cid, map[string]any{"orderId": head.OrderID, "reason": "dispatch.sent"})
+		}
+	}
 	go s.notifyDispatchSent(head, isPartial)
 	return map[string]any{"success": true}, nil
 }

@@ -61,22 +61,23 @@ const questions = [
   },
   {
     id: 'q5',
-    q: "Sizga xodimlar uchun alohida rollar kerakmi?",
+    q: "Jamoa va xodimlar uchun rollar kerakmi?",
+    helper: "Menejer, omborchi, sotuvchi kabi rollar alohida kirish bilan ishlaydi.",
     options: [
       { id: 'now', label: 'Ha, hozir qo‘shaman' },
-      { id: 'later', label: 'Ha, keyinroq' },
+      { id: 'later', label: 'Ha, keyinroq sozlayman' },
       { id: 'no', label: 'Yo‘q, hozircha o‘zim ishlayman' }
     ]
   },
   {
     id: 'q6',
-    q: "POS/kassa interfeysi kerakmi?",
+    q: "POS / kassa interfeysi kerakmi?",
     options: [
-      { id: 'no', label: 'Hozir kerak emas' },
-      { id: 'later', label: 'Keyingi bosqichda kerak bo‘lishi mumkin' },
-      { id: 'yes', label: 'Ha, lekin keyinroq' }
+      { id: 'yes', label: 'Ha, chakana sotuv uchun kerak' },
+      { id: 'later', label: 'Keyinroq yoqaman' },
+      { id: 'no', label: 'Hozir kerak emas' }
     ],
-    info: "POS, chek chop etish va real to‘lov integratsiyalari keyingi bosqichda alohida modul sifatida qo‘shiladi."
+    info: "POS moduli kassa ekrani, chek va chakana sotuv uchun ishlatiladi."
   }
 ];
 

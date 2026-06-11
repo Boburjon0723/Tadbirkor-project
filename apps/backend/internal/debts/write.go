@@ -106,7 +106,7 @@ func (s *Service) CreatePaymentRecord(ctx context.Context, debtEntryID, companyI
 				{Key: "DEBT_REJECT", Label: "Bekor qilish", TargetType: "DEBT_PAYMENT", TargetID: paymentID},
 			},
 		})
-	s.notifyDebtsChanged(entry.DebtorID, entry.CreditorID, map[string]any{
+	s.notifyDebtsChanged(ctx, entry.DebtorID, entry.CreditorID, map[string]any{
 		"debtEntryId": debtEntryID,
 		"reason":      "payment_created",
 	})
@@ -199,7 +199,7 @@ func (s *Service) ConfirmPayment(ctx context.Context, recordID, companyID, userI
 			TargetRoles: debtNotifyRoles,
 		})
 	s.markPendingPaymentNotificationsResolved(ctx, companyID)
-	s.notifyDebtsChanged(payment.DebtorID, payment.CreditorID, map[string]any{
+	s.notifyDebtsChanged(ctx, payment.DebtorID, payment.CreditorID, map[string]any{
 		"debtEntryId": payment.DebtEntryID,
 		"reason":      "payment_confirmed",
 	})
@@ -258,7 +258,7 @@ func (s *Service) RejectPayment(ctx context.Context, recordID, companyID, userID
 			TargetRoles: debtNotifyRoles,
 		})
 	s.markPendingPaymentNotificationsResolved(ctx, companyID)
-	s.notifyDebtsChanged(payment.DebtorID, payment.CreditorID, map[string]any{
+	s.notifyDebtsChanged(ctx, payment.DebtorID, payment.CreditorID, map[string]any{
 		"debtEntryId": payment.DebtEntryID,
 		"reason":      "payment_rejected",
 	})
@@ -349,7 +349,7 @@ func (s *Service) ApplyPaymentByCreditor(ctx context.Context, debtEntryID, compa
 			},
 			TargetRoles: debtNotifyRoles,
 		})
-	s.notifyDebtsChanged(entry.DebtorID, entry.CreditorID, map[string]any{
+	s.notifyDebtsChanged(ctx, entry.DebtorID, entry.CreditorID, map[string]any{
 		"debtEntryId": debtEntryID,
 		"reason":      "payment_applied_by_creditor",
 	})
@@ -478,7 +478,7 @@ func (s *Service) RecordPartnerBulkPaymentByDebtor(ctx context.Context, companyI
 			},
 			TargetRoles: debtNotifyRoles,
 		})
-	s.notifyDebtsChanged(companyID, partnerCompanyID, map[string]any{
+	s.notifyDebtsChanged(ctx, companyID, partnerCompanyID, map[string]any{
 		"partnerCompanyId": partnerCompanyID,
 		"reason":           "partner_bulk_payment_recorded",
 	})
@@ -628,7 +628,7 @@ func (s *Service) ConfirmPartnerBulkPaymentsByCreditor(ctx context.Context, comp
 			TargetRoles: debtNotifyRoles,
 		})
 	s.markPendingPaymentNotificationsResolved(ctx, companyID)
-	s.notifyDebtsChanged(partnerCompanyID, companyID, map[string]any{
+	s.notifyDebtsChanged(ctx, partnerCompanyID, companyID, map[string]any{
 		"partnerCompanyId": partnerCompanyID,
 		"reason":           "partner_bulk_payment_confirmed",
 	})

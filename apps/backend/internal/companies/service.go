@@ -27,7 +27,7 @@ func NewService(pool *pgxpool.Pool, c *cache.Cache, botUsername string) *Service
 }
 
 func (s *Service) featuresKey(companyID string) string {
-	return "company:features:" + companyID
+	return cache.CompanyFeaturesKey(companyID)
 }
 
 func (s *Service) EnsureModuleCatalog(ctx context.Context) error {

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
@@ -29,16 +30,31 @@ type Service struct {
 	pool   *pgxpool.Pool
 	notify *notifications.Service
 	hub    pkgrealtime.Hub
+	cache  *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, notify *notifications.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, notify *notifications.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, notify: notify, hub: hub}
+	return &Service{pool: pool, notify: notify, hub: hub, cache: c}
+}
+
+func (s *Service) invalidateList(ctx context.Context, companyID string) {
+	if s.cache != nil {
+		s.cache.InvalidateInventoryCountsList(ctx, companyID)
+	}
 }
 
 func (s *Service) List(ctx context.Context, companyID, status, warehouseID string) ([]map[string]any, error) {
+	key := cache.InventoryCountsListKey(companyID, warehouseID, status)
+	var cached []map[string]any
+	if s.cache != nil {
+		if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
+			return cached, nil
+		}
+	}
+
 	where := ` WHERE ic."companyId" = $1`
 	args := []any{companyID}
 	n := 2
@@ -86,7 +102,13 @@ func (s *Service) List(ctx context.Context, companyID, status, warehouseID strin
 			"_count":    map[string]any{"items": itemCount},
 		})
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, key, out, 30*time.Second)
+	}
+	return out, nil
 }
 
 func (s *Service) FindOne(ctx context.Context, id, companyID string) (map[string]any, error) {
@@ -282,6 +304,7 @@ func (s *Service) Start(ctx context.Context, companyID, userID string, in StartI
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.invalidateList(ctx, companyID)
 
 	count, err := s.FindOne(ctx, countID, companyID)
 	if err != nil {
@@ -480,11 +503,11 @@ func (s *Service) Complete(ctx context.Context, id, companyID, userID string) (m
 	if err := releaseBlocksForCount(ctx, s.pool, id, companyID); err != nil {
 		return nil, err
 	}
-	s.hub.EmitInventoryChanged(companyID, map[string]any{
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
 		"warehouseId": warehouseID,
 		"reason":      "INVENTORY_COUNT",
 	})
-	s.hub.EmitDashboardRefresh(companyID)
+	s.invalidateList(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -504,5 +527,6 @@ func (s *Service) Cancel(ctx context.Context, id, companyID string) (map[string]
 	if err != nil {
 		return nil, err
 	}
+	s.invalidateList(ctx, companyID)
 	return map[string]any{"success": true}, nil
 }

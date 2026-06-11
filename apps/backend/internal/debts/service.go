@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/notifications"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
 
@@ -28,26 +29,29 @@ type Service struct {
 	pool          *pgxpool.Pool
 	notifications *notifications.Service
 	hub           pkgrealtime.Hub
+	cache         *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, notificationsSvc *notifications.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, notificationsSvc *notifications.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
-	return &Service{pool: pool, notifications: notificationsSvc, hub: hub}
+	return &Service{pool: pool, notifications: notificationsSvc, hub: hub, cache: c}
 }
 
-func (s *Service) notifyDebtsChanged(debtorID, creditorID string, payload map[string]any) {
-	if s == nil || s.hub == nil {
+func (s *Service) notifyDebtsChanged(ctx context.Context, debtorID, creditorID string, payload map[string]any) {
+	if s == nil {
 		return
 	}
 	if payload == nil {
 		payload = map[string]any{}
 	}
-	s.hub.EmitDebtsChanged(debtorID, payload)
-	s.hub.EmitDebtsChanged(creditorID, payload)
-	s.hub.EmitDashboardRefresh(debtorID)
-	s.hub.EmitDashboardRefresh(creditorID)
+	if s.hub != nil {
+		s.hub.EmitDebtsChanged(debtorID, payload)
+		s.hub.EmitDebtsChanged(creditorID, payload)
+	}
+	pkgrealtime.NotifyDashboardChange(ctx, s.hub, s.cache, debtorID)
+	pkgrealtime.NotifyDashboardChange(ctx, s.hub, s.cache, creditorID)
 }
 
 type moneyPair struct {

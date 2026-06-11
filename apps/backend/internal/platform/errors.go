@@ -2,7 +2,11 @@ package platform
 
 import "errors"
 
-var ErrCompanyNotFound = errors.New("Kompaniya topilmadi")
+var (
+	ErrCompanyNotFound = errors.New("Kompaniya topilmadi")
+	ErrUserNotFound    = errors.New("Foydalanuvchi topilmadi")
+	ErrJobNotFound     = errors.New("Reja topilmadi")
+)
 
 type forbiddenError struct{ msg string }
 

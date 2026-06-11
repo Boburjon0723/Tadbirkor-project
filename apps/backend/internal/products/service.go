@@ -76,9 +76,50 @@ func (s *Service) buildWhere(companyID string, q map[string]string) (string, []a
 	return strings.Join(parts, " AND "), args
 }
 
+func (s *Service) countActiveWarehouses(ctx context.Context, companyID string) (int, error) {
+	key := cache.ActiveWarehouseCountKey(companyID)
+	if s.cache != nil {
+		var cached int
+		if ok, _ := s.cache.GetJSON(ctx, key, &cached); ok {
+			return cached, nil
+		}
+	}
+	var count int
+	err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*)::int FROM "Warehouse"
+		WHERE "companyId" = $1 AND status = 'ACTIVE'
+	`, companyID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, key, count, 2*time.Minute)
+	}
+	return count, nil
+}
+
+func (s *Service) effectiveWarehouseID(ctx context.Context, companyID, warehouseID string) string {
+	warehouseID = strings.TrimSpace(warehouseID)
+	if warehouseID == "" {
+		return ""
+	}
+	if count, err := s.countActiveWarehouses(ctx, companyID); err == nil && count == 1 {
+		return ""
+	}
+	return warehouseID
+}
+
+func (s *Service) bumpCatalogCaches(ctx context.Context, companyID string) {
+	if s.cache == nil {
+		return
+	}
+	s.cache.InvalidateProductsList(ctx, companyID)
+	s.cache.InvalidateVariantsSearch(ctx, companyID)
+}
+
 func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]string) (any, error) {
 	where, args := s.buildWhere(companyID, q)
-	warehouseID := strings.TrimSpace(q["warehouseId"])
+	warehouseID := s.effectiveWarehouseID(ctx, companyID, q["warehouseId"])
 	limit, _ := strconv.Atoi(q["limit"])
 	if limit <= 0 {
 		limit = 50
@@ -91,6 +132,17 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 		page = 1
 	}
 	skip := (page - 1) * limit
+
+	search := strings.TrimSpace(q["search"])
+	status := strings.TrimSpace(q["status"])
+	categoryID := strings.TrimSpace(q["categoryId"])
+	listKey := fmt.Sprintf("%s%s:%s:%s:%s:%d:%d", cache.ProductsListPrefix(companyID), warehouseID, search, status, categoryID, page, limit)
+	if s.cache != nil {
+		var cached map[string]any
+		if ok, _ := s.cache.GetJSON(ctx, listKey, &cached); ok {
+			return cached, nil
+		}
+	}
 
 	var total int
 	if err := s.pool.QueryRow(ctx, `SELECT COUNT(*)::int FROM "Product" p WHERE `+where, args...).Scan(&total); err != nil {
@@ -131,10 +183,14 @@ func (s *Service) FindAll(ctx context.Context, companyID string, q map[string]st
 			return nil, err
 		}
 	}
-	return map[string]any{
+	result := map[string]any{
 		"items": items, "page": page, "limit": limit, "total": total,
 		"hasMore": skip+len(items) < total,
-	}, nil
+	}
+	if s.cache != nil {
+		_ = s.cache.SetJSON(ctx, listKey, result, 45*time.Second)
+	}
+	return result, nil
 }
 
 func (s *Service) attachVariants(ctx context.Context, items []map[string]any, productIDs []string, companyID, warehouseID string) error {

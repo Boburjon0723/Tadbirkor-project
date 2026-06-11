@@ -30,7 +30,7 @@ export default function AdminLoginPage() {
         );
         return;
       }
-      router.push('/dashboard/platform-admin');
+      router.push('/admin');
     } catch (err: unknown) {
       const msg =
         err && typeof err === 'object' && 'response' in err

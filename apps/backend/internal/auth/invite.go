@@ -89,6 +89,7 @@ func (s *Service) InviteUser(ctx context.Context, companyID string, in InviteInp
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.InvalidateMe(ctx, userID, companyID)
 	return map[string]any{
 		"id": userID, "companyUserId": membershipID, "fullName": in.FullName,
 		"login": login, "email": in.Email, "phone": p,
@@ -132,6 +133,7 @@ func (s *Service) inviteExistingUser(ctx context.Context, pool *pgxpool.Pool, co
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.InvalidateMe(ctx, existingID, companyID)
 	return map[string]any{
 		"id": existingID, "companyUserId": membershipID, "fullName": in.FullName,
 		"login": login, "email": in.Email, "phone": p, "reactivated": true,

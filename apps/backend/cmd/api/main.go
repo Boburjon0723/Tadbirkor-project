@@ -21,6 +21,7 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/expenses"
 	"github.com/tadbirkor/axis-erp/backend/internal/field"
 	"github.com/tadbirkor/axis-erp/backend/internal/goodsreceipts"
+	"github.com/tadbirkor/axis-erp/backend/internal/health"
 	"github.com/tadbirkor/axis-erp/backend/internal/income"
 	"github.com/tadbirkor/axis-erp/backend/internal/inventorycounts"
 	"github.com/tadbirkor/axis-erp/backend/internal/invoices"
@@ -86,7 +87,7 @@ func main() {
 	companiesSvc := companies.NewService(pool, c, cfg.TelegramBotUsername)
 	companiesHandler := companies.NewHandler(companiesSvc)
 
-	warehousesSvc := warehouses.NewService(pool)
+	warehousesSvc := warehouses.NewService(pool, c)
 	warehousesHandler := warehouses.NewHandler(warehousesSvc)
 
 	posSvc := pos.NewService(pool, c, hub)
@@ -98,16 +99,16 @@ func main() {
 	categoriesSvc := categories.NewService(pool, c)
 	categoriesHandler := categories.NewHandler(categoriesSvc)
 
-	variantsSvc := variants.NewService(pool)
+	variantsSvc := variants.NewService(pool, c)
 	variantsHandler := variants.NewHandler(variantsSvc)
 
-	stockSvc := stock.NewService(pool, hub)
+	stockSvc := stock.NewService(pool, hub, c)
 	stockHandler := stock.NewHandler(stockSvc, companiesSvc)
 
 	notificationsSvc := notifications.NewService(pool, hub)
 	notificationsHandler := notifications.NewHandler(notificationsSvc)
 
-	usersSvc := users.NewService(pool)
+	usersSvc := users.NewService(pool, c)
 	usersHandler := users.NewHandler(usersSvc)
 
 	supportRepo := support.NewRepository(pool)
@@ -119,7 +120,7 @@ func main() {
 	expensesHandler := expenses.NewHandler(expensesSvc)
 
 	goodsReceiptsRepo := goodsreceipts.NewRepository(pool)
-	goodsReceiptsSvc := goodsreceipts.NewService(pool, goodsReceiptsRepo, notificationsSvc, hub)
+	goodsReceiptsSvc := goodsreceipts.NewService(pool, goodsReceiptsRepo, notificationsSvc, hub, c)
 	goodsReceiptsHandler := goodsreceipts.NewHandler(goodsReceiptsSvc)
 
 	incomeRepo := income.NewRepository(pool)
@@ -129,20 +130,20 @@ func main() {
 	retailCustomersSvc := retailcustomers.NewService(pool, c)
 	retailCustomersHandler := retailcustomers.NewHandler(retailCustomersSvc)
 
-	retailReceivablesSvc := retailreceivables.NewService(pool)
+	retailReceivablesSvc := retailreceivables.NewService(pool, c)
 	retailReceivablesHandler := retailreceivables.NewHandler(retailReceivablesSvc)
 
 	partnersSvc := partners.NewService(pool, notificationsSvc)
 	partnersHandler := partners.NewHandler(partnersSvc)
 
 	b2bOrdersRepo := b2borders.NewRepository(pool)
-	b2bOrdersSvc := b2borders.NewService(pool, b2bOrdersRepo, hub, notificationsSvc)
+	b2bOrdersSvc := b2borders.NewService(pool, b2bOrdersRepo, hub, notificationsSvc, c)
 	b2bOrdersHandler := b2borders.NewHandler(b2bOrdersSvc)
 
 	productMappingsSvc := productmappings.NewService(pool)
 	productMappingsHandler := productmappings.NewHandler(productMappingsSvc)
 
-	debtsSvc := debts.NewService(pool, notificationsSvc, hub)
+	debtsSvc := debts.NewService(pool, notificationsSvc, hub, c)
 
 	tasksRepo := tasks.NewRepository(pool)
 	tasksSvc := tasks.NewService(tasksRepo)
@@ -163,7 +164,7 @@ func main() {
 	pickTasksHandler := picktasks.NewHandler(pickTasksSvc, companiesSvc)
 
 	dispatchesRepo := dispatches.NewRepository(pool)
-	dispatchesSvc := dispatches.NewService(pool, dispatchesRepo, pickTasksSvc, notificationsSvc, hub)
+	dispatchesSvc := dispatches.NewService(pool, dispatchesRepo, pickTasksSvc, notificationsSvc, hub, c)
 	dispatchesHandler := dispatches.NewHandler(dispatchesSvc)
 
 	onboardingSvc := onboarding.NewService(pool)
@@ -178,15 +179,15 @@ func main() {
 	reportsHandler := reports.NewHandler(reportsSvc)
 	debtsHandler := debts.NewHandler(debtsSvc, reportsSvc)
 
-	inventoryCountsSvc := inventorycounts.NewService(pool, notificationsSvc, hub)
+	inventoryCountsSvc := inventorycounts.NewService(pool, notificationsSvc, hub, c)
 	inventoryCountsHandler := inventorycounts.NewHandler(inventoryCountsSvc, companiesSvc)
 
 	warehouseIntakeRepo := warehouseintake.NewRepository(pool)
-	warehouseIntakeSvc := warehouseintake.NewService(pool, warehouseIntakeRepo, companiesSvc, hub)
+	warehouseIntakeSvc := warehouseintake.NewService(pool, warehouseIntakeRepo, companiesSvc, hub, c)
 	warehouseIntakeHandler := warehouseintake.NewHandler(warehouseIntakeSvc)
 
 	partnerLedgerRepo := partnerledger.NewRepository(pool)
-	partnerLedgerSvc := partnerledger.NewService(pool, partnerLedgerRepo, notificationsSvc, hub)
+	partnerLedgerSvc := partnerledger.NewService(pool, partnerLedgerRepo, notificationsSvc, hub, c)
 	partnerLedgerHandler := partnerledger.NewHandler(partnerLedgerSvc)
 
 	platformRepo := platform.NewRepository(pool)
@@ -194,7 +195,7 @@ func main() {
 	platformHandler := platform.NewHandler(platformSvc)
 
 	fieldRepo := field.NewRepository(pool)
-	fieldSvc := field.NewService(pool, fieldRepo, companiesSvc, notificationsSvc, hub)
+	fieldSvc := field.NewService(pool, fieldRepo, companiesSvc, notificationsSvc, hub, c)
 	fieldHandler := field.NewHandler(fieldSvc)
 
 	telegramRepo := telegram.NewRepository(pool)
@@ -202,6 +203,7 @@ func main() {
 	deliverySvc := notifications.NewDeliveryService(pool, telegramSvc)
 	notificationsSvc.SetDelivery(deliverySvc)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
+	platformSvc.StartScheduler(workerCtx)
 	deliverySvc.StartRetryWorker(workerCtx)
 	telegramSvc.BindBots(payrollLeaveSvc, payrollDataSvc, fieldSvc)
 	telegramHandler := telegram.NewHandler(telegramSvc)
@@ -209,9 +211,13 @@ func main() {
 	invoicesHandler := invoices.NewHandler(b2bOrdersSvc)
 	storefrontHandler := storefront.NewHandler(variantsSvc)
 
+	startTime := time.Now()
+	healthHandler := &health.Handler{Pool: pool, Cache: c, StartTime: startTime}
+
 	apiHandler := router.New(router.Deps{
 		Config:                   cfg,
 		Pool:                     pool,
+		HealthHandler:            healthHandler,
 		AuthHandler:              authHandler,
 		DashboardHandler:         dashHandler,
 		CompaniesHandler:         companiesHandler,

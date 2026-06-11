@@ -24,7 +24,7 @@ func NewService(pool *pgxpool.Pool, c *cache.Cache, ttlMs int) *Service {
 }
 
 func (s *Service) cacheKey(companyID string) string {
-	return "dashboard:stats:" + companyID
+	return cache.DashboardStatsKey(companyID)
 }
 
 func (s *Service) GetStats(ctx context.Context, companyID string) (map[string]any, error) {

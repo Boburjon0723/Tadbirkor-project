@@ -112,7 +112,7 @@ func (s *Service) UpdateMemberRole(ctx context.Context, companyID, membershipID 
 	if err != nil {
 		return nil, err
 	}
-	_ = userID
+	s.invalidateUserMe(ctx, userID, companyID)
 	return s.findMembership(ctx, companyID, membershipID)
 }
 
@@ -152,6 +152,7 @@ func (s *Service) ResetMemberPassword(ctx context.Context, companyID, membership
 	if err != nil {
 		return nil, err
 	}
+	s.invalidateUserMe(ctx, userID, companyID)
 	return map[string]any{"success": true}, nil
 }
 
@@ -176,6 +177,7 @@ func (s *Service) UpdateMemberPhone(ctx context.Context, companyID, membershipID
 	if err != nil {
 		return nil, err
 	}
+	s.invalidateUserMe(ctx, userID, companyID)
 	return map[string]any{"success": true, "phone": p}, nil
 }
 
@@ -211,6 +213,7 @@ func (s *Service) RemoveMember(ctx context.Context, companyID, membershipID, act
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
+	s.invalidateUserMe(ctx, userID, companyID)
 	return map[string]any{"success": true}, nil
 }
 
@@ -231,7 +234,11 @@ func (s *Service) UpdatePassword(ctx context.Context, userID string, in UpdatePa
 		return err
 	}
 	_, err = s.pool.Exec(ctx, `UPDATE "User" SET "passwordHash" = $1 WHERE id = $2`, string(newHash), userID)
-	return err
+	if err != nil {
+		return err
+	}
+	s.invalidateUserMeAllCompanies(ctx, userID)
+	return nil
 }
 
 func (s *Service) WarehouseScope(ctx context.Context, companyID, userID string) (map[string]any, error) {

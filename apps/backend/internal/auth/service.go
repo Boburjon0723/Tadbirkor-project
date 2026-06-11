@@ -31,6 +31,7 @@ var (
 	ErrPhoneInvalid          = errors.New("Telefon raqami noto'g'ri (masalan: +998901234567)")
 	ErrPhoneTaken            = errors.New("Bunday telefon raqami band")
 	ErrTelegramNotConfigured = errors.New("TELEGRAM_BOT_USERNAME sozlanmagan")
+	ErrUserBlocked           = errors.New("Hisobingiz bloklangan. Administrator bilan bog'laning.")
 )
 
 type Service struct {
@@ -198,6 +199,9 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResponse, 
 	if err := bcrypt.CompareHashAndPassword([]byte(*user.PasswordHash), []byte(input.Password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
+	if user.Status != "" && strings.ToLower(user.Status) != "active" {
+		return nil, ErrUserBlocked
+	}
 	if len(memberships) == 0 {
 		return nil, ErrNoMembership
 	}
@@ -215,6 +219,12 @@ func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResponse, 
 			Role:     main.Role,
 		},
 	}, nil
+}
+
+func (s *Service) InvalidateMe(ctx context.Context, userID, companyID string) {
+	if s.cache != nil {
+		s.cache.InvalidateAuthMe(ctx, userID, companyID)
+	}
 }
 
 func (s *Service) GetMe(ctx context.Context, userID, companyID string) (map[string]any, error) {

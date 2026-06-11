@@ -47,7 +47,7 @@ var GoModules = []string{
 	"invoices: B2B order PDF (category grouping, Nest layout)",
 	"storefront: public catalog",
 	"websocket: inventory + notifications Socket.IO",
-	"system: ping, health, migration/status",
+	"system: ping, health, health/deep, migration/status",
 }
 
 // PendingModules — keyingi navbat (hali NestJS proxy).

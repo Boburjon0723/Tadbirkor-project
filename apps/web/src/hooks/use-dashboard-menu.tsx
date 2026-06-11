@@ -59,8 +59,8 @@ export function useDashboardMenu({ role, featureConfig, isPlatformAdmin }: Param
         title: 'Platforma',
         items: [
           {
-            href: '/dashboard/platform-admin',
-            label: 'Admin panel',
+            href: '/admin',
+            label: 'Axis Console',
             icon: <Crown size={20} />,
             roles: allRoles,
           },

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/tadbirkor/axis-erp/backend/pkg/httpx"
@@ -29,7 +30,7 @@ func (h *Handler) write(w http.ResponseWriter, err error, data any) {
 		return
 	}
 	switch {
-	case errors.Is(err, ErrCompanyNotFound):
+	case errors.Is(err, ErrCompanyNotFound), errors.Is(err, ErrUserNotFound), errors.Is(err, ErrJobNotFound):
 		httpx.Error(w, http.StatusNotFound, err.Error())
 	default:
 		var fe forbiddenError
@@ -111,12 +112,50 @@ func (h *Handler) UpdateCompany(w http.ResponseWriter, r *http.Request) {
 	h.write(w, err, data)
 }
 
+func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(httpx.Query(r, "page"))
+	limit, _ := strconv.Atoi(httpx.Query(r, "limit"))
+	data, err := h.svc.ListUsers(r.Context(), httpx.Query(r, "search"), httpx.Query(r, "status"), page, limit)
+	h.write(w, err, data)
+}
+
+func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	c, ok := claims(r)
+	if !ok {
+		httpx.Error(w, http.StatusUnauthorized, "Token topilmadi")
+		return
+	}
+	var input UpdateUserStatusInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "Noto'g'ri so'rov")
+		return
+	}
+	data, err := h.svc.UpdateUserStatus(r.Context(), c.Sub, chi.URLParam(r, "userId"), input)
+	h.write(w, err, data)
+}
+
 func (h *Handler) Broadcast(w http.ResponseWriter, r *http.Request) {
 	var input BroadcastNotificationInput
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		httpx.Error(w, http.StatusBadRequest, "Noto'g'ri so'rov")
 		return
 	}
+	if strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Message) == "" {
+		httpx.Error(w, http.StatusBadRequest, "Sarlavha va matn majburiy")
+		return
+	}
 	data, err := h.svc.BroadcastToUsers(r.Context(), input)
 	h.write(w, err, data)
+}
+
+func (h *Handler) ListScheduledJobs(w http.ResponseWriter, r *http.Request) {
+	page, _ := strconv.Atoi(httpx.Query(r, "page"))
+	limit, _ := strconv.Atoi(httpx.Query(r, "limit"))
+	data, err := h.svc.ListScheduledJobs(r.Context(), httpx.Query(r, "status"), page, limit)
+	h.write(w, err, data)
+}
+
+func (h *Handler) CancelScheduledJob(w http.ResponseWriter, r *http.Request) {
+	err := h.svc.CancelScheduledJob(r.Context(), chi.URLParam(r, "jobId"))
+	h.write(w, err, map[string]any{"ok": true})
 }

@@ -35,7 +35,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, ErrInvalidCredentials), errors.Is(err, ErrNoPassword):
 			httpx.Error(w, http.StatusUnauthorized, err.Error())
-		case errors.Is(err, ErrNoMembership):
+		case errors.Is(err, ErrNoMembership), errors.Is(err, ErrUserBlocked):
 			httpx.Error(w, http.StatusUnauthorized, err.Error())
 		default:
 			httpx.Error(w, http.StatusInternalServerError, "Server xatosi")

@@ -75,6 +75,7 @@ func (s *Service) Create(ctx context.Context, companyID string, in CreateInput) 
 	if err != nil {
 		return nil, err
 	}
+	s.bumpWarehouseCaches(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -121,6 +122,7 @@ func (s *Service) Update(ctx context.Context, id, companyID string, in UpdateInp
 	if ct.RowsAffected() == 0 {
 		return nil, ErrNotFound
 	}
+	s.bumpWarehouseCaches(ctx, companyID)
 	return s.FindOne(ctx, id, companyID)
 }
 
@@ -135,6 +137,7 @@ func (s *Service) Remove(ctx context.Context, id, companyID, userID string) (map
 	if ct.RowsAffected() == 0 {
 		return nil, ErrNotFound
 	}
+	s.bumpWarehouseCaches(ctx, companyID)
 	_ = userID
 	return map[string]any{"success": true}, nil
 }

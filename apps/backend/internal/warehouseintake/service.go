@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tadbirkor/axis-erp/backend/internal/companies"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 	"github.com/tadbirkor/axis-erp/backend/pkg/scope"
 )
@@ -22,9 +23,10 @@ type Service struct {
 	repo      *Repository
 	companies *companies.Service
 	hub       pkgrealtime.Hub
+	cache     *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, hub pkgrealtime.Hub) *Service {
+func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Service, hub pkgrealtime.Hub, c *cache.Cache) *Service {
 	if hub == nil {
 		hub = pkgrealtime.Noop
 	}
@@ -33,6 +35,7 @@ func NewService(pool *pgxpool.Pool, repo *Repository, companiesSvc *companies.Se
 		repo:      repo,
 		companies: companiesSvc,
 		hub:       hub,
+		cache:     c,
 	}
 }
 
@@ -983,14 +986,10 @@ func (s *Service) Complete(ctx context.Context, id, companyID, userID string) (m
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
-	for _, line := range updated.Lines {
-		s.hub.EmitInventoryChanged(companyID, map[string]any{
-			"warehouseId":      updated.WarehouseID,
-			"productVariantId": line.ProductVariantID,
-			"reason":           "WAREHOUSE_INTAKE",
-		})
-	}
-	s.hub.EmitDashboardRefresh(companyID)
+	pkgrealtime.NotifyInventory(ctx, s.hub, s.cache, companyID, map[string]any{
+		"warehouseId": updated.WarehouseID,
+		"reason":      "WAREHOUSE_INTAKE",
+	})
 	warehouse, err := s.repo.LoadWarehouse(ctx, companyID, updated.WarehouseID)
 	if err != nil {
 		return nil, err
