@@ -62,9 +62,10 @@ export function computeOnboardingProgress(
   const hasBusinessType = !!String(me?.company?.businessType || '').trim();
   const hasModules = !!features?.hasFeatureConfig;
 
+  // Backend /onboarding/status bilan mos: active + STIR + biznes turi yetarli
   const isComplete =
     role !== 'OWNER' ||
-    (companyStatus === 'active' && hasTin && hasBusinessType && hasModules);
+    (companyStatus === 'active' && hasTin && hasBusinessType);
 
   let requiredPath: OnboardingStepPath = '/onboarding/company';
   if (!hasTin) {

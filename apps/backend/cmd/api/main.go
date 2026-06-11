@@ -167,7 +167,7 @@ func main() {
 	dispatchesSvc := dispatches.NewService(pool, dispatchesRepo, pickTasksSvc, notificationsSvc, hub, c)
 	dispatchesHandler := dispatches.NewHandler(dispatchesSvc)
 
-	onboardingSvc := onboarding.NewService(pool)
+	onboardingSvc := onboarding.NewService(pool, c)
 	onboardingHandler := onboarding.NewHandler(onboardingSvc)
 
 	payrollRepo := payroll.NewRepository(pool)

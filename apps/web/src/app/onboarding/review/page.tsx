@@ -90,6 +90,18 @@ export default function FinalReviewPage() {
 
       patchSessionCompanyActive(queryClient);
       await refreshOnboardingSession(queryClient);
+
+      const status = await onboardingService.getStatus();
+      if (!status?.isCompleted && status?.nextPath !== '/dashboard') {
+        toast.error(
+          'Yakunlash to‘liq saqlanmadi. Qayta urinib ko‘ring yoki administrator bilan bog‘laning.',
+        );
+        if (status?.nextPath) {
+          router.replace(status.nextPath);
+        }
+        return;
+      }
+
       window.location.assign('/dashboard');
     } catch (err) {
       console.error(err);

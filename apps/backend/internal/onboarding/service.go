@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -32,11 +33,20 @@ var defaultFeatureKeys = []string{
 }
 
 type Service struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.Cache
 }
 
-func NewService(pool *pgxpool.Pool) *Service {
-	return &Service{pool: pool}
+func NewService(pool *pgxpool.Pool, c *cache.Cache) *Service {
+	return &Service{pool: pool, cache: c}
+}
+
+func (s *Service) invalidateSessionCaches(ctx context.Context, companyID, userID string) {
+	if s.cache == nil {
+		return
+	}
+	s.cache.Del(ctx, cache.CompanyFeaturesKey(companyID))
+	s.cache.InvalidateAuthMe(ctx, userID, companyID)
 }
 
 func (s *Service) ResolveCompanyID(ctx context.Context, companyID, userID string) (string, error) {
@@ -328,6 +338,7 @@ func (s *Service) ApplyModules(ctx context.Context, companyID, userID string, in
 	}
 
 	moduleKeys := uniqueStrings(extractModuleKeys(toEnable))
+	s.invalidateSessionCaches(ctx, resolved, userID)
 	return &ApplyModulesResult{Success: true, EnabledModules: moduleKeys}, nil
 }
 
@@ -409,6 +420,7 @@ func (s *Service) CompleteOnboarding(ctx context.Context, companyID, userID stri
 		`, uuid.NewString(), resolved, addr)
 	}
 
+	s.invalidateSessionCaches(ctx, resolved, userID)
 	return s.companyWithWarehouses(ctx, resolved)
 }
 
