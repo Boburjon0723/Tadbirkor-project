@@ -3,7 +3,9 @@ package products
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -148,7 +150,16 @@ func (h *Handler) writeProduct(w http.ResponseWriter, err error, data map[string
 	case strings.Contains(err.Error(), "ombor"):
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 	default:
-		httpx.Error(w, http.StatusInternalServerError, "Server xatosi")
+		if mapped := mapProductWriteErr(err); mapped != err {
+			httpx.Error(w, http.StatusBadRequest, mapped.Error())
+			return
+		}
+		log.Printf("products write error: %v", err)
+		msg := "Server xatosi"
+		if os.Getenv("NODE_ENV") != "production" {
+			msg = err.Error()
+		}
+		httpx.Error(w, http.StatusInternalServerError, msg)
 	}
 }
 

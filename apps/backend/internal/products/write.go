@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/tadbirkor/axis-erp/backend/internal/stock"
 	pkgrealtime "github.com/tadbirkor/axis-erp/backend/pkg/realtime"
 )
@@ -23,6 +24,25 @@ var (
 
 func roundQty(n float64) float64 {
 	return math.Max(0, math.Round(n*1000)/1000)
+}
+
+func mapProductWriteErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23505" {
+		return err
+	}
+	constraint := strings.ToLower(pgErr.ConstraintName)
+	switch {
+	case strings.Contains(constraint, "barcode"):
+		return ErrDuplicateBarcode
+	case strings.Contains(constraint, "sku"):
+		return ErrDuplicateSKU
+	default:
+		return ErrBadInput
+	}
 }
 
 func (s *Service) ensureActiveWarehouse(ctx context.Context, companyID string) error {
@@ -359,11 +379,22 @@ func (s *Service) Create(ctx context.Context, companyID, userID string, in Creat
 		}
 	}
 
-	_, _ = tx.Exec(ctx, `
+	auditNew, err := json.Marshal(map[string]any{
+		"name":       in.Name,
+		"categoryId": in.CategoryID,
+		"type":       in.Type,
+		"unit":       in.Unit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.Exec(ctx, `
 		INSERT INTO "AuditLog" (id, "companyId", "userId", action, "entityType", "entityId", "newData", "createdAt")
-		VALUES (gen_random_uuid()::text, $1, $2, 'product.created', 'PRODUCT', $3,
-		        jsonb_build_object('name', $4, 'categoryId', $5, 'type', $6, 'unit', $7), NOW())
-	`, companyID, userID, productID, in.Name, in.CategoryID, in.Type, in.Unit)
+		VALUES (gen_random_uuid()::text, $1, $2, 'product.created', 'PRODUCT', $3, $4, NOW())
+	`, companyID, userID, productID, string(auditNew))
+	if err != nil {
+		return nil, fmt.Errorf("audit log: %w", err)
+	}
 
 	initialWarehouse := ""
 	for _, v := range in.Variants {
