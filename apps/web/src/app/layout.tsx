@@ -6,6 +6,7 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import { Providers } from '@/components/providers';
 import { PWARegister } from '@/components/pwa-register';
 import { SupportWidget } from '@/components/SupportWidget';
+import { MetaPixel } from '@/components/MetaPixel';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -52,6 +53,7 @@ export default function RootLayout({
   return (
     <html lang="uz" className="scroll-smooth">
       <body className={`${inter.className} bg-[#020202] text-white min-h-screen antialiased`}>
+        <MetaPixel />
         <Providers>
           <LanguageProvider>
             <PWARegister />

@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services/auth.service';
 import { fetchPostAuthPath } from '@/lib/onboarding';
 import { prefetchSession } from '@/hooks/use-session';
+import { trackMetaPixelEvent } from '@/lib/meta-pixel';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -94,6 +95,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
         await authService.register({
           ...normalizedRegisterData,
         });
+        trackMetaPixelEvent('CompleteRegistration');
       } else {
         await authService.login(formData.login, formData.password);
       }
