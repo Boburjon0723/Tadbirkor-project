@@ -82,7 +82,7 @@ export class AuthService {
       startUrl: botUrl,
       expiresAt,
       instructions:
-        'Telegram botni oching, «Telefon raqamni ulashish» tugmasini bosing, keyin yangi parol kiriting.',
+        `Telegramda @${this.telegramLinkService.getBotUsername()} botni oching, «Telefon raqamni ulashish» tugmasini bosing, keyin yangi parol kiriting.`,
     };
   }
 
@@ -168,9 +168,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.usersService.findByLogin(dto.login);
+    const identifier = String(dto.login || '').trim();
+    const normalizedPhone = normalizeUzPhone(identifier);
+    const user = normalizedPhone
+      ? await this.usersService.findByPhone(identifier)
+      : await this.usersService.findByLogin(identifier);
     if (!user) {
-      throw new UnauthorizedException('Login yoki parol noto\'g\'ri');
+      throw new UnauthorizedException('Login, telefon yoki parol noto\'g\'ri');
     }
 
     if (!user.passwordHash) {
@@ -181,7 +185,7 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Login yoki parol noto\'g\'ri');
+      throw new UnauthorizedException('Login, telefon yoki parol noto\'g\'ri');
     }
 
     const memberships = (user.companies || []).filter(

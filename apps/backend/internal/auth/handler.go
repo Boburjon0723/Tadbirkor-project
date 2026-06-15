@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/tadbirkor/axis-erp/backend/internal/config"
@@ -26,8 +27,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusBadRequest, "Noto'g'ri JSON")
 		return
 	}
-	if input.Login == "" || input.Password == "" {
-		httpx.Error(w, http.StatusBadRequest, "Login va parol majburiy")
+	if strings.TrimSpace(input.Login) == "" || input.Password == "" {
+		httpx.Error(w, http.StatusBadRequest, "Login/telefon va parol majburiy")
 		return
 	}
 	result, err := h.svc.Login(r.Context(), input)
@@ -58,6 +59,80 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, ErrRegistrationDisabled):
 			httpx.Error(w, http.StatusForbidden, err.Error())
 		case errors.Is(err, ErrLoginTaken), errors.Is(err, ErrEmailTaken), errors.Is(err, ErrPhoneInvalid), errors.Is(err, ErrPhoneTaken):
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		default:
+			httpx.Error(w, http.StatusInternalServerError, "Server xatosi")
+		}
+		return
+	}
+	h.setAuthCookie(w, result.AccessToken)
+	httpx.JSON(w, http.StatusCreated, result)
+}
+
+func (h *Handler) RegisterStart(w http.ResponseWriter, r *http.Request) {
+	var input RegistrationStartInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "Noto'g'ri JSON")
+		return
+	}
+	result, err := h.svc.StartRegistration(r.Context(), input)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrRegistrationDisabled):
+			httpx.Error(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, ErrLoginTaken), errors.Is(err, ErrEmailTaken), errors.Is(err, ErrPhoneInvalid), errors.Is(err, ErrPhoneTaken):
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, ErrTelegramNotConfigured):
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		default:
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		}
+		return
+	}
+	httpx.JSON(w, http.StatusOK, result)
+}
+
+func (h *Handler) RegisterStatus(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("sessionToken"))
+	if token == "" {
+		httpx.Error(w, http.StatusBadRequest, "sessionToken majburiy")
+		return
+	}
+	result, err := h.svc.RegistrationStatus(r.Context(), token)
+	if err != nil {
+		if errors.Is(err, ErrRegistrationSessionNotFound) {
+			httpx.Error(w, http.StatusNotFound, err.Error())
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "Server xatosi")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, result)
+}
+
+type registerCompleteInput struct {
+	SessionToken string `json:"sessionToken"`
+	Code         string `json:"code"`
+}
+
+func (h *Handler) RegisterComplete(w http.ResponseWriter, r *http.Request) {
+	var input registerCompleteInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "Noto'g'ri JSON")
+		return
+	}
+	if strings.TrimSpace(input.SessionToken) == "" || strings.TrimSpace(input.Code) == "" {
+		httpx.Error(w, http.StatusBadRequest, "sessionToken va code majburiy")
+		return
+	}
+	result, err := h.svc.CompleteRegistration(r.Context(), input.SessionToken, input.Code)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrRegistrationSessionNotFound):
+			httpx.Error(w, http.StatusNotFound, err.Error())
+		case errors.Is(err, ErrRegistrationOTPNotReady), errors.Is(err, ErrRegistrationOTPInvalid):
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, ErrLoginTaken), errors.Is(err, ErrEmailTaken), errors.Is(err, ErrPhoneTaken):
 			httpx.Error(w, http.StatusBadRequest, err.Error())
 		default:
 			httpx.Error(w, http.StatusInternalServerError, "Server xatosi")

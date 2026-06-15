@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -9,83 +9,41 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Linking
+  Linking,
+  ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
-import * as SecureStore from 'expo-secure-store';
-import { Sparkles, User, Lock, Eye, EyeOff, MessageSquare, Phone, Fingerprint, ScanFace } from 'lucide-react-native';
-import { api } from '../../api/client';
+import { User, Lock, Eye, EyeOff, MessageSquare, Phone } from 'lucide-react-native';
+import { authApi } from '../../services/auth.service';
 import { useTheme } from '../../theme';
+import { AuthThemeToggle } from '../../components/auth/AuthThemeToggle';
+import { AuthBrandHeader } from '../../components/auth/AuthBrandHeader';
+import { loginFieldAutofill, passwordFieldAutofill } from '../../lib/auth-autofill';
+import { TELEGRAM_BOT_MENTION, TELEGRAM_BOT_URL } from '../../constants/telegram';
 
 export default function LoginScreen({ navigation }: any) {
   const { colors, isDark } = useTheme();
-  const styles = getStyles(colors);
+  const styles = getStyles(colors, isDark);
 
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [isBiometricSupported, setIsBiometricSupported] = useState(false);
-  const [biometricType, setBiometricType] = useState<'fingerprint' | 'face'>('fingerprint');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotHint, setForgotHint] = useState<string | null>(null);
 
   const [isLoginFocused, setIsLoginFocused] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      if (compatible && enrolled) {
-        setIsBiometricSupported(true);
-        
-        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
-        if (types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
-          setBiometricType('face');
-        }
-        
-        handleBiometricAuth(true);
-      }
-    })();
-  }, []);
-
-  const handleBiometricAuth = async (autoLogin: boolean = false) => {
-    try {
-      const savedLogin = await SecureStore.getItemAsync('saved_login');
-      const savedPassword = await SecureStore.getItemAsync('saved_password');
-      
-      if (!savedLogin || !savedPassword) {
-        if (!autoLogin) Alert.alert('Xatolik', "Saqlangan ma'lumotlar topilmadi. Iltimos, avval parol bilan kiring.");
-        return;
-      }
-
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Tizimga kirish',
-        fallbackLabel: 'Parol orqali kirish',
-        cancelLabel: 'Bekor qilish',
-      });
-
-      if (result.success) {
-        setLogin(savedLogin);
-        setPassword(savedPassword);
-        performLogin(savedLogin, savedPassword);
-      }
-    } catch (error) {
-      console.log('Biometric auth error:', error);
-    }
-  };
-
   const performLogin = async (loginStr: string, passwordStr: string) => {
     setLoading(true);
     try {
-      const { data } = await api.post('/auth/login', { login: loginStr, password: passwordStr });
+      const data = await authApi.login(loginStr, passwordStr);
       
       if (data.access_token) {
         await AsyncStorage.setItem('token', data.access_token);
         await AsyncStorage.setItem('user', JSON.stringify(data.user));
-        
-        await SecureStore.setItemAsync('saved_login', loginStr);
-        await SecureStore.setItemAsync('saved_password', passwordStr);
         
         const role = data.user?.role || 'FIELD_WORKER'; 
         
@@ -98,7 +56,7 @@ export default function LoginScreen({ navigation }: any) {
         }
       }
     } catch (error: any) {
-      const msg = error.response?.data?.message || 'Login yoki parol xato';
+      const msg = error.response?.data?.message || 'Login, telefon yoki parol xato';
       Alert.alert('Xatolik', msg);
     } finally {
       setLoading(false);
@@ -106,38 +64,72 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   const handleLogin = () => {
-    if (!login || !password) {
-      Alert.alert('Xatolik', 'Login va parolni kiriting');
+    if (!login.trim() || !password) {
+      Alert.alert('Xatolik', 'Login/telefon va parolni kiriting');
       return;
     }
-    performLogin(login, password);
+    setForgotHint(null);
+    performLogin(login.trim(), password);
+  };
+
+  const handleForgotPassword = async () => {
+    setForgotLoading(true);
+    setForgotHint(null);
+    try {
+      const loginValue = login.trim();
+      const { botUrl, instructions } = await authApi.getPasswordResetTelegramLink(
+        loginValue || undefined,
+      );
+      const canOpen = await Linking.canOpenURL(botUrl);
+      if (canOpen) {
+        await Linking.openURL(botUrl);
+      }
+      setForgotHint(
+        instructions ||
+          'Telegram bot ochildi. «Telefon raqamni ulashish» tugmasini bosing va yangi parol kiriting.',
+      );
+    } catch (error: any) {
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        'Telegram havolasini yaratib bo‘lmadi. Keyinroq urinib ko‘ring.';
+      Alert.alert('Xatolik', msg);
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={styles.flex} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        {/* Decorative background glows */}
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        keyboardDismissMode="on-drag"
+      >
+        <View style={styles.topHeader}>
+          <AuthBrandHeader compact />
+          <AuthThemeToggle />
+        </View>
+
         <View style={styles.glowTop} />
         <View style={styles.glowBottom} />
-
-        <View style={styles.brandContainer}>
-          <View style={styles.brandIconWrapper}>
-            <Sparkles size={32} color="#3b82f6" />
-          </View>
-          <Text style={styles.brandName}>Axis <Text style={{ color: '#3b82f6' }}>ERP</Text></Text>
-        </View>
 
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.title}>Tizimga kirish</Text>
             <Text style={styles.subtitle}>Boshqaruv paneli</Text>
+            <Text style={styles.autofillHint}>
+              Birinchi kirishdan keyin telefon login va parolni saqlashni taklif qiladi — keyingi safar Face ID bilan avtomatik to‘ldiriladi.
+            </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.label}>LOGIN</Text>
+            <Text style={styles.label}>LOGIN YOKI TELEFON</Text>
             <View style={[
               styles.inputWrapper,
               isLoginFocused && { borderColor: '#3b82f6' }
@@ -145,13 +137,16 @@ export default function LoginScreen({ navigation }: any) {
               <User size={18} color={isLoginFocused ? '#3b82f6' : colors.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Loginni kiriting"
+                placeholder="Login yoki +998901234567"
                 placeholderTextColor={colors.textMuted}
                 value={login}
                 onChangeText={setLogin}
                 autoCapitalize="none"
+                keyboardType="default"
                 onFocus={() => setIsLoginFocused(true)}
                 onBlur={() => setIsLoginFocused(false)}
+                returnKeyType="next"
+                {...loginFieldAutofill}
               />
             </View>
 
@@ -170,6 +165,9 @@ export default function LoginScreen({ navigation }: any) {
                 secureTextEntry={!showPassword}
                 onFocus={() => setIsPasswordFocused(true)}
                 onBlur={() => setIsPasswordFocused(false)}
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+                {...passwordFieldAutofill}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
                 {showPassword ? (
@@ -179,6 +177,23 @@ export default function LoginScreen({ navigation }: any) {
                 )}
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              disabled={forgotLoading}
+              style={styles.forgotLinkWrap}
+              activeOpacity={0.7}
+            >
+              {forgotLoading ? (
+                <ActivityIndicator color="#3b82f6" size="small" />
+              ) : (
+                <Text style={styles.forgotLink}>Parolni unutdingizmi? — Telegram orqali tiklash</Text>
+              )}
+            </TouchableOpacity>
+
+            {forgotHint ? (
+              <Text style={styles.forgotHint}>{forgotHint}</Text>
+            ) : null}
 
             <TouchableOpacity 
               style={[styles.button, loading && styles.buttonDisabled]} 
@@ -193,22 +208,15 @@ export default function LoginScreen({ navigation }: any) {
               )}
             </TouchableOpacity>
 
-            {isBiometricSupported && (
-              <TouchableOpacity 
-                style={styles.biometricButton} 
-                onPress={() => handleBiometricAuth(false)}
-                activeOpacity={0.8}
-              >
-                {biometricType === 'face' ? (
-                  <ScanFace color="#3b82f6" size={24} />
-                ) : (
-                  <Fingerprint color="#3b82f6" size={24} />
-                )}
-                <Text style={styles.biometricText}>
-                  {biometricType === 'face' ? 'Face ID orqali kirish' : 'Touch ID / Biometrik kirish'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Register')}
+              style={{ marginTop: 16, alignItems: 'center' }}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: '#3b82f6', fontSize: 14, fontWeight: '600' }}>
+                Akkauntingiz yo'qmi? Ro'yxatdan o'tish
+              </Text>
+            </TouchableOpacity>
 
             <View style={styles.supportDividerRow}>
               <View style={styles.supportLine} />
@@ -219,11 +227,11 @@ export default function LoginScreen({ navigation }: any) {
             <View style={styles.supportRow}>
               <TouchableOpacity 
                 style={styles.supportItem}
-                onPress={() => Alert.alert('Telegram Yordam', 'Savol va takliflaringizni @tadbirkor_malumot_bot telegram manziliga yuborishingiz mumkin.')}
+                onPress={() => Linking.openURL(TELEGRAM_BOT_URL)}
                 activeOpacity={0.7}
               >
                 <MessageSquare size={14} color="#3b82f6" />
-                <Text style={styles.supportLink}>Telegram bot</Text>
+                <Text style={styles.supportLink}>{TELEGRAM_BOT_MENTION}</Text>
               </TouchableOpacity>
               
               <View style={styles.verticalDivider} />
@@ -248,94 +256,86 @@ export default function LoginScreen({ navigation }: any) {
         </View>
 
         <Text style={styles.footerCopyright}>© 2026 Axis ERP. Barcha huquqlar himoyalangan.</Text>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const getStyles = (colors: any) => StyleSheet.create({
+const getStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
+  flex: { flex: 1 },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 20,
     position: 'relative',
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    gap: 12,
+    zIndex: 10,
   },
   glowTop: {
     position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    top: -80,
+    right: -80,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: isDark ? 'rgba(59, 130, 246, 0.08)' : 'rgba(59, 130, 246, 0.1)',
   },
   glowBottom: {
     position: 'absolute',
-    bottom: -150,
-    left: -150,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-  },
-  brandContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 12,
-  },
-  brandIconWrapper: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: colors.accentBg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.accentBorder,
-    shadowColor: '#3b82f6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  brandName: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: 0.5,
+    bottom: -100,
+    left: -100,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(16, 185, 129, 0.07)',
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 28,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 24,
+    padding: 18,
+    marginTop: 52,
     shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
-    shadowRadius: 24,
-    elevation: 5,
+    shadowRadius: 16,
+    elevation: 4,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: colors.text,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   subtitle: {
     fontSize: 12,
     color: colors.textSecondary,
     lineHeight: 18,
   },
+  autofillHint: {
+    marginTop: 8,
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 16,
+  },
   form: {
-    gap: 16,
+    gap: 12,
   },
   label: {
     color: colors.textSecondary,
@@ -375,13 +375,30 @@ const getStyles = (colors: any) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  forgotLinkWrap: {
+    alignSelf: 'flex-end',
+    marginTop: 4,
+    paddingVertical: 4,
+  },
+  forgotLink: {
+    color: '#3b82f6',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  forgotHint: {
+    marginTop: 6,
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 16,
+  },
   button: {
     backgroundColor: '#3b82f6',
-    height: 52,
-    borderRadius: 16,
+    height: 48,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 10,
     shadowColor: '#3b82f6',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -401,13 +418,13 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.textMuted,
     fontSize: 10,
     textAlign: 'center',
-    marginTop: 32,
+    marginTop: 20,
   },
   supportDividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 14,
+    marginBottom: 8,
     gap: 8,
   },
   supportLine: {
@@ -448,22 +465,5 @@ const getStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
     fontSize: 11,
     fontWeight: '600',
-  },
-  biometricButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-    paddingVertical: 14,
-    gap: 8,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
-  },
-  biometricText: {
-    color: '#3b82f6',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
 });

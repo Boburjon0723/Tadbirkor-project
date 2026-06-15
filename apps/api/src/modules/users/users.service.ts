@@ -23,6 +23,17 @@ export class UsersService {
     });
   }
 
+  async findByPhone(phoneRaw: string) {
+    const phone = normalizeUzPhone(phoneRaw);
+    if (!phone) {
+      return null;
+    }
+    return this.prisma.user.findUnique({
+      where: { phone },
+      include: { companies: { include: { company: true } } },
+    });
+  }
+
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

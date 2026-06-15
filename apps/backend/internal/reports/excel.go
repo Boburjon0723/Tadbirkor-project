@@ -369,8 +369,8 @@ func (s *Service) GenerateProductImportTemplate(ctx context.Context, companyID s
 		"Ombor nomi",
 	}
 	_ = f.SetSheetRow(importSheet, "A1", &headers)
-	_ = f.SetSheetRow(importSheet, "A2", &[]any{"Shim Jinsi", "SH-001", "123456789", "Kok", "L", 100000, 150000, "UZS", 50, "dona", "Kiyim", "Asosiy Ombor"})
-	_ = f.SetSheetRow(importSheet, "A3", &[]any{"Sut 3.2%", "SUT-1L", "8600123456789", "", "", 12000, 15000, "UZS", 120, "l", "Oziq-ovqat", "Asosiy Ombor"})
+	_ = f.SetSheetRow(importSheet, "A2", &[]any{"Shim Jinsi", "MISOL-SH-001", "123456789", "Kok", "L", 100000, 150000, "UZS", 50, "dona", "Kiyim", "Asosiy Ombor"})
+	_ = f.SetSheetRow(importSheet, "A3", &[]any{"Sut 3.2%", "MISOL-SUT-1L", "8600123456789", "", "", 12000, 15000, "UZS", 120, "l", "Oziq-ovqat", "Asosiy Ombor"})
 
 	_ = f.SetSheetRow(guideSheet, "A1", &[]any{"Bolim", "Tavsif"})
 	_ = f.SetSheetRow(guideSheet, "A2", &[]any{"Qadam 1", "Import varagidagi faqat 2-qatordan boshlab malumot kiriting."})

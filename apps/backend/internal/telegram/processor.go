@@ -9,6 +9,7 @@ import (
 )
 
 type tgUpdate struct {
+	UpdateID      int              `json:"update_id"`
 	Message       *tgMessage       `json:"message"`
 	CallbackQuery *tgCallbackQuery `json:"callback_query"`
 }
@@ -143,6 +144,9 @@ func (s *Service) handleMessage(ctx context.Context, msg *tgMessage) {
 	}
 
 	if msg.Contact != nil && msg.Contact.PhoneNumber != "" {
+		if s.handleRegistrationContact(ctx, chatID, msg.Contact.PhoneNumber) {
+			return
+		}
 		if s.handlePasswordResetContact(ctx, chatID, msg.Contact.PhoneNumber) {
 			return
 		}
@@ -230,6 +234,10 @@ func (s *Service) handleCommand(ctx context.Context, chatID, cmd, fullText strin
 		s.promptPasswordReset(ctx, chatID, "")
 	case "/bekor":
 		cancelled := false
+		if s.reg.getSession(chatID) != nil {
+			s.reg.cancelFlow(chatID)
+			cancelled = true
+		}
 		if s.reset.cancelFlow(chatID) {
 			cancelled = true
 		}
@@ -261,6 +269,27 @@ func (s *Service) handleStart(ctx context.Context, chatID, text string) {
 		lower := strings.ToLower(payload)
 		if lower == "parol" {
 			s.promptPasswordReset(ctx, chatID, "")
+			return
+		}
+		if strings.HasPrefix(payload, "reg_") {
+			phoneHint, err := s.repo.consumeRegistrationIntent(ctx, strings.TrimPrefix(payload, "reg_"))
+			if err != nil {
+				_ = s.tg.sendMessage(ctx, chatID, "Xatolik. Keyinroq urinib ko'ring.", nil)
+				return
+			}
+			if phoneHint == nil {
+				_ = s.tg.sendMessage(ctx, chatID, strings.Join([]string{
+					"⚠️ Havola muddati o'tgan yoki allaqachon ishlatilgan.",
+					"Ilovada qayta ro'yxatdan o'tishni boshlang.",
+				}, "\n"), nil)
+				return
+			}
+			sessionCode := strings.TrimPrefix(payload, "reg_")
+			hint := ""
+			if phoneHint != nil {
+				hint = *phoneHint
+			}
+			s.promptRegistration(ctx, chatID, sessionCode, hint)
 			return
 		}
 		if strings.HasPrefix(payload, "rp_") {

@@ -366,6 +366,26 @@ func (r *Repository) consumePasswordResetIntent(ctx context.Context, code string
 	if login != "" {
 		return &login, nil
 	}
+	empty := ""
+	return &empty, nil
+}
+
+func (r *Repository) consumeRegistrationIntent(ctx context.Context, code string) (phoneHint *string, err error) {
+	now := time.Now()
+	var id, phone string
+	err = r.pool.QueryRow(ctx, `
+		SELECT id, COALESCE(login, '') FROM "TelegramBotIntent"
+		WHERE code = $1 AND intent = 'REGISTRATION' AND "usedAt" IS NULL AND "expiresAt" > $2
+	`, strings.TrimSpace(code), now).Scan(&id, &phone)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if phone != "" {
+		return &phone, nil
+	}
 	return nil, nil
 }
 

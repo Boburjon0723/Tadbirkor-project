@@ -49,15 +49,13 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   });
 
   const handleForgotPassword = async () => {
-    const login = formData.login.trim();
-    if (!login) {
-      setError('Avval login kiriting, keyin «Parolni unutdingizmi» ni bosing.');
-      return;
-    }
     setForgotLoading(true);
     setForgotHint(null);
     try {
-      const { botUrl, instructions } = await authService.getPasswordResetTelegramLink(login);
+      const login = formData.login.trim();
+      const { botUrl, instructions } = await authService.getPasswordResetTelegramLink(
+        login || undefined,
+      );
       window.open(botUrl, '_blank', 'noopener,noreferrer');
       setForgotHint(
         instructions ||
@@ -441,16 +439,17 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   ) : (
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase ml-1">Kirish nomi</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase ml-1">Login yoki telefon</label>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                           <input 
                             required
                             type="text"
-                            placeholder="Kirish nomini kiriting"
+                            placeholder="Login yoki +998901234567"
                             className="w-full bg-white/5 border border-white/10 rounded-2xl py-3 pl-12 pr-4 text-sm focus:outline-none focus:border-blue-500 transition-all text-white"
                             value={formData.login}
                             onChange={(e) => setFormData({...formData, login: e.target.value})}
+                            autoComplete="username"
                           />
                         </div>
                       </div>
@@ -482,7 +481,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                         <button
                           type="button"
                           onClick={handleForgotPassword}
-                          disabled={forgotLoading || !formData.login.trim()}
+                          disabled={forgotLoading}
                           className="text-blue-400 hover:text-blue-300 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {forgotLoading ? 'Telegram ochilmoqda...' : 'Parolni unutdingizmi?'}

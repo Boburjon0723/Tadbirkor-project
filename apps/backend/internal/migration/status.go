@@ -8,7 +8,7 @@ const GoImplementedEndpoints = 331
 
 // GoModules — Go'da implement qilingan (1:1 test oldidan).
 var GoModules = []string{
-	"auth: register, login, logout, me, invite, password-reset/telegram-link",
+	"auth: register, register/start, register/status, register/complete, login, logout, me, invite, password-reset/telegram-link",
 	"dashboard: stats",
 	"companies: full settings (me, features, pos, intake, telegram, storefront)",
 	"warehouses: full CRUD (list, get, create, update, archive)",

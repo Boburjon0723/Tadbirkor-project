@@ -187,6 +187,9 @@ func (s *Service) executeImportRows(ctx context.Context, companyID, userID, jobI
 		}
 		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc, catCache)
 		if err != nil {
+			if mapped := mapProductWriteErr(err); mapped != err {
+				err = mapped
+			}
 			failed++
 			errs = append(errs, map[string]any{"rowNumber": i + 1, "message": err.Error(), "name": row.Name})
 			_ = s.insertImportStagingFailure(ctx, jobID, i, row, err.Error())
@@ -297,6 +300,13 @@ func (s *Service) importOneRow(ctx context.Context, companyID, userID string, ro
 	} else {
 		q := `SELECT id FROM "ProductVariant" WHERE "companyId" = $1 AND "productId" = $2 AND lower(name) = lower($3) LIMIT 1`
 		err = tx.QueryRow(ctx, q, companyID, productID, variantName).Scan(&variantID)
+		if errors.Is(err, pgx.ErrNoRows) && strings.TrimSpace(row.SKU) != "" {
+			err = tx.QueryRow(ctx, `
+				SELECT id FROM "ProductVariant"
+				WHERE "companyId" = $1 AND lower(sku) = lower($2)
+				LIMIT 1
+			`, companyID, strings.TrimSpace(row.SKU)).Scan(&variantID)
+		}
 		if errors.Is(err, pgx.ErrNoRows) {
 			err = tx.QueryRow(ctx, `
 				INSERT INTO "ProductVariant" (

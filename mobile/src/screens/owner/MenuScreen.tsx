@@ -35,6 +35,7 @@ import { useTheme } from '../../theme';
 import { MODULE_CATALOG } from '../../config/modules';
 import { confirmLogout } from '../../auth/session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TELEGRAM_BOT_URL } from '../../constants/telegram';
 
 export default function MenuScreen({ navigation }: any) {
   const { colors, isDark, toggleTheme } = useTheme();
@@ -526,7 +527,7 @@ export default function MenuScreen({ navigation }: any) {
               
               <TouchableOpacity 
                 style={styles.supportActionBtn} 
-                onPress={() => Linking.openURL('https://t.me/tadbirkor_support_bot')}
+                onPress={() => Linking.openURL(TELEGRAM_BOT_URL)}
               >
                 <Smartphone size={20} color="#FFF" />
                 <Text style={styles.supportActionText}>Telegram orqali bog'lanish</Text>

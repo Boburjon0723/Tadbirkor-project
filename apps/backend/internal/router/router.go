@@ -145,6 +145,9 @@ func New(d Deps) http.Handler {
 
 		api.Route("/auth", func(ar chi.Router) {
 			ar.Post("/register", d.AuthHandler.Register)
+			ar.Post("/register/start", d.AuthHandler.RegisterStart)
+			ar.Get("/register/status", d.AuthHandler.RegisterStatus)
+			ar.Post("/register/complete", d.AuthHandler.RegisterComplete)
 			ar.Post("/login", d.AuthHandler.Login)
 			ar.Post("/logout", d.AuthHandler.Logout)
 			ar.Post("/password-reset/telegram-link", d.AuthHandler.PasswordResetTelegramLink)

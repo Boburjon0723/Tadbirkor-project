@@ -69,6 +69,55 @@ func (c *tgClient) sendMessage(ctx context.Context, chatID string, text string, 
 	return nil
 }
 
+func (c *tgClient) deleteWebhook(ctx context.Context) error {
+	if c == nil || c.token == "" {
+		return nil
+	}
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/deleteWebhook?drop_pending_updates=true", c.token)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+type tgUpdatesResponse struct {
+	OK     bool       `json:"ok"`
+	Result []tgUpdate `json:"result"`
+}
+
+func (c *tgClient) getUpdates(ctx context.Context, offset int, timeoutSec int) ([]tgUpdate, error) {
+	if c == nil || c.token == "" {
+		return nil, fmt.Errorf("telegram bot token yo'q")
+	}
+	url := fmt.Sprintf(
+		"https://api.telegram.org/bot%s/getUpdates?offset=%d&timeout=%d",
+		c.token, offset, timeoutSec,
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var payload tgUpdatesResponse
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	if !payload.OK {
+		return nil, fmt.Errorf("telegram getUpdates failed")
+	}
+	return payload.Result, nil
+}
+
 func contactKeyboard() map[string]any {
 	return map[string]any{
 		"keyboard": [][]map[string]any{{

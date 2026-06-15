@@ -1,0 +1,12 @@
+-- =============================================================================
+-- BITTA kompaniyani va unga tegishli foydalanuvchilarni to'liq o'chirish
+-- Supabase SQL Editor yoki: go run ./cmd/delete-company <company_uuid>
+-- DIQQAT: Qaytarib bo'lmaydi!
+-- =============================================================================
+
+-- Ro'yxat (tanlash uchun):
+-- SELECT c.id, c.name, c.phone, u.login, u.phone
+-- FROM "Company" c
+-- LEFT JOIN "CompanyUser" cu ON cu."companyId" = c.id AND cu.role = 'OWNER'
+-- LEFT JOIN "User" u ON u.id = cu."userId"
+-- ORDER BY c."createdAt" DESC;

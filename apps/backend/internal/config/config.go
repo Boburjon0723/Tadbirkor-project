@@ -8,6 +8,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const DefaultTelegramBotUsername = "tadbirkor_malumot_bot"
+
 type Config struct {
 	Port            string
 	DatabaseURL     string
@@ -22,6 +24,7 @@ type Config struct {
 	TelegramBotUsername     string
 	TelegramBotToken        string
 	TelegramWebhookSecret   string
+	TelegramUpdatesEnabled  bool
 	RegistrationEnabled     *bool
 	SupportTelegramChatID   string
 	SupportTelegramUsername string
@@ -35,7 +38,8 @@ type Config struct {
 }
 
 func Load() Config {
-	_ = godotenv.Load()
+	// Lokal .env fayl shell dagi eski DATABASE_URL ni bosib ketadi
+	_ = godotenv.Overload()
 	ttlMs, _ := strconv.Atoi(getEnv("AUTH_ME_CACHE_TTL_MS", "60000"))
 	origins := strings.Split(getEnv("CORS_ORIGINS", "http://localhost:3000"), ",")
 	for i := range origins {
@@ -53,9 +57,10 @@ func Load() Config {
 		DashboardCacheTTL: dashTTL,
 		CORSOrigins:       origins,
 		IsProduction:      os.Getenv("NODE_ENV") == "production",
-		TelegramBotUsername:     strings.TrimSpace(os.Getenv("TELEGRAM_BOT_USERNAME")),
+		TelegramBotUsername:     strings.TrimPrefix(strings.TrimSpace(getEnv("TELEGRAM_BOT_USERNAME", DefaultTelegramBotUsername)), "@"),
 		TelegramBotToken:        strings.TrimSpace(os.Getenv("TELEGRAM_BOT_TOKEN")),
 		TelegramWebhookSecret:   strings.TrimSpace(os.Getenv("TELEGRAM_WEBHOOK_SECRET")),
+		TelegramUpdatesEnabled:  strings.EqualFold(strings.TrimSpace(os.Getenv("TELEGRAM_UPDATES_ENABLED")), "true"),
 		RegistrationEnabled:     parseRegistrationFlag(),
 		SupportTelegramChatID:   strings.TrimSpace(os.Getenv("SUPPORT_TELEGRAM_CHAT_ID")),
 		SupportTelegramUsername: strings.TrimSpace(os.Getenv("SUPPORT_TELEGRAM_USERNAME")),

@@ -27,6 +27,7 @@ services:
       PORT: 4002
       JWT_SECRET: your_super_secret_jwt_key_here
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/axis_erp
+      TELEGRAM_BOT_USERNAME: tadbirkor_malumot_bot
     depends_on:
       - postgres
     ports:
@@ -44,7 +45,8 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/axis_erp
       REDIS_URL: redis://redis:6379
       CORS_ORIGINS: http://localhost:3000,http://localhost
-      TELEGRAM_BOT_USERNAME: ""
+      TELEGRAM_BOT_USERNAME: tadbirkor_malumot_bot
+      TELEGRAM_UPDATES_ENABLED: "true"
     depends_on:
       - postgres
       - redis

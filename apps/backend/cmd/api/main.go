@@ -199,13 +199,14 @@ func main() {
 	fieldHandler := field.NewHandler(fieldSvc)
 
 	telegramRepo := telegram.NewRepository(pool)
-	telegramSvc := telegram.NewService(telegramRepo, cfg)
+	telegramSvc := telegram.NewService(telegramRepo, cfg, c)
 	deliverySvc := notifications.NewDeliveryService(pool, telegramSvc)
 	notificationsSvc.SetDelivery(deliverySvc)
 	workerCtx, workerCancel := context.WithCancel(context.Background())
 	platformSvc.StartScheduler(workerCtx)
 	deliverySvc.StartRetryWorker(workerCtx)
 	telegramSvc.BindBots(payrollLeaveSvc, payrollDataSvc, fieldSvc)
+	telegramSvc.StartPollingIfEnabled(workerCtx)
 	telegramHandler := telegram.NewHandler(telegramSvc)
 
 	invoicesHandler := invoices.NewHandler(b2bOrdersSvc)

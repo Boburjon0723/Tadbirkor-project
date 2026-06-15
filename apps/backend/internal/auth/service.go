@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strconv"
@@ -21,7 +22,7 @@ import (
 )
 
 var (
-	ErrInvalidCredentials    = errors.New("Login yoki parol noto'g'ri")
+	ErrInvalidCredentials    = errors.New("Login, telefon yoki parol noto'g'ri")
 	ErrNoMembership          = errors.New("Hisobingiz hech qanday kompaniyaga biriktirilmagan. Administrator bilan bog'laning.")
 	ErrNoPassword            = errors.New("Hisob paroli sozlanmagan. Administrator bilan bog'laning.")
 	ErrCompanyNotFound       = errors.New("Kompaniya topilmadi yoki hisobingiz ushbu kompaniyaga bog'lanmagan.")
@@ -176,17 +177,26 @@ func (s *Service) CreatePasswordResetTelegramLink(ctx context.Context, input Pas
 		return nil, err
 	}
 	startPayload := "rp_" + code
-	botURL := "https://t.me/" + strings.TrimPrefix(s.cfg.TelegramBotUsername, "@") + "?start=" + url.QueryEscape(startPayload)
+	botName := strings.TrimPrefix(s.cfg.TelegramBotUsername, "@")
+	botURL := "https://t.me/" + botName + "?start=" + url.QueryEscape(startPayload)
 	return map[string]any{
 		"botUrl":       botURL,
 		"startUrl":     botURL,
 		"expiresAt":    expiresAt,
-		"instructions": "Telegram botni oching, «Telefon raqamni ulashish» tugmasini bosing, keyin yangi parol kiriting.",
+		"instructions": fmt.Sprintf("Telegramda @%s botni oching, «Telefon raqamni ulashish» tugmasini bosing, keyin yangi parol kiriting.", botName),
 	}, nil
 }
 
 func (s *Service) Login(ctx context.Context, input LoginInput) (*LoginResponse, error) {
-	user, memberships, err := s.repo.FindUserByLogin(ctx, strings.TrimSpace(input.Login))
+	identifier := strings.TrimSpace(input.Login)
+	var user *UserRow
+	var memberships []MembershipRow
+	var err error
+	if normalizedPhone := phone.NormalizeUzPhone(identifier); normalizedPhone != "" {
+		user, memberships, err = s.repo.FindUserByPhone(ctx, normalizedPhone)
+	} else {
+		user, memberships, err = s.repo.FindUserByLogin(ctx, identifier)
+	}
 	if err != nil {
 		return nil, err
 	}

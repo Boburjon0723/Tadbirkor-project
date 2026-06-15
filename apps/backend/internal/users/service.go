@@ -42,9 +42,11 @@ func (s *Service) invalidateUserMeAllCompanies(ctx context.Context, userID strin
 func (s *Service) FindByCompany(ctx context.Context, companyID string) ([]map[string]any, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT cu.id, cu.role, cu."warehouseId", cu."grantPermissions", cu."denyPermissions",
-		       u.id, u."fullName", u.login, u.email, u.phone, u.status
+		       u.id, u."fullName", u.login, u.email, u.phone, u.status,
+		       u."telegramChatId", w.id, w.name, w.status
 		FROM "CompanyUser" cu
 		JOIN "User" u ON u.id = cu."userId"
+		LEFT JOIN "Warehouse" w ON w.id = cu."warehouseId"
 		WHERE cu."companyId" = $1
 		ORDER BY cu."createdAt" ASC
 	`, companyID)
@@ -55,18 +57,24 @@ func (s *Service) FindByCompany(ctx context.Context, companyID string) ([]map[st
 	out := []map[string]any{}
 	for rows.Next() {
 		var membershipID, role, userID, fullName, login, status string
-		var warehouseID, email, phone *string
+		var warehouseID, email, phone, telegramChatID *string
+		var whID, whName, whStatus *string
 		var grant, deny []string
-		if err := rows.Scan(&membershipID, &role, &warehouseID, &grant, &deny, &userID, &fullName, &login, &email, &phone, &status); err != nil {
+		if err := rows.Scan(&membershipID, &role, &warehouseID, &grant, &deny, &userID, &fullName, &login, &email, &phone, &status, &telegramChatID, &whID, &whName, &whStatus); err != nil {
 			return nil, err
 		}
-		out = append(out, map[string]any{
-			"companyUserId": membershipID, "role": role, "warehouseId": warehouseID,
+		item := map[string]any{
+			"id": membershipID, "companyUserId": membershipID, "role": role, "warehouseId": warehouseID,
 			"grantPermissions": grant, "denyPermissions": deny,
 			"user": map[string]any{
 				"id": userID, "fullName": fullName, "login": login, "email": email, "phone": phone, "status": status,
+				"telegramChatId": telegramChatID,
 			},
-		})
+		}
+		if whID != nil && whName != nil {
+			item["warehouse"] = map[string]any{"id": *whID, "name": *whName, "status": whStatus}
+		}
+		out = append(out, item)
 	}
 	return out, rows.Err()
 }

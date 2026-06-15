@@ -315,6 +315,9 @@ func (s *Service) processImportJob(ctx context.Context, jobID string) error {
 		}
 		err := s.importOneRowWithLedger(ctx, companyID, userID, row, wh, mode, acc, catCache)
 		if err != nil {
+			if mapped := mapProductWriteErr(err); mapped != err {
+				err = mapped
+			}
 			failed++
 			lastErr = err.Error()
 			importErrors = append(importErrors, map[string]any{"rowNumber": i + 1, "message": err.Error(), "name": row.Name})

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, User, Phone, Mail, Shield, KeyRound, CheckCircle2, AlertCircle, Building2, Send } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TELEGRAM_BOT_MENTION } from '../../constants/telegram';
 import { api } from '../../api/client';
 import { useTheme } from '../../theme';
 
@@ -188,7 +188,7 @@ export default function ProfileScreen({ navigation }: any) {
             </View>
             {!user.telegramChatId && (
               <Text style={styles.telegramInstructions}>
-                Bot orqali real-time hisobotlar va ogohlantirishlar olish uchun, Telegram'dan botimizni izlang va hisobingizni bog'lang.
+                {TELEGRAM_BOT_MENTION} botini oching va telefon raqamingizni ulashing — real-time hisobotlar va ogohlantirishlar shu chatga keladi.
               </Text>
             )}
           </View>

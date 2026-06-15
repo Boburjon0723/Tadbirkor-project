@@ -401,10 +401,7 @@ func matchCatalogVariant(catalog *importCatalogIndex, row parsedImportRow) *cata
 	}
 	if sku := strings.TrimSpace(row.SKU); sku != "" {
 		if v := catalog.bySKU[strings.ToLower(sku)]; v != nil {
-			skuNv := importVariantIdentityKey(v.ProductName, v.VariantLabel, v.Color)
-			if skuNv == nvKey {
-				return v
-			}
+			return v
 		}
 	}
 	return nil

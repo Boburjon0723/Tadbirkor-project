@@ -12,14 +12,17 @@ import (
 	"github.com/tadbirkor/axis-erp/backend/internal/config"
 	"github.com/tadbirkor/axis-erp/backend/internal/field"
 	"github.com/tadbirkor/axis-erp/backend/internal/payroll"
+	"github.com/tadbirkor/axis-erp/backend/pkg/cache"
 )
 
 type Service struct {
 	repo   *Repository
 	cfg    config.Config
+	cache  *cache.Cache
 	tg     *tgClient
 	botCtx *botContext
 	reset  *passwordResetState
+	reg    *registrationState
 	actions *actionDeps
 	leaveBot *leaveBot
 	payrollBot *payrollBot
@@ -28,12 +31,14 @@ type Service struct {
 	pendingPartnerComment map[string]partnerOrderComment
 }
 
-func NewService(repo *Repository, cfg config.Config) *Service {
+func NewService(repo *Repository, cfg config.Config, c *cache.Cache) *Service {
 	s := &Service{
 		repo:                  repo,
 		cfg:                   cfg,
+		cache:                 c,
 		botCtx:                newBotContext(),
 		reset:                 newPasswordResetState(),
+		reg:                   newRegistrationState(),
 		pendingPartnerComment: map[string]partnerOrderComment{},
 	}
 	if token := strings.TrimSpace(cfg.TelegramBotToken); token != "" {

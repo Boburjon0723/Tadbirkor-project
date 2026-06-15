@@ -41,9 +41,11 @@ export const lightColors = {
   backdrop: 'rgba(15, 23, 42, 0.3)',
 };
 
+export type ThemeColors = typeof darkColors;
+
 interface ThemeContextType {
   theme: ThemeType;
-  colors: typeof darkColors;
+  colors: ThemeColors;
   isDark: boolean;
   toggleTheme: () => void;
 }

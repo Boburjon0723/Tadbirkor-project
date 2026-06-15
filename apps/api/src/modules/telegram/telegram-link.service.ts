@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { normalizeUzPhone } from '../../common/phone.util';
+import { normalizeTelegramBotUsername } from '../../common/telegram.constants';
 
 export type TelegramLinkByPhoneResult = {
   userId: string;
@@ -38,9 +39,9 @@ export class TelegramLinkService {
   ) {}
 
   getBotUsername(): string {
-    return (this.configService.get<string>('TELEGRAM_BOT_USERNAME') || '')
-      .trim()
-      .replace(/^@+/, '');
+    return normalizeTelegramBotUsername(
+      this.configService.get<string>('TELEGRAM_BOT_USERNAME'),
+    );
   }
 
   getBotStartUrl(startPayload?: string): string | null {

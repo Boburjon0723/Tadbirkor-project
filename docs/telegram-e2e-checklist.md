@@ -3,7 +3,7 @@
 ## Pre-setup
 - [ ] Railway env:
   - `TELEGRAM_BOT_TOKEN`
-  - `TELEGRAM_BOT_USERNAME` (`@` belgisiz)
+  - `TELEGRAM_BOT_USERNAME` = `tadbirkor_malumot_bot` (`@` belgisiz)
   - `TELEGRAM_WEBHOOK_URL` = `https://<backend>/api/telegram/webhook`
   - `TELEGRAM_WEBHOOK_SECRET` = random string
   - `TELEGRAM_UPDATES_ENABLED=false`

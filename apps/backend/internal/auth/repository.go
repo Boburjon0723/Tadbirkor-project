@@ -78,6 +78,15 @@ func (r *Repository) FindUserByLogin(ctx context.Context, login string) (*UserRo
 	return user, memberships, err
 }
 
+func (r *Repository) FindUserByPhone(ctx context.Context, phone string) (*UserRow, []MembershipRow, error) {
+	user, err := r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", status, "telegramChatId", "telegramLinkedAt" FROM "User" WHERE phone = $1`, phone)
+	if err != nil || user == nil {
+		return nil, nil, err
+	}
+	memberships, err := r.listMemberships(ctx, user.ID)
+	return user, memberships, err
+}
+
 func (r *Repository) FindUserByID(ctx context.Context, userID string) (*UserRow, error) {
 	return r.findUser(ctx, `SELECT id, "fullName", login, email, phone, "passwordHash", status, "telegramChatId", "telegramLinkedAt" FROM "User" WHERE id = $1`, userID)
 }
@@ -240,5 +249,21 @@ func (r *Repository) CreatePasswordResetIntent(ctx context.Context, code string,
 		INSERT INTO "TelegramBotIntent" (id, code, intent, login, "expiresAt", "createdAt")
 		VALUES (gen_random_uuid()::text, $1, 'PASSWORD_RESET', $2, $3, NOW())
 	`, code, loginHint, expiresAt)
+	return err
+}
+
+func (r *Repository) CreateRegistrationIntent(ctx context.Context, code, phone string, expiresAt time.Time) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO "TelegramBotIntent" (id, code, intent, login, "expiresAt", "createdAt")
+		VALUES (gen_random_uuid()::text, $1, 'REGISTRATION', $2, $3, NOW())
+	`, code, phone, expiresAt)
+	return err
+}
+
+func (r *Repository) MarkRegistrationIntentUsed(ctx context.Context, code string) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE "TelegramBotIntent" SET "usedAt" = NOW()
+		WHERE code = $1 AND intent = 'REGISTRATION' AND "usedAt" IS NULL
+	`, code)
 	return err
 }

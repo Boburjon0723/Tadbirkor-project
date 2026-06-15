@@ -74,10 +74,11 @@ export const authService = {
   },
 
   /** Parolni unutdim — server bir martalik Telegram havola kodi beradi */
-  getPasswordResetTelegramLink: async (login: string) => {
+  getPasswordResetTelegramLink: async (login?: string) => {
+    const trimmed = login?.trim();
     const { data } = await api.post<{ botUrl: string; startUrl: string; instructions?: string }>(
       '/auth/password-reset/telegram-link',
-      { login: login.trim() },
+      trimmed ? { login: trimmed } : {},
     );
     return data;
   },

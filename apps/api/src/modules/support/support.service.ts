@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TelegramService } from '../telegram/telegram.service';
 import { SubmitSupportMessageDto } from './dto/support-message.dto';
+import { normalizeTelegramBotUsername } from '../../common/telegram.constants';
 
 @Injectable()
 export class SupportService {
@@ -24,7 +25,7 @@ export class SupportService {
       this.normalizeUsername(
         this.configService.get<string>('SUPPORT_TELEGRAM_USERNAME'),
       ) ||
-      this.normalizeUsername(
+      normalizeTelegramBotUsername(
         this.configService.get<string>('TELEGRAM_BOT_USERNAME'),
       );
 

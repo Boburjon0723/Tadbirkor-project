@@ -1,9 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from './src/theme';
 import LoginScreen from './src/screens/auth/LoginScreen';
+import RegisterScreen from './src/screens/auth/RegisterScreen';
 import OwnerMain from './src/screens/owner/OwnerMain';
 import FieldMain from './src/screens/field/FieldMain';
 import ProductVariantsScreen from './src/screens/owner/ProductVariantsScreen';
@@ -29,6 +31,7 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="OwnerMain" component={OwnerMain} />
         <Stack.Screen name="SalesMain" component={PosCenterScreen} />
         <Stack.Screen name="POSTerminal" component={POSScreen} />
@@ -51,8 +54,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
